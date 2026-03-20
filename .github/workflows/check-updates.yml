@@ -2,10 +2,12 @@ name: Check for Package Updates
 
 on:
   schedule:
+    # Runs every 4 hours for stable releases
     - cron: '0 */4 * * *'  
   workflow_dispatch:
 
 env:
+  # Ensuring Node 24 without conflicting flags
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 permissions:
@@ -79,24 +81,26 @@ jobs:
               content = info['content']
               new_version = new_tag.lstrip('v')
               
-              # 1. Update Version and Reset Revision (Preserving quotes if they exist)
-              content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\1{new_version}', content)
-              content = re.sub(r'(revision=["\']?)\d+', rf'\11', content)
+              # 1. Update Version and Reset Revision
+              # FIXED: Using \g<1> to prevent "group reference 11" error
+              content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
+              content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Parse distfiles block
+              # 2. Parse distfiles block (Handles multi-line Zen-style)
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              # Grab only the FIRST URL from the list (fixes Zen multi-line crash)
+              # FIXED: Correctly handling list objects and splitting strings
               urls = distfiles_match.group(1).strip().split()
               if not urls: return False
               
-              # Take the first URL and strip the >filename redirect
+              # Grab first URL and remove redirects (e.g., >LICENSE)
               primary_url_template = urls.split('>')
               
               # 3. Resolve variables for download
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              # Handle Zen architecture variable
+              
+              # Handle Zen's arch variable for the x86_64 checksum fetch
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
@@ -106,8 +110,8 @@ jobs:
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
                       
-                      # Replace ONLY the first checksum (preserves Zen's license checksum)
-                      content = re.sub(r'(checksum=["\']?)[^\s"\']+', rf'\1{new_hash}', content, count=1)
+                      # Replace ONLY the first checksum (preserves License hashes)
+                      content = re.sub(r'(checksum=["\']?)[^\s"\']+', rf'\g<1>{new_hash}', content, count=1)
                       
                       with open(info['file'], 'w') as f:
                           f.write(content)
@@ -122,6 +126,7 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
+          # FLAT STRUCTURE SCANNER: Scans top-level folders
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
