@@ -1,48 +1,26 @@
-pkgname=gpu-screen-recorder
-version=r1187.7d4a406
+# Template file for 'gpu-screen-recorder-git'
+pkgname=gpu-screen-recorder-git
+_gitrepo="https://repo.dec05eba.com/gpu-screen-recorder"
+_commit=4ed04830c1ffc1e0fd7286b8558e8a61eec6041e
+version=20260321
 revision=1
-archs="x86_64"
+build_style=meson
+configure_args="-Dsystemd=false"
 
-short_desc="A shadowplay-like screen recorder for Linux. The fastest screen recorder for Linux"
-maintainer="Ackerman <https://github.com/Ackerman-00>"
-homepage="https://git.dec05eba.com/gpu-screen-recorder"
+hostmakedepends="pkg-config wayland-devel"
+makedepends="libX11-devel libXcomposite-devel libXrandr-devel libXfixes-devel
+ libXdamage-devel libpulse-devel libva-devel libdrm-devel wayland-devel
+ pipewire-devel dbus-devel ffmpeg-devel libcap-devel vulkan-loader-devel"
+
+depends="desktop-file-utils"
+
+short_desc="A shadowplay-like screen recorder for Linux (Git Snapshot)"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-only"
+homepage="https://git.dec05eba.com/gpu-screen-recorder"
 
-# Runtime dependencies
-depends="ffmpeg libglvnd libX11 libXcomposite libXrandr libXfixes libXdamage pulseaudio libva libdrm libcap wayland libpipewire dbus"
+conflicts="gpu-screen-recorder>=0"
+provides="gpu-screen-recorder-${version}_${revision}"
 
-# Build-time dependencies
-hostmakedepends="meson ninja pkg-config vulkan-loader-devel glib-devel ffmpeg libX11-devel libXcomposite-devel libXrandr-devel libXfixes-devel libXdamage-devel pulseaudio-devel libva-devel libdrm-devel wayland-devel pipewire-devel dbus-devel desktop-file-utils ffmpeg-devel libcap-devel git"
-
-# Optional features
-optdepends=(
-    'nvidia-utils: Required to record your screen on NVIDIA'
-    'libxnvctrl: Required for -oc overclock option on NVIDIA'
-    'mesa: Required to record on AMD/Intel GPUs'
-    'libva-mesa-driver: Required to record on AMD GPUs'
-    'libva-intel-driver: Required to record on Intel G45/HD Graphics'
-    'intel-media-driver: Required for Broadwell+ Intel iGPUs or Intel Arc'
-    'linux-firmware-intel: Required for Intel Skylake+ iGPUs'
-)
-
-# Source tarball snapshot
-distfiles="https://dec05eba.com/snapshot/gpu-screen-recorder.git.${version}.tar.gz"
-checksum=5c6532d83f31b2db69654ddf501933830f235ff15bb225564e2aa0ea2fff5228
-
-install="${pkgname}.install"
-
-do_build() {
-    cd "${wrksrc}"
-    meson setup build \
-        --prefix=/usr \
-        --libdir=/usr/lib \
-        --buildtype=release \
-        -Dsystemd=true \
-        -Dstrip=true
-    meson compile -C build
-}
-
-do_install() {
-    cd "${wrksrc}"
-    meson install -C build --destdir="${DESTDIR}"
-}
+distfiles="https://git.dec05eba.com/gpu-screen-recorder/snapshot/gpu-screen-recorder-${_commit}.tar.gz"
+checksum=8e2207c4240cc38be1c4d4d3b5b5e5f0033f83b39db49099d861347d8a6e71a1

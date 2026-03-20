@@ -1,0 +1,25 @@
+# Template file for 'xwayland-satellite-git'
+pkgname=xwayland-satellite-git
+_commit=a879e5e0896a326adc79c474bf457b8b99011027
+version=20260321
+revision=1
+build_style=cargo
+hostmakedepends="pkg-config clang"
+makedepends="xcb-util-cursor-devel"
+depends="xorg-server-xwayland"
+short_desc="Xwayland outside your Wayland compositor (Git Snapshot)"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="MPL-2.0"
+homepage="https://github.com/Supreeeme/xwayland-satellite"
+
+conflicts="xwayland-satellite>=0"
+provides="xwayland-satellite-${version}_${revision}"
+
+distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
+checksum=2649b91546ba7fcac16d03ba44e724652dff4c973cae95f7dd38e60ecbd6c7a7
+
+make_check="no"
+
+post_install() {
+    vman xwayland-satellite.man xwayland-satellite.1
+}

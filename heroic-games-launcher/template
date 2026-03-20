@@ -1,0 +1,61 @@
+# Template file for 'heroic-games-launcher'
+pkgname=heroic-games-launcher
+version=2.20.1
+revision=1
+archs="x86_64"
+build_style=fetch
+short_desc="Open source launcher for GOG, Epic, and Amazon Games"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="GPL-3.0-or-later"
+homepage="https://heroicgameslauncher.com"
+# GitHub repo automatically
+distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/heroic_${version}_amd64.deb"
+checksum=4e9957436bc270318b00a1107910a3c7d30ad72da530af4dee5c2860866a6272
+
+# Added desktop-file-utils and hicolor-icon-theme
+depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
+
+# bsdtar natively handles .deb files much cleaner than 'ar'
+hostmakedepends="bsdtar"
+
+# WHITELIST: Tell Void's pkglint to ignore pre-compiled non-PIE binaries
+_helper_path="opt/Heroic/resources/app.asar.unpacked/build/bin/x64/linux"
+nopie_files="
+ /opt/Heroic/heroic
+ /opt/Heroic/chrome-sandbox
+ /${_helper_path}/gogdl
+ /${_helper_path}/legendary
+ /${_helper_path}/nile
+ /${_helper_path}/comet
+ /${_helper_path}/vulkan-helper"
+
+nostrip_files="${nopie_files}"
+
+do_extract() {
+    # Extract the data tarball
+    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/heroic_${version}_amd64.deb data.tar.xz
+    bsdtar xf data.tar.xz -C .
+}
+
+do_install() {
+    # Install the main application preserving all original permissions (-a)
+    vmkdir opt
+    cp -a opt/Heroic ${DESTDIR}/opt/
+
+    # Install desktop entries and icons
+    vmkdir usr/share
+    cp -a usr/share/applications ${DESTDIR}/usr/share/
+    cp -a usr/share/icons ${DESTDIR}/usr/share/
+
+    # Symlink the executable to the user's PATH
+    vmkdir usr/bin
+    ln -sf /opt/Heroic/heroic ${DESTDIR}/usr/bin/heroic
+
+    # Fix permissions for the main binary
+    chmod 755 ${DESTDIR}/opt/Heroic/heroic
+    
+    # SUID sandbox (Required for the Electron engine to run safely)
+    if [ -f ${DESTDIR}/opt/Heroic/chrome-sandbox ]; then
+        chmod 4755 ${DESTDIR}/opt/Heroic/chrome-sandbox
+    fi
+}

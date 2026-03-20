@@ -1,19 +1,17 @@
 [Desktop Entry]
-Version=1.0
 Name=Zen Browser
-GenericName=Web Browser
 Comment=Experience tranquillity while browsing the web without people tracking you!
 Exec=zen %u
+Icon=zen
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/x-xpinstall;application/pdf;application/json;
+StartupWMClass=zen
+Categories=Network;WebBrowser;
 StartupNotify=true
 Terminal=false
-Icon=/usr/share/icons/hicolor/128x128/apps/zen-browser.png
-Type=Application
-Categories=Network;WebBrowser;
-Keywords=Internet;WWW;Browser;Web;Explorer
-MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/x-xpinstall;application/pdf;application/json;
-Actions=new-window;new-private-window;profilemanager;
 X-MultipleArgs=false
-StartupWMClass=zen
+Keywords=Internet;WWW;Browser;Web;Explorer;
+Actions=new-window;new-private-window;profilemanager;
 
 [Desktop Action new-window]
 Name=Open a New Window

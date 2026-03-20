@@ -1,0 +1,19 @@
+# Template file for 'dankmaterialshell'
+pkgname=dankmaterialshell
+version=1.4.3
+revision=1
+build_style=fetch
+depends="quickshell-git qt6-declarative qt6-wayland pam"
+short_desc="A Material You inspired shell for Wayland"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/AvengeMedia/DankMaterialShell"
+
+distfiles="https://github.com/AvengeMedia/DankMaterialShell/archive/refs/tags/v${version}.tar.gz"
+checksum=2be47d1192fd0b6212ab224a5a1c2a83d08ec5374fbbf307721d6e455eb9895d
+
+do_install() {
+    # Quickshell configs usually live in XDG paths.
+    vmkdir etc/xdg/quickshell/DankMaterialShell
+    cp -a ${wrksrc}/* ${DESTDIR}/etc/xdg/quickshell/DankMaterialShell/
+}

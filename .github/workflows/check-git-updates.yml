@@ -1,0 +1,159 @@
+name: Check Git Snapshot Updates
+
+on:
+  schedule:
+    # Runs every day at 02:00 UTC (8:00 AM Dhaka time)
+
+    - cron: '0 2 * * *'  
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  check-git-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.REPO_PAT }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check for Universal Git Updates
+        id: check
+        run: |
+          python3 << 'EOF'
+          import os, re, requests, subprocess, hashlib, datetime
+
+          def extract_git_info(filepath):
+              with open(filepath, 'r') as f:
+                  content = f.read()
+              
+              # ONLY target templates that explicitly use BOTH _commit and _gitrepo
+              if '_commit=' not in content or '_gitrepo=' not in content:
+                  return None
+                  
+              pkg_match = re.search(r'pkgname="?([^"\n\s]+)"?', content)
+              commit_match = re.search(r'_commit="?([a-fA-F0-9]+)"?', content)
+              repo_match = re.search(r'_gitrepo="?([^"\n]+)"?', content)
+              dist_match = re.search(r'distfiles="([^"]+)"', content)
+              
+              if not (pkg_match and commit_match and repo_match and dist_match):
+                  return None
+                  
+              return {
+                  'name': pkg_match.group(1),
+                  'commit': commit_match.group(1),
+                  'gitrepo': repo_match.group(1).strip('"'),
+                  'distfiles': dist_match.group(1),
+                  'file': filepath,
+                  'content': content
+              }
+
+          def get_latest_commit(gitrepo):
+              try:
+                  # Uses native git to fetch from ANY public repository on the internet
+                  out = subprocess.check_output(['git', 'ls-remote', gitrepo, 'HEAD'], timeout=15)
+                  sha = out.split().decode('utf-8')
+                  # Generate today's date for Void versioning (YYYYMMDD)
+                  date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+                  return sha, date_str
+              except Exception as e:
+                  print(f"Git error on {gitrepo}: {e}")
+              return None, None
+
+          def update_git_template(info, new_sha, new_date):
+              content = info['content']
+              
+              # Dynamically construct the new tarball URL based on the template's distfiles
+              url = info['distfiles']
+              url = url.replace('${_commit}', new_sha).replace('$_commit', new_sha)
+              url = url.replace('${version}', new_date).replace('$version', new_date)
+              
+              print(f"Fetching tarball to calculate checksum: {url}")
+              
+              try:
+                  resp = requests.get(url, timeout=30, allow_redirects=True)
+                  if resp.status_code == 200:
+                      new_hash = hashlib.sha256(resp.content).hexdigest()
+                      
+                      # Rewrite variables
+                      content = re.sub(r'_commit=\S+', f'_commit={new_sha}', content)
+                      content = re.sub(r'version=\S+', f'version={new_date}', content)
+                      content = re.sub(r'revision=\d+', 'revision=1', content)
+                      content = re.sub(r'checksum=\S+', f'checksum={new_hash}', content)
+                      
+                      with open(info['file'], 'w') as f:
+                          f.write(content)
+                      return True
+                  else:
+                      print(f"HTTP {resp.status_code} for {url}")
+                      return False
+              except Exception as e:
+                  print(f"Download error: {e}")
+                  return False
+
+          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+          subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
+
+          templates = []
+          for d in os.listdir('.'):
+              t_path = os.path.join(d, 'template')
+              if os.path.isdir(d) and os.path.isfile(t_path):
+                  templates.append(t_path)
+          
+          updates = []
+
+          for path in templates:
+              info = extract_git_info(path)
+              if not info: continue
+              
+              latest_sha, latest_date = get_latest_commit(info['gitrepo'])
+              if not latest_sha: continue
+              
+              if latest_sha == info['commit']:
+                  print(f"{info['name']} is already at the latest commit.")
+                  continue
+
+              print(f"Update found for {info['name']}: {info['commit'][:7]} -> {latest_sha[:7]}")
+              
+              if update_git_template(info, latest_sha, latest_date):
+                  subprocess.run(['git', 'add', info['file']], check=True)
+                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_sha[:7]}"], check=True)
+                  updates.append(info['name'])
+
+          if updates:
+              subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True)
+              subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+
+          with open('updated_git_packages.txt', 'w') as f:
+              for u in updates: f.write(f"{u}\n")
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"updates_found={'true' if updates else 'false'}\n")
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Build Factory
+        if: steps.check.outputs.updates_found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.REPO_PAT }}
+        run: |
+          cat updated_git_packages.txt | while read pkg; do
+            echo "Triggering build factory for $pkg..."
+            gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
+          done

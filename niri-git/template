@@ -1,0 +1,45 @@
+# Template file for 'niri-git'
+pkgname=niri-git
+_commit=b07bde3ee82dd73115e6b949e4f3f63695da35ea
+version=20260321
+revision=1
+build_style=cargo
+build_helper="qemu"
+configure_args="--no-default-features --features dbus,xdp-gnome-screencast"
+hostmakedepends="pkg-config clang19-devel"
+makedepends="eudev-libudev-devel libxkbcommon-devel libinput-devel libgbm-devel
+ libdisplay-info-devel pipewire-devel pango-devel libseat-devel clang19-devel
+ gdk-pixbuf-devel graphene-devel gtk4-devel libadwaita-devel"
+depends="wayland"
+checkdepends="wayland"
+short_desc="Scrollable-tiling Wayland compositor (Git Snapshot)"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/niri-wm/niri"
+conflicts="niri>=0"
+provides="niri-${version}_${revision}"
+
+distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
+checksum=aa6f588f7114317591b45cc817aa3fc7fbe8e57d661a2d756e1c68e49c120ca1
+
+pre_check() {
+    export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")
+    ulimit -n 4096
+}
+
+do_check() {
+    if [ "$XBPS_TARGET_LIBC" != "musl" ]; then
+        cargo test --target ${RUST_TARGET} --workspace --locked -- --skip=::egl
+    fi
+}
+
+post_install() {
+    local sh
+    vinstall resources/niri.desktop 644 usr/share/wayland-sessions
+    vinstall resources/niri-portals.conf 644 usr/share/xdg-desktop-portal
+
+    for sh in bash fish zsh; do
+        vtargetrun "${DESTDIR}/usr/bin/niri" completions "${sh}" > "niri.${sh}"
+        vcompletion "niri.${sh}" "${sh}"
+    done
+}

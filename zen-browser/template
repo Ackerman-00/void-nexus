@@ -2,43 +2,54 @@
 pkgname=zen-browser
 version=1.19.3b
 revision=1
-archs="x86_64"
-hostmakedepends="binutils tar xz curl"
-short_desc="Experience tranquillity while browsing the web without people tracking you!"
-maintainer="Ackerman <https://github.com/Ackerman-00>"
+archs="x86_64 aarch64"
+build_style=fetch
+hostmakedepends="xz"
+depends="desktop-file-utils hicolor-icon-theme libnotify libavcodec xdg-utils"
+short_desc="Welcome to a calmer internet"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MPL-2.0"
 homepage="https://www.zen-browser.app/"
-changelog="https://github.com/zen-browser/desktop/releases"
-distfiles="https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz"
-checksum=3b03eaeecfb222ecd62d37b9d6d409d704ce2437ff8286626e17b0289eb60c91
+
+case "${XBPS_TARGET_MACHINE}" in
+x86_64*)
+    _upstream_arch=x86_64
+    _checksum=3b03eaeecfb222ecd62d37b9d6d409d704ce2437ff8286626e17b0289eb60c91
+    ;;
+aarch64*)
+    _upstream_arch=aarch64
+    _checksum=78d45f75527146b59f49e806d220b7872091443965b727132703edd110661988
+    ;;
+*) broken="No distfiles available for this target" ;;
+esac
+
+distfiles="https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-${_upstream_arch}.tar.xz
+ https://raw.githubusercontent.com/zen-browser/desktop/refs/heads/dev/LICENSE>LICENSE"
+checksum="${_checksum}
+c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
 
 do_install() {
-  install -dm755 "${DESTDIR}/opt/${pkgname}" "${DESTDIR}/usr/bin" "${DESTDIR}/usr/share/applications" "${DESTDIR}/usr/share/pixmaps"
+    vmkdir opt
+    cp -a zen ${DESTDIR}/opt/zen-browser
 
-  vinstall "${FILESDIR}/zen.desktop" 0644 usr/share/applications/
+    vmkdir usr/bin
+    ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
 
-  vcopy * "opt/${pkgname}"
+    vinstall ${FILESDIR}/zen.desktop 0644 usr/share/applications/
+    
+    vmkdir opt/zen-browser/distribution
+    vinstall ${FILESDIR}/policies.json 644 opt/zen-browser/distribution/
 
-  ln -sf "/opt/${pkgname}/zen" "${DESTDIR}/usr/bin/zen"
+    vinstall browser/chrome/icons/default/default48.png 0644 usr/share/pixmaps zen.png
+    for size in 16 32 48 64 128; do
+        vmkdir usr/share/icons/hicolor/${size}x${size}/apps
+        vinstall browser/chrome/icons/default/default${size}.png 0644 usr/share/icons/hicolor/${size}x${size}/apps zen.png
+    done
 
-  # install policies files
-  install -dm755 "${DESTDIR}/opt/${pkgname}/distribution"
-  vinstall ${FILESDIR}/policies.json 644 "opt/${pkgname}/distribution/"
-
-# Follow https://wiki.freepascal.org/Debian_package_structure#usr/share/pixmaps_directory and https://wiki.freepascal.org/Debian_package_structure#usr/share/hicolor_directory
-  vinstall browser/chrome/icons/default/default48.png 0644 usr/share/pixmaps zen-browser.png
-  for size in 16 32 48 64 128; do
-    install -d ${DESTDIR}/usr/share/icons/hicolor/${size}x${size}/apps
-    vinstall browser/chrome/icons/default/default${size}.png 0644 usr/share/icons/hicolor/${size}x${size}/apps zen-browser.png
-  done
-
-  # using system dictionary
-  ln -Ts /usr/share/hunspell "${DESTDIR}/opt/${pkgname}/dictionaries"
-  ln -Ts /usr/share/hyphen "${DESTDIR}/opt/${pkgname}/hyphenation"
-  ln -sf /usr/lib/libnssckbi.so "${DESTDIR}/opt/${pkgname}/libnssckbi.so"
-}
-
-post_install() {
-  curl --fail -sOL https://raw.githubusercontent.com/zen-browser/desktop/refs/heads/stable/LICENSE
-  vlicense LICENSE
+    # Safe to link dictionaries
+    ln -sf /usr/share/hunspell ${DESTDIR}/opt/zen-browser/dictionaries
+    ln -sf /usr/share/hyphen ${DESTDIR}/opt/zen-browser/hyphenation
+    
+    # License is already downloaded from distfiles, so we just install it
+    vlicense ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE
 }
