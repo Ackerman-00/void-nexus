@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
 
 env:
+  # Using only this flag to stop the Node.js warning clash
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Suppress the aggressive deprecation warnings
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 permissions:
   contents: write
@@ -19,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
@@ -72,37 +71,45 @@ jobs:
                   resp = requests.get(url, headers=headers, timeout=15)
                   if resp.status_code == 200:
                       data = resp.json()
-                      return data['tag_name'].lstrip('v')
+                      # Return the tag name; update_template will handle the 'v' prefix logic
+                      return data['tag_name']
               except Exception as e:
                   print(f"  [!] API Error for {owner}/{repo}: {e}")
               return None
 
-          def update_template(info, new_version):
+          def update_template(info, new_tag):
               content = info['content']
+              # Void version usually doesn't include the 'v' prefix
+              new_version = new_tag.lstrip('v')
               
               # 1. Update Version and Reset Revision
               content = re.sub(r'version=[^\n\s]+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
-              # 2. Extract and parse distfiles
+              # 2. Parse distfiles safely
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              # FIX: Get only the FIRST URL from the distfiles list and strip redirects
-              raw_urls = distfiles_match.group(1).split()
-              if not raw_urls: return False
+              # Get only the first line/URL to calculate the primary checksum
+              dist_content = distfiles_match.group(1).strip()
+              primary_url_raw = dist_content.splitlines().strip()
               
-              primary_url_template = raw_urls.split('>')
+              # Strip the >filename redirection if it exists
+              primary_url_template = primary_url_raw.split('>').strip()
               
-              # 3. Resolve variables
+              # 3. Resolve variables for download
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              # Handle architecture variables for Zen Browser
+              # Handle both tag styles (some repos use 'v1.0', others use '1.0' in the URL)
+              if '${version}' not in primary_url_template and '$version' not in primary_url_template:
+                  # If the URL had the tag literally, we replace the old version with the new one
+                  download_url = primary_url_template.replace(info['version'], new_version)
+              
+              # Handle Zen architecture variable for the checksum fetch
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
               try:
-                  # Use browser-like headers to avoid being blocked
-                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) VoidLinux-BuildBot'}
+                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux; x86_64) VoidLinux-BuildBot'}
                   resp = requests.get(download_url, timeout=45, allow_redirects=True, headers=headers)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
@@ -112,10 +119,10 @@ jobs:
                           f.write(content)
                       return True
                   else:
-                      print(f"  [!] Download failed with status {resp.status_code}")
+                      print(f"  [!] HTTP {resp.status_code} - Download failed.")
                       return False
               except Exception as e:
-                  print(f"  [!] Hash update error: {e}")
+                  print(f"  [!] Error: {e}")
               return False
 
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
@@ -135,9 +142,10 @@ jobs:
                   
               print(f"Checking {info['name']}...")
               owner, repo = info['github']
-              latest_ver = get_latest_github_release(owner, repo)
+              latest_tag = get_latest_github_release(owner, repo)
+              if not latest_tag: continue
               
-              if not latest_ver: continue
+              latest_ver = latest_tag.lstrip('v')
               
               try:
                   if version.parse(latest_ver) <= version.parse(info['version']):
@@ -145,9 +153,9 @@ jobs:
               except Exception:
                   if latest_ver == info['version']: continue
 
-              print(f"  [!] New Version: {info['version']} -> {latest_ver}")
+              print(f"  [!] Update: {info['version']} -> {latest_ver}")
               
-              if update_template(info, latest_ver):
+              if update_template(info, latest_tag):
                   subprocess.run(['git', 'add', info['file']], check=True)
                   subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_ver}"], check=True)
                   updates.append(info['name'])
@@ -171,6 +179,6 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           cat updated_packages.txt | while read pkg; do
-            echo "Triggering build factory for $pkg..."
+            echo "Triggering build for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
           done
