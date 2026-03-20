@@ -2,6 +2,7 @@ name: Check for Package Updates
 
 on:
   schedule:
+    # Runs every 4 hours to catch new stable releases fast
     - cron: '0 */4 * * *'  
   workflow_dispatch:
 
@@ -71,7 +72,7 @@ jobs:
                   resp = requests.get(url, headers=headers, timeout=15)
                   if resp.status_code == 200:
                       data = resp.json()
-                      # Return the tag name; update_template will handle the 'v' prefix logic
+                      # Return tag exactly as is; logic below handles the 'v'
                       return data['tag_name']
               except Exception as e:
                   print(f"  [!] API Error for {owner}/{repo}: {e}")
@@ -86,34 +87,38 @@ jobs:
               content = re.sub(r'version=[^\n\s]+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
-              # 2. Parse distfiles safely
+              # 2. Parse distfiles block (Handle multi-line Zen-style)
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              # Get only the first line/URL to calculate the primary checksum
+              # FIX: split() with no args splits by ANY whitespace (space or newline)
+              # and returns only the first URL found
               dist_content = distfiles_match.group(1).strip()
-              primary_url_raw = dist_content.splitlines().strip()
+              primary_url_raw = dist_content.split()
               
-              # Strip the >filename redirection if it exists
-              primary_url_template = primary_url_raw.split('>').strip()
+              # FIX: split('>') gets the part before the redirection arrow
+              primary_url_template = primary_url_raw.split('>')
               
-              # 3. Resolve variables for download
+              # 3. Resolve variables for the download check
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              # Handle both tag styles (some repos use 'v1.0', others use '1.0' in the URL)
+              
+              # If the URL had the old version hardcoded (not a variable), swap it
               if '${version}' not in primary_url_template and '$version' not in primary_url_template:
-                  # If the URL had the tag literally, we replace the old version with the new one
                   download_url = primary_url_template.replace(info['version'], new_version)
               
-              # Handle Zen architecture variable for the checksum fetch
+              # Handle Zen architecture variables specifically for the check
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
               try:
-                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux; x86_64) VoidLinux-BuildBot'}
+                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) VoidLinux-BuildBot'}
                   resp = requests.get(download_url, timeout=45, allow_redirects=True, headers=headers)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
-                      content = re.sub(r'checksum=[^\n\s]+', f'checksum={new_hash}', content)
+                      
+                      # THE FIX: Replace ONLY the first checksum value found.
+                      # This preserves multi-line checksums for things like licenses.
+                      content = re.sub(r'(checksum="?)([^\s"\n]+)', rf'\1{new_hash}', content, count=1)
                       
                       with open(info['file'], 'w') as f:
                           f.write(content)
@@ -128,6 +133,7 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
+          # FLAT STRUCTURE SCANNER
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -153,7 +159,7 @@ jobs:
               except Exception:
                   if latest_ver == info['version']: continue
 
-              print(f"  [!] Update: {info['version']} -> {latest_ver}")
+              print(f"  [!] Update Found: {info['version']} -> {latest_ver}")
               
               if update_template(info, latest_tag):
                   subprocess.run(['git', 'add', info['file']], check=True)
@@ -179,6 +185,6 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           cat updated_packages.txt | while read pkg; do
-            echo "Triggering build for $pkg..."
+            echo "Triggering build factory for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
           done
