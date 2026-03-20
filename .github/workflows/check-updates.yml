@@ -9,6 +9,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write
 
 jobs:
   check-updates:
@@ -16,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REPO_PAT }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -26,7 +29,7 @@ jobs:
         run: |
           pip install requests packaging
 
-      - name: Check for updates and create PR branches
+      - name: Check for updates and update templates
         id: check
         run: |
           python3 << 'EOF'
@@ -44,7 +47,6 @@ jobs:
               ver_match = re.search(r'version=(\S+)', content)
               if not pkg_match or not ver_match:
                   return None
-              # Looks for github owner/repo in the homepage or distfiles
               github_match = re.search(r'https://github\.com/([^/]+)/([^/\s"$}]+)', content)
               return {
                   'name': pkg_match.group(1),
@@ -72,17 +74,13 @@ jobs:
 
           def update_template(info, new_version):
               content = info['content']
-              # Update version and reset revision to 1
               content = re.sub(r'version=\S+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
-              # Calculate new checksum
               distfiles_match = re.search(r'distfiles="([^"]+)"', content)
               if distfiles_match:
                   url_template = distfiles_match.group(1)
-                  # Basic replacement of variable
                   download_url = url_template.replace('${version}', new_version).replace('$version', new_version)
-                  print(f"Downloading for checksum: {download_url}")
                   resp = requests.get(download_url, timeout=30)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
@@ -95,14 +93,12 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # ROOT FOLDER SCAN: Finds folders containing a 'template' file
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
               if os.path.isdir(d) and os.path.isfile(t_path):
                   templates.append(t_path)
           
-          print(f"Found {len(templates)} templates to check")
           updates = []
 
           for template_path in templates:
@@ -122,27 +118,19 @@ jobs:
                   if latest_ver == info['version']: continue
 
               print(f"Updating {info['name']}: {info['version']} -> {latest_ver}")
-              branch_name = f"auto-update/{info['name']}"
               
-              # Git operations
-              subprocess.run(['git', 'checkout', 'main'], check=True)
-              subprocess.run(['git', 'checkout', '-B', branch_name], check=True)
               update_template(info, latest_ver)
               subprocess.run(['git', 'add', info['file']], check=True)
-              subprocess.run(['git', 'commit', '-m', f"{info['name']}: update to {latest_ver}"], check=True)
-              subprocess.run(['git', 'push', '-f', 'origin', branch_name], check=True)
+              subprocess.run(['git', 'commit', '-m', f"Auto-update: {info['name']} to {latest_ver}"], check=True)
 
-              updates.append({
-                  'package': info['name'],
-                  'old_version': info['version'],
-                  'new_version': latest_ver,
-                  'branch': branch_name,
-                  'release_url': release_url
-              })
+              updates.append(info['name'])
 
-          with open('pr_summary.txt', 'w') as f:
+          if updates:
+              subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+
+          with open('updated_packages.txt', 'w') as f:
               for u in updates:
-                  f.write(f"{u['package']}|{u['old_version']}|{u['new_version']}|{u['branch']}|{u['release_url']}\n")
+                  f.write(f"{u}\n")
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if updates else 'false'}\n")
@@ -150,45 +138,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Pull Requests
+      - name: Trigger Build Workflow for Updated Packages
         if: steps.check.outputs.updates_found == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const summary = fs.readFileSync('pr_summary.txt', 'utf8');
-            const updates = summary.trim().split('\n').map(line => {
-              const [pkg, oldVer, newVer, branch, releaseUrl] = line.split('|');
-              return { pkg, oldVer, newVer, branch, releaseUrl };
-            });
-
-            for (const update of updates) {
-              const { data: pulls } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open',
-                head: `${context.repo.owner}:${update.branch}`
-              });
-
-              const title = `${update.pkg}: update to ${update.newVer}`;
-              const body = `## Automated Update\n- **New Version:** ${update.newVer}\n- **Release:** ${update.releaseUrl}`;
-
-              if (pulls.length > 0) {
-                await github.rest.pulls.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pulls[0].number,
-                  title: title,
-                  body: body
-                });
-              } else {
-                await github.rest.pulls.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: title,
-                  body: body,
-                  head: update.branch,
-                  base: 'main'
-                });
-              }
-            }
+        env:
+          GH_TOKEN: ${{ secrets.REPO_PAT }}
+        run: |
+          cat updated_packages.txt | while read pkg; do
+            echo "Triggering build for $pkg..."
+            gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
+          done
