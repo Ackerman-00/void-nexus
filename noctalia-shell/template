@@ -1,5 +1,5 @@
 pkgname=noctalia-shell
-version=4.7.0
+version=4.6.0
 revision=1
 hostmakedepends=""
 maintainer="Ackerman <https://github.com/Ackerman-00>"

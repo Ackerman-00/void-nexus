@@ -1,6 +1,6 @@
 # Template file for 'protonplus'
 pkgname=protonplus
-version=0.5.17
+version=0.5.15
 revision=1
 build_style=meson
 
