@@ -1,6 +1,6 @@
 # Template file for 'HeroicGamesLauncher'
 pkgname=HeroicGamesLauncher
-version=2.20.0
+version=2.20.1
 revision=1
 archs="x86_64"
 short_desc="Open source launcher for GOG, Epic, and Amazon Games"
