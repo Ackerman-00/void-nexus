@@ -7,6 +7,10 @@ on:
         description: 'Package to build (e.g., vesktop)'
         required: true
 
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -45,7 +49,7 @@ jobs:
         run: |
           cp -r custom-templates-temp/${{ github.event.inputs.package_name }} srcpkgs/
           mkdir -p etc
-          echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
+          echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
           chown -R builder:builder .
 
       - name: Prepare Masterdir
@@ -69,7 +73,7 @@ jobs:
         run: |
           mkdir -p public/x86_64
           
-          # File copy process
+          # Bulletproof file copy
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
           
@@ -79,7 +83,7 @@ jobs:
           # Create the repodata index
           xbps-rindex -a *.xbps
           
-          # Add --signedby flag to initialize signed repository
+          # Initialize signed repository with mandatory signedby flag
           xbps-rindex --privkey /tmp/private.pem --signedby "GitHub Actions <actions@github.com>" --sign .
           
           # Clean up the key
