@@ -4,15 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       package_name:
-        description: 'Package to build (e.g., vesktop)'
+        description: 'Package to build (e.g., niri-git)'
         required: true
-
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 concurrency:
-  group: "pages"
+  group: build-${{ github.event.inputs.package_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -32,7 +31,7 @@ jobs:
           REPO="https://repo-fastly.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || xbps-install -S -R "$REPO" -yu xbps
           xbps-install -S -R "$REPO" -yu
-          xbps-install -S -R "$REPO" -y sudo bash curl git grep openssl
+          xbps-install -S -R "$REPO" -y sudo bash curl git grep openssl tar xz
           useradd -G xbuilder -M builder
 
       - name: Clone Official Void-Packages
@@ -45,11 +44,33 @@ jobs:
         with:
           path: custom-templates-temp
 
-      - name: Inject Template
+      - name: Inject Template & Persistence
         run: |
-          cp -r custom-templates-temp/${{ github.event.inputs.package_name }} srcpkgs/
+          # 1. Inject the specific package to build
+          cp -r custom-templates-temp/srcpkgs/${{ github.event.inputs.package_name }} srcpkgs/
+          
+          # 2. Setup Build Environment
           mkdir -p etc
           echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
+          
+          # 3. REPO PERSISTENCE: Download existing packages so we don't overwrite the whole repo
+          mkdir -p public/x86_64
+          echo "Fetching existing repository index..."
+          # We use -f to ignore errors if the repo doesn't exist yet (first run)
+          curl -L https://ackerman-00.github.io/void-template/x86_64/x86_64-repodata -o public/x86_64/x86_64-repodata || true
+          
+          # Download existing .xbps files so the index remains complete
+          # This is the "secret sauce" for a rolling repo
+          if [ -f public/x86_64/x86_64-repodata ]; then
+             echo "Syncing existing binaries..."
+             # Extract current package list and download them
+             # This ensures building 'niri' doesn't delete 'vesktop'
+             xbps-query -R https://ackerman-00.github.io/void-template -m | while read pkg; do
+                pkg_file=$(xbps-query -R https://ackerman-00.github.io/void-template -p filename "$pkg")
+                curl -L "https://ackerman-00.github.io/void-template/x86_64/$pkg_file" -o "public/x86_64/$pkg_file" || true
+             done
+          fi
+          
           chown -R builder:builder .
 
       - name: Prepare Masterdir
@@ -60,7 +81,6 @@ jobs:
 
       - name: Build Package
         run: |
-          # Tell the build script exactly which package to compile
           echo "${{ github.event.inputs.package_name }}" > /tmp/templates
           sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
 
@@ -71,22 +91,22 @@ jobs:
 
       - name: Sign & Index Repository
         run: |
-          mkdir -p public/x86_64
-          
-          # Bulletproof file copy
+          # Copy newly built packages to our public folder
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
           
-          # Sign each package
-          xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
+          # Sign newly built packages
+          # We check if there are any .xbps files first to avoid errors
+          if ls *.xbps 1> /dev/null 2>&1; then
+            xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
+            
+            # Re-index the entire directory (Old + New packages)
+            xbps-rindex -a *.xbps
+            
+            # Sign the actual repository index
+            xbps-rindex --privkey /tmp/private.pem --signedby "Apex Linux Build Bot <actions@github.com>" --sign .
+          fi
           
-          # Create the repodata index
-          xbps-rindex -a *.xbps
-          
-          # Initialize signed repository with mandatory signedby flag
-          xbps-rindex --privkey /tmp/private.pem --signedby "GitHub Actions <actions@github.com>" --sign .
-          
-          # Clean up the key
           rm /tmp/private.pem
 
       - name: Upload Pages Artifact
@@ -98,6 +118,10 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    # This prevents parallel DEPLOYS from clashing while allowing parallel BUILDS
+    concurrency:
+      group: "pages-deploy"
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write

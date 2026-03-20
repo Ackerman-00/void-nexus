@@ -1,0 +1,71 @@
+# Template file for 'rootapp'
+pkgname=rootapp
+version=0.9.106
+revision=1
+archs="x86_64 aarch64"
+build_style=fetch
+depends="gtk+3 nss libnotify alsa-lib libXScrnSaver libXtst xdg-utils 
+ at-spi2-core icu fontconfig freetype libglvnd libX11 libICE libSM libXext desktop-file-utils"
+
+short_desc="Discord alternative for gaming communities"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="custom"
+homepage="https://www.rootapp.com"
+
+case "${XBPS_TARGET_MACHINE}" in
+x86_64*)
+    _arch_url="X64"
+    _checksum=b81d23935e1db25e5dc5f857944fe71e072e3895db1c0c8195bd178374737206
+    ;;
+aarch64*)
+    _arch_url="Arm64"
+    _checksum=a18f0e050a4c42f6e6eb77cfb7e54b531c9c13de37d7e64e353b8b10c8022fc8
+    ;;
+*) broken="Architecture not supported" ;;
+esac
+
+distfiles="https://installer.rootapp.com/installer/Linux/${_arch_url}/Root.AppImage>Root-${version}-${XBPS_TARGET_MACHINE}.AppImage"
+checksum="${_checksum}"
+
+nostrip_files="/opt/rootapp/*"
+
+do_extract() {
+    local _appimage="${XBPS_SRCDISTDIR}/${pkgname}-${version}/Root-${version}-${XBPS_TARGET_MACHINE}.AppImage"
+    
+    # Make the downloaded AppImage executable, then command it to extract itself
+    chmod +x "${_appimage}"
+    "${_appimage}" --appimage-extract
+}
+
+do_install() {
+    # 1. Move the extracted contents to /opt
+    vmkdir opt/rootapp
+    cp -a squashfs-root/* ${DESTDIR}/opt/rootapp/
+    
+    chmod 755 ${DESTDIR}/opt/rootapp/AppRun
+    
+    # 2. Link the executable to /usr/bin
+    vmkdir usr/bin
+    ln -sf /opt/rootapp/AppRun ${DESTDIR}/usr/bin/rootapp
+    
+    # 3. Grab the internal icon directly from the extraction folder
+    vmkdir usr/share/pixmaps
+    vinstall squashfs-root/Root.png 0644 usr/share/pixmaps rootapp.png
+    
+    vmkdir usr/share/icons/hicolor/256x256/apps
+    vinstall squashfs-root/Root.png 0644 usr/share/icons/hicolor/256x256/apps rootapp.png
+
+    # 4. Create the Wayland-ready desktop file
+    vmkdir usr/share/applications
+    cat > ${DESTDIR}/usr/share/applications/rootapp.desktop <<EOF
+[Desktop Entry]
+Type=Application
+Name=Root
+Comment=Root App is a new Discord alternative, designed for gaming communities and large online groups
+Exec=env AVALONIA_PLATFORM=wayland rootapp
+Icon=rootapp
+Terminal=false
+StartupWMClass=Root
+Categories=Network;InstantMessaging;
+EOF
+}
