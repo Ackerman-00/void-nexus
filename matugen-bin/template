@@ -1,5 +1,5 @@
 pkgname=matugen-bin
-version=3.0.0
+version=4.0.0
 revision=1
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 short_desc="A material you color generation tool with templates (binary)"
