@@ -1,7 +1,7 @@
 # Template for ProtonPlus
 
 pkgname=protonplus
-version=0.5.17
+version=0.5.15
 revision=1
 archs="x86_64"
 
