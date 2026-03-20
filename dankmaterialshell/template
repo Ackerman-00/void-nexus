@@ -1,6 +1,6 @@
 # Template file for 'dankmaterialshell'
 pkgname=dankmaterialshell
-version=1.4.2
+version=1.4.3
 revision=1
 build_style=fetch
 depends="quickshell-git qt6-declarative qt6-wayland pam"
