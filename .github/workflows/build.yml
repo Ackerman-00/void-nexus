@@ -10,7 +10,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
-
+# Build Concurrency: Allows parallel builds for DIFFERENT packages.
 concurrency:
   group: build-${{ github.event.inputs.package_name }}-${{ github.ref }}
   cancel-in-progress: false
@@ -47,25 +47,21 @@ jobs:
 
       - name: Inject Template & Persistence
         run: |
-          # 1. Inject the specific package to build
-          cp -r custom-templates-temp/srcpkgs/${{ github.event.inputs.package_name }} srcpkgs/
+          # 1. Inject the specific package (Flat structure fix: directly from root)
+          cp -r custom-templates-temp/${{ github.event.inputs.package_name }} srcpkgs/
           
           # 2. Setup Build Environment
           mkdir -p etc
           echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
           
-          # 3. REPO PERSISTENCE: Download existing packages so we don't overwrite the whole repo
+          # 3. REPO PERSISTENCE: Sync existing binaries from GitHub Pages
           mkdir -p public/x86_64
           echo "Fetching existing repository index..."
-          # We use -f to ignore errors if the repo doesn't exist yet (first run)
           curl -L https://ackerman-00.github.io/void-template/x86_64/x86_64-repodata -o public/x86_64/x86_64-repodata || true
           
-          # Download existing .xbps files so the index remains complete
-          # This is the "secret sauce" for a rolling repo
           if [ -f public/x86_64/x86_64-repodata ]; then
-             echo "Syncing existing binaries..."
-             # Extract current package list and download them
-             # This ensures building 'niri' doesn't delete 'vesktop'
+             echo "Syncing existing binaries to prevent repo wipe..."
+             # Extract current package list and download existing .xbps files
              xbps-query -R https://ackerman-00.github.io/void-template -m | while read pkg; do
                 pkg_file=$(xbps-query -R https://ackerman-00.github.io/void-template -p filename "$pkg")
                 curl -L "https://ackerman-00.github.io/void-template/x86_64/$pkg_file" -o "public/x86_64/$pkg_file" || true
@@ -92,19 +88,18 @@ jobs:
 
       - name: Sign & Index Repository
         run: |
-          # Copy newly built packages to our public folder
+          # Copy newly built packages to public folder
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
           
-          # Sign newly built packages
-          # We check if there are any .xbps files first to avoid errors
           if ls *.xbps 1> /dev/null 2>&1; then
+            # Sign the individual packages
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
             
-            # Re-index the entire directory (Old + New packages)
+            # Index the entire folder (Old + New)
             xbps-rindex -a *.xbps
             
-            # Sign the actual repository index
+            # Sign the repository metadata
             xbps-rindex --privkey /tmp/private.pem --signedby "Apex Linux Build Bot <actions@github.com>" --sign .
           fi
           
@@ -119,7 +114,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
-    # This prevents parallel DEPLOYS from clashing while allowing parallel BUILDS
+    # Prevents deployment race conditions
     concurrency:
       group: "pages-deploy"
       cancel-in-progress: false

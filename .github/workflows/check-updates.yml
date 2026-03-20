@@ -2,9 +2,13 @@ name: Check for Package Updates
 
 on:
   schedule:
-
+    # Runs every 4 hours to catch new stable releases fast
     - cron: '0 */4 * * *'  
-  workflow_dispatch:  # Manual trigger button
+  workflow_dispatch:
+
+env:
+  # Opting into the future: Node 24 for all actions
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 permissions:
   contents: write
@@ -15,42 +19,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5 # Modernized to v5 (Node 24)
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # Modernized to v5 (Node 24)
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install requests packaging
+        run: pip install requests packaging
 
       - name: Check for updates and update templates
         id: check
         run: |
           python3 << 'EOF'
-          import os
-          import re
-          import requests
-          import subprocess
-          import hashlib
+          import os, re, requests, subprocess, hashlib
           from packaging import version
 
           def extract_info_from_template(filepath):
-              with open(filepath, 'r') as f:
-                  content = f.read()
-              pkg_match = re.search(r'pkgname=(\S+)', content)
-              ver_match = re.search(r'version=(\S+)', content)
+              try:
+                  with open(filepath, 'r') as f:
+                      content = f.read()
+              except Exception:
+                  return None
+                  
+              pkg_match = re.search(r'pkgname="?([^"\n\s]+)"?', content)
+              ver_match = re.search(r'version="?([^"\n\s]+)"?', content)
+              
               if not pkg_match or not ver_match:
                   return None
+                  
+              # Specifically look for GitHub URLs to find the source repo
               github_match = re.search(r'https://github\.com/([^/]+)/([^/\s"$}]+)', content)
+              
               return {
-                  'name': pkg_match.group(1).strip('"'),
-                  'version': ver_match.group(1).strip('"'),
+                  'name': pkg_match.group(1),
+                  'version': ver_match.group(1),
                   'github': github_match.groups() if github_match else None,
                   'file': filepath,
                   'content': content
@@ -61,46 +68,50 @@ jobs:
                   url = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
                   headers = {'Accept': 'application/vnd.github.v3+json'}
                   token = os.environ.get('GITHUB_TOKEN')
-                  if token:
-                      headers['Authorization'] = f'token {token}'
+                  if token: headers['Authorization'] = f'token {token}'
+                  
                   resp = requests.get(url, headers=headers, timeout=15)
                   if resp.status_code == 200:
                       data = resp.json()
+                      # Clean the tag (remove 'v' prefix if exists)
                       tag = data['tag_name'].lstrip('v')
-                      return tag, data['html_url']
+                      return tag
               except Exception as e:
-                  print(f"Error fetching {owner}/{repo}: {e}")
-              return None, None
+                  print(f"  [!] API Error for {owner}/{repo}: {e}")
+              return None
 
           def update_template(info, new_version):
               content = info['content']
-              content = re.sub(r'version=\S+', f'version={new_version}', content)
+              
+              # 1. Update Version and Reset Revision
+              content = re.sub(r'version=[^\n\s]+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
+              # 2. Extract and update distfiles for the new version
               distfiles_match = re.search(r'distfiles="([^"]+)"', content)
-              if distfiles_match:
-                  url_template = distfiles_match.group(1)
-                  download_url = url_template.replace('${version}', new_version).replace('$version', new_version)
-                  print(f"Fetching: {download_url}")
-                  try:
-                      resp = requests.get(download_url, timeout=30, allow_redirects=True)
-                      if resp.status_code == 200:
-                          new_hash = hashlib.sha256(resp.content).hexdigest()
-                          content = re.sub(r'checksum=\S+', f'checksum={new_hash}', content)
-                      else:
-                          return False
-                  except Exception as e:
-                      return False
+              if not distfiles_match: return False
               
-              with open(info['file'], 'w') as f:
-                  f.write(content)
-              return True
+              url_template = distfiles_match.group(1)
+              download_url = url_template.replace('${version}', new_version).replace('$version', new_version)
+              
+              print(f"  --> Fetching: {download_url}")
+              try:
+                  resp = requests.get(download_url, timeout=30, allow_redirects=True)
+                  if resp.status_code == 200:
+                      new_hash = hashlib.sha256(resp.content).hexdigest()
+                      content = re.sub(r'checksum=[^\n\s]+', f'checksum={new_hash}', content)
+                      
+                      with open(info['file'], 'w') as f:
+                          f.write(content)
+                      return True
+              except Exception as e:
+                  print(f"  [!] Hash update error: {e}")
+              return False
 
-          # Configure Git Identity
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # Find all templates in srcpkgs subdirectories
+          # FLAT STRUCTURE SCANNER
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -108,38 +119,38 @@ jobs:
                   templates.append(t_path)
           
           updates = []
-
-          for template_path in templates:
-              info = extract_info_from_template(template_path)
-              if not info or not info['github']:
+          for path in templates:
+              info = extract_info_from_template(path)
+              # Skip if no GitHub info or if it's a Git-snapshot template (handled by the other bot)
+              if not info or not info['github'] or '_commit=' in info['content']:
                   continue
                   
+              print(f"Checking {info['name']}...")
               owner, repo = info['github']
-              latest_ver, _ = get_latest_github_release(owner, repo)
+              latest_ver = get_latest_github_release(owner, repo)
               
               if not latest_ver: continue
               
+              # Semantic Versioning comparison
               try:
                   if version.parse(latest_ver) <= version.parse(info['version']):
                       continue
-              except:
+              except Exception:
                   if latest_ver == info['version']: continue
 
-              print(f"Update found for {info['name']}: {info['version']} -> {latest_ver}")
+              print(f"  [!] New Version: {info['version']} -> {latest_ver}")
               
               if update_template(info, latest_ver):
                   subprocess.run(['git', 'add', info['file']], check=True)
                   subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_ver}"], check=True)
                   updates.append(info['name'])
 
-          # Atomic push with rebase (The "Smart Way")
           if updates:
               subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True)
               subprocess.run(['git', 'push', 'origin', 'main'], check=True)
 
           with open('updated_packages.txt', 'w') as f:
-              for u in updates:
-                  f.write(f"{u}\n")
+              for u in updates: f.write(f"{u}\n")
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if updates else 'false'}\n")
@@ -147,7 +158,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger Build Workflow for Updated Packages
+      - name: Trigger Build Factory
         if: steps.check.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}

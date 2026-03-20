@@ -2,8 +2,6 @@ name: Check Git Snapshot Updates
 
 on:
   schedule:
-    # Runs every day at 02:00 UTC (8:00 AM Dhaka time)
-
     - cron: '0 2 * * *'  
   workflow_dispatch:
 
@@ -39,10 +37,12 @@ jobs:
           import os, re, requests, subprocess, hashlib, datetime
 
           def extract_git_info(filepath):
-              with open(filepath, 'r') as f:
-                  content = f.read()
+              try:
+                  with open(filepath, 'r') as f:
+                      content = f.read()
+              except Exception:
+                  return None
               
-              # ONLY target templates that explicitly use BOTH _commit and _gitrepo
               if '_commit=' not in content or '_gitrepo=' not in content:
                   return None
                   
@@ -65,10 +65,12 @@ jobs:
 
           def get_latest_commit(gitrepo):
               try:
-                  # Uses native git to fetch from ANY public repository on the internet
+                  # Fixed: decode the output before splitting
                   out = subprocess.check_output(['git', 'ls-remote', gitrepo, 'HEAD'], timeout=15)
-                  sha = out.split().decode('utf-8')
-                  # Generate today's date for Void versioning (YYYYMMDD)
+                  decoded_out = out.decode('utf-8').split()
+                  if not decoded_out:
+                      return None, None
+                  sha = decoded_out
                   date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
                   return sha, date_str
               except Exception as e:
@@ -77,38 +79,35 @@ jobs:
 
           def update_git_template(info, new_sha, new_date):
               content = info['content']
-              
-              # Dynamically construct the new tarball URL based on the template's distfiles
               url = info['distfiles']
               url = url.replace('${_commit}', new_sha).replace('$_commit', new_sha)
               url = url.replace('${version}', new_date).replace('$version', new_date)
               
-              print(f"Fetching tarball to calculate checksum: {url}")
+              print(f"  --> Fetching tarball: {url}")
               
               try:
                   resp = requests.get(url, timeout=30, allow_redirects=True)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
-                      
-                      # Rewrite variables
-                      content = re.sub(r'_commit=\S+', f'_commit={new_sha}', content)
-                      content = re.sub(r'version=\S+', f'version={new_date}', content)
+                      content = re.sub(r'_commit=[^\n\s]+', f'_commit={new_sha}', content)
+                      content = re.sub(r'version=[^\n\s]+', f'version={new_date}', content)
                       content = re.sub(r'revision=\d+', 'revision=1', content)
-                      content = re.sub(r'checksum=\S+', f'checksum={new_hash}', content)
+                      content = re.sub(r'checksum=[^\n\s]+', f'checksum={new_hash}', content)
                       
                       with open(info['file'], 'w') as f:
                           f.write(content)
                       return True
                   else:
-                      print(f"HTTP {resp.status_code} for {url}")
+                      print(f"  [!] HTTP {resp.status_code} for {url}")
                       return False
               except Exception as e:
-                  print(f"Download error: {e}")
+                  print(f"  [!] Download error: {e}")
                   return False
 
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
+          # FLAT STRUCTURE FIX: Scan every top-level directory for a 'template' file
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -116,23 +115,22 @@ jobs:
                   templates.append(t_path)
           
           updates = []
-
           for path in templates:
               info = extract_git_info(path)
               if not info: continue
               
+              print(f"Checking {info['name']}...")
               latest_sha, latest_date = get_latest_commit(info['gitrepo'])
-              if not latest_sha: continue
               
+              if not latest_sha: continue
               if latest_sha == info['commit']:
-                  print(f"{info['name']} is already at the latest commit.")
+                  print(f"  {info['name']} is up to date.")
                   continue
 
-              print(f"Update found for {info['name']}: {info['commit'][:7]} -> {latest_sha[:7]}")
-              
+              print(f"  [!] New commit found: {latest_sha[:7]}")
               if update_git_template(info, latest_sha, latest_date):
                   subprocess.run(['git', 'add', info['file']], check=True)
-                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_sha[:7]}"], check=True)
+                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to commit {latest_sha[:7]}"], check=True)
                   updates.append(info['name'])
 
           if updates:
