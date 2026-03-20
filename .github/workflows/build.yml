@@ -56,6 +56,8 @@ jobs:
 
       - name: Build Package
         run: |
+          # THE FIX: Tell the build script exactly which package to compile
+          echo "${{ github.event.inputs.package_name }}" > /tmp/templates
           sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
 
       - name: Setup Private Key for Signing
@@ -66,7 +68,9 @@ jobs:
       - name: Sign & Index Repository
         run: |
           mkdir -p public/x86_64
-          cp hostdir/binpkgs/**/*.xbps public/x86_64/
+          
+          # THE FIX: Use 'find' to bulletproof the file copy process
+          find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
           
           # Sign each package
