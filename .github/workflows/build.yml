@@ -37,7 +37,7 @@ jobs:
           chown -R builder:builder .
 
       - name: Checkout Your Custom Templates
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: custom-templates-temp
 
