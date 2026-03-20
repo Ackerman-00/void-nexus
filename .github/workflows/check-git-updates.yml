@@ -65,12 +65,14 @@ jobs:
 
           def get_latest_commit(gitrepo):
               try:
-                  # Fixed: decode the output before splitting
                   out = subprocess.check_output(['git', 'ls-remote', gitrepo, 'HEAD'], timeout=15)
                   decoded_out = out.decode('utf-8').split()
                   if not decoded_out:
                       return None, None
+                  
+                  # THE FIX: Grab the first element (the hash) only!
                   sha = decoded_out
+                  
                   date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
                   return sha, date_str
               except Exception as e:
@@ -80,6 +82,8 @@ jobs:
           def update_git_template(info, new_sha, new_date):
               content = info['content']
               url = info['distfiles']
+              
+              # Replace both formats: ${_variable} and $variable
               url = url.replace('${_commit}', new_sha).replace('$_commit', new_sha)
               url = url.replace('${version}', new_date).replace('$version', new_date)
               
@@ -89,6 +93,8 @@ jobs:
                   resp = requests.get(url, timeout=30, allow_redirects=True)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
+                      
+                      # Robust regex replacement
                       content = re.sub(r'_commit=[^\n\s]+', f'_commit={new_sha}', content)
                       content = re.sub(r'version=[^\n\s]+', f'version={new_date}', content)
                       content = re.sub(r'revision=\d+', 'revision=1', content)
@@ -107,7 +113,7 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # FLAT STRUCTURE FIX: Scan every top-level directory for a 'template' file
+          # FLAT STRUCTURE SCANNER
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -130,7 +136,7 @@ jobs:
               print(f"  [!] New commit found: {latest_sha[:7]}")
               if update_git_template(info, latest_sha, latest_date):
                   subprocess.run(['git', 'add', info['file']], check=True)
-                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to commit {latest_sha[:7]}"], check=True)
+                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_sha[:7]}"], check=True)
                   updates.append(info['name'])
 
           if updates:

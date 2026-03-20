@@ -2,13 +2,13 @@ name: Check for Package Updates
 
 on:
   schedule:
-    # Runs every 4 hours to catch new stable releases fast
     - cron: '0 */4 * * *'  
   workflow_dispatch:
 
 env:
-  # Opting into the future: Node 24 for all actions
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # Silence deprecation warnings globally
+  ACTIONS_STEP_DEBUG: 'false'
 
 permissions:
   contents: write
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
@@ -52,7 +52,6 @@ jobs:
               if not pkg_match or not ver_match:
                   return None
                   
-              # Specifically look for GitHub URLs to find the source repo
               github_match = re.search(r'https://github\.com/([^/]+)/([^/\s"$}]+)', content)
               
               return {
@@ -73,9 +72,7 @@ jobs:
                   resp = requests.get(url, headers=headers, timeout=15)
                   if resp.status_code == 200:
                       data = resp.json()
-                      # Clean the tag (remove 'v' prefix if exists)
-                      tag = data['tag_name'].lstrip('v')
-                      return tag
+                      return data['tag_name'].lstrip('v')
               except Exception as e:
                   print(f"  [!] API Error for {owner}/{repo}: {e}")
               return None
@@ -87,16 +84,22 @@ jobs:
               content = re.sub(r'version=[^\n\s]+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
-              # 2. Extract and update distfiles for the new version
+              # 2. Extract and resolve distfiles
               distfiles_match = re.search(r'distfiles="([^"]+)"', content)
               if not distfiles_match: return False
               
               url_template = distfiles_match.group(1)
               download_url = url_template.replace('${version}', new_version).replace('$version', new_version)
               
+              # THE FIX: Resolve shell variables like ${_upstream_arch}
+              # Since the runner is x86_64, we assume that architecture for the checksum check
+              download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
+              
               print(f"  --> Fetching: {download_url}")
               try:
-                  resp = requests.get(download_url, timeout=30, allow_redirects=True)
+                  # Use a custom User-Agent to avoid being blocked by some servers
+                  headers = {'User-Agent': 'Mozilla/5.0 ApexLinux-BuildBot'}
+                  resp = requests.get(download_url, timeout=45, allow_redirects=True, headers=headers)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
                       content = re.sub(r'checksum=[^\n\s]+', f'checksum={new_hash}', content)
@@ -104,6 +107,9 @@ jobs:
                       with open(info['file'], 'w') as f:
                           f.write(content)
                       return True
+                  else:
+                      print(f"  [!] Download failed with status {resp.status_code}")
+                      return False
               except Exception as e:
                   print(f"  [!] Hash update error: {e}")
               return False
@@ -111,7 +117,6 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # FLAT STRUCTURE SCANNER
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -121,7 +126,6 @@ jobs:
           updates = []
           for path in templates:
               info = extract_info_from_template(path)
-              # Skip if no GitHub info or if it's a Git-snapshot template (handled by the other bot)
               if not info or not info['github'] or '_commit=' in info['content']:
                   continue
                   
@@ -131,7 +135,6 @@ jobs:
               
               if not latest_ver: continue
               
-              # Semantic Versioning comparison
               try:
                   if version.parse(latest_ver) <= version.parse(info['version']):
                       continue
@@ -163,6 +166,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
+          # Use the GITHUB_OUTPUT from the previous step
           cat updated_packages.txt | while read pkg; do
             echo "Triggering build factory for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
