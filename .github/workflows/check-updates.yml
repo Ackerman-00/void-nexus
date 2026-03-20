@@ -2,27 +2,26 @@ name: Check for Package Updates
 
 on:
   schedule:
-    - cron: '0 7 * * *'  # Daily check (1:00 PM BST)
+
+    - cron: '0 */4 * * *'  
   workflow_dispatch:  # Manual trigger button
 
 permissions:
   contents: write
-  pull-requests: write
-  issues: write
   actions: write
 
 jobs:
   check-updates:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - name: Checkout Repository
+        uses: actions/checkout@v5 # Modernized to v5 (Node 24)
         with:
-          token: ${{ secrets.REPO_PAT }} # Uses PAT to ensure it can trigger Build Action
+          token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # Modernized to v5 (Node 24)
         with:
           python-version: '3.11'
 
@@ -48,7 +47,6 @@ jobs:
               ver_match = re.search(r'version=(\S+)', content)
               if not pkg_match or not ver_match:
                   return None
-              # Improved Regex to catch various GitHub URL styles in templates
               github_match = re.search(r'https://github\.com/([^/]+)/([^/\s"$}]+)', content)
               return {
                   'name': pkg_match.group(1).strip('"'),
@@ -68,7 +66,6 @@ jobs:
                   resp = requests.get(url, headers=headers, timeout=15)
                   if resp.status_code == 200:
                       data = resp.json()
-                      # Remove 'v' prefix if present
                       tag = data['tag_name'].lstrip('v')
                       return tag, data['html_url']
               except Exception as e:
@@ -77,37 +74,33 @@ jobs:
 
           def update_template(info, new_version):
               content = info['content']
-              # Update version and reset revision to 1
               content = re.sub(r'version=\S+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
-              # Handle distfiles checksum update
               distfiles_match = re.search(r'distfiles="([^"]+)"', content)
               if distfiles_match:
                   url_template = distfiles_match.group(1)
-                  # Replace both styles of variables
                   download_url = url_template.replace('${version}', new_version).replace('$version', new_version)
-                  print(f"Fetching new checksum from: {download_url}")
+                  print(f"Fetching: {download_url}")
                   try:
                       resp = requests.get(download_url, timeout=30, allow_redirects=True)
                       if resp.status_code == 200:
                           new_hash = hashlib.sha256(resp.content).hexdigest()
                           content = re.sub(r'checksum=\S+', f'checksum={new_hash}', content)
                       else:
-                          print(f"Failed to download distfile for {info['name']}")
                           return False
                   except Exception as e:
-                      print(f"Hash error for {info['name']}: {e}")
                       return False
               
               with open(info['file'], 'w') as f:
                   f.write(content)
               return True
 
-          # Configure Git
+          # Configure Git Identity
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
+          # Find all templates in srcpkgs subdirectories
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -122,26 +115,24 @@ jobs:
                   continue
                   
               owner, repo = info['github']
-              latest_ver, release_url = get_latest_github_release(owner, repo)
+              latest_ver, _ = get_latest_github_release(owner, repo)
               
               if not latest_ver: continue
               
               try:
-                  # Use packaging.version for smart comparison (e.g., 1.10 > 1.2)
                   if version.parse(latest_ver) <= version.parse(info['version']):
                       continue
               except:
-                  # Fallback to string comparison
                   if latest_ver == info['version']: continue
 
-              print(f"Found update for {info['name']}: {info['version']} -> {latest_ver}")
+              print(f"Update found for {info['name']}: {info['version']} -> {latest_ver}")
               
               if update_template(info, latest_ver):
                   subprocess.run(['git', 'add', info['file']], check=True)
-                  subprocess.run(['git', 'commit', '-m', f"Auto-update: {info['name']} to {latest_ver}"], check=True)
+                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_ver}"], check=True)
                   updates.append(info['name'])
 
-          # Push all updates at once with retry logic
+          # Atomic push with rebase (The "Smart Way")
           if updates:
               subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True)
               subprocess.run(['git', 'push', 'origin', 'main'], check=True)
@@ -162,7 +153,6 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           cat updated_packages.txt | while read pkg; do
-            echo "Triggering build for $pkg..."
-            # Using --wait is not needed here as Build Action has its own concurrency group
+            echo "Triggering build factory for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
           done
