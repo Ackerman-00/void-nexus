@@ -56,7 +56,7 @@ jobs:
 
       - name: Build Package
         run: |
-          # THE FIX: Tell the build script exactly which package to compile
+          # Tell the build script exactly which package to compile
           echo "${{ github.event.inputs.package_name }}" > /tmp/templates
           sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
 
@@ -69,7 +69,7 @@ jobs:
         run: |
           mkdir -p public/x86_64
           
-          # THE FIX: Use 'find' to bulletproof the file copy process
+          # Use 'find' to bulletproof the file copy process
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
           
@@ -79,8 +79,8 @@ jobs:
           # Create the repodata index
           xbps-rindex -a *.xbps
           
-          # Sign the repodata index
-          xbps-rindex --privkey /tmp/private.pem --sign-repo .
+          # THE FIX: Correct syntax for signing the repository metadata
+          xbps-rindex --privkey /tmp/private.pem --sign .
           
           # Clean up the key
           rm /tmp/private.pem
