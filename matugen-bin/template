@@ -1,5 +1,5 @@
 pkgname=matugen-bin
-version=3.1.0
+version=4.0.0
 revision=1
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 short_desc="A material you color generation tool with templates (binary)"
@@ -9,7 +9,7 @@ arch="x86_64"
 
 distfiles="https://github.com/InioX/matugen/releases/download/v${version}/matugen-${version}-x86_64.tar.gz"
 # We will fill this in the next step
-checksum=dd124cc9907e31cd171fb156fbe05c00552476ad2f46f2d1b2af53bc07e181fd
+checksum=8a5575111a3f49f54bf5bedd735fe56ab7afb569a75c0895cd48e7314045b4d4
 
 build() {
     return 0
