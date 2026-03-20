@@ -1,40 +1,34 @@
-name: Build Custom XBPS
+name: Build and Deploy Custom XBPS
 
 on:
   workflow_dispatch:
     inputs:
       package_name:
-        description: 'Package to build (e.g., niri)'
+        description: 'Package to build (e.g., vesktop)'
         required: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build:
-    name: Build packages
+    name: Build & Index
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     container:
       image: ghcr.io/void-linux/void-glibc-full:latest
       options: --privileged
-      volumes:
-        - /dev:/dev
-      env:
-        ARCH: 'x86_64'
-        BOOTSTRAP: 'x86_64'
-        TEST: '1'
-
+    env:
+      ARCH: 'x86_64'
+      BOOTSTRAP: 'x86_64'
+      TEST: '1'
     steps:
       - name: Prepare container
         run: |
-          # Use Fastly
           REPO="https://repo-fastly.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || xbps-install -S -R "$REPO" -yu xbps
           xbps-install -S -R "$REPO" -yu
-          xbps-install -S -R "$REPO" -y sudo bash curl git grep
+          xbps-install -S -R "$REPO" -y sudo bash curl git grep openssl
           useradd -G xbuilder -M builder
 
       - name: Clone Official Void-Packages
@@ -51,27 +45,58 @@ jobs:
         run: |
           cp -r custom-templates-temp/${{ github.event.inputs.package_name }} srcpkgs/
           mkdir -p etc
-          echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           chown -R builder:builder .
 
-      - name: Prepare Masterdir (Void Style)
+      - name: Prepare Masterdir
         run: |
           sudo -Eu builder common/travis/set_mirror.sh
-          # This prepare script is what they use to set up the build environment
           sudo -Eu builder common/travis/prepare.sh
           common/travis/fetch-xtools.sh
 
-      - name: Build
+      - name: Build Package
         run: |
-          # We tell the build script exactly what to build manually
-          echo "${{ github.event.inputs.package_name }}" > /tmp/templates
           sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Setup Private Key for Signing
+        run: |
+          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
+          chmod 600 /tmp/private.pem
+
+      - name: Sign & Index Repository
+        run: |
+          mkdir -p public/x86_64
+          cp hostdir/binpkgs/**/*.xbps public/x86_64/
+          cd public/x86_64
+          
+          # Sign each package
+          xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
+          
+          # Create the repodata index
+          xbps-rindex -a *.xbps
+          
+          # Sign the repodata index
+          xbps-rindex --privkey /tmp/private.pem --sign-repo .
+          
+          # Clean up the key
+          rm /tmp/private.pem
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          tag_name: "latest-${{ github.event.inputs.package_name }}"
-          name: "${{ github.event.inputs.package_name }} - Latest Build"
-          files: hostdir/binpkgs/**/*.xbps
-          generate_release_notes: true
+          path: public/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
