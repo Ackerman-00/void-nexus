@@ -69,7 +69,7 @@ jobs:
         run: |
           mkdir -p public/x86_64
           
-          # Use 'find' to bulletproof the file copy process
+          # File copy process
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
           
@@ -79,8 +79,8 @@ jobs:
           # Create the repodata index
           xbps-rindex -a *.xbps
           
-          # THE FIX: Correct syntax for signing the repository metadata
-          xbps-rindex --privkey /tmp/private.pem --sign .
+          # Add --signedby flag to initialize signed repository
+          xbps-rindex --privkey /tmp/private.pem --signedby "GitHub Actions <actions@github.com>" --sign .
           
           # Clean up the key
           rm /tmp/private.pem
