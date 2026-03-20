@@ -2,12 +2,10 @@ name: Check for Package Updates
 
 on:
   schedule:
-    # Runs every 4 hours to catch new stable releases fast
     - cron: '0 */4 * * *'  
   workflow_dispatch:
 
 env:
-  # Using only this flag to stop the Node.js warning clash
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 permissions:
@@ -72,7 +70,6 @@ jobs:
                   resp = requests.get(url, headers=headers, timeout=15)
                   if resp.status_code == 200:
                       data = resp.json()
-                      # Return tag exactly as is; logic below handles the 'v'
                       return data['tag_name']
               except Exception as e:
                   print(f"  [!] API Error for {owner}/{repo}: {e}")
@@ -80,33 +77,26 @@ jobs:
 
           def update_template(info, new_tag):
               content = info['content']
-              # Void version usually doesn't include the 'v' prefix
               new_version = new_tag.lstrip('v')
               
-              # 1. Update Version and Reset Revision
-              content = re.sub(r'version=[^\n\s]+', f'version={new_version}', content)
-              content = re.sub(r'revision=\d+', 'revision=1', content)
+              # 1. Update Version and Reset Revision (Preserving quotes if they exist)
+              content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\1{new_version}', content)
+              content = re.sub(r'(revision=["\']?)\d+', rf'\11', content)
               
-              # 2. Parse distfiles block (Handle multi-line Zen-style)
+              # 2. Parse distfiles block
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              # FIX: split() with no args splits by ANY whitespace (space or newline)
-              # and returns only the first URL found
-              dist_content = distfiles_match.group(1).strip()
-              primary_url_raw = dist_content.split()
+              # Grab only the FIRST URL from the list (fixes Zen multi-line crash)
+              urls = distfiles_match.group(1).strip().split()
+              if not urls: return False
               
-              # FIX: split('>') gets the part before the redirection arrow
-              primary_url_template = primary_url_raw.split('>')
+              # Take the first URL and strip the >filename redirect
+              primary_url_template = urls.split('>')
               
-              # 3. Resolve variables for the download check
+              # 3. Resolve variables for download
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              
-              # If the URL had the old version hardcoded (not a variable), swap it
-              if '${version}' not in primary_url_template and '$version' not in primary_url_template:
-                  download_url = primary_url_template.replace(info['version'], new_version)
-              
-              # Handle Zen architecture variables specifically for the check
+              # Handle Zen architecture variable
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
@@ -116,9 +106,8 @@ jobs:
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
                       
-                      # THE FIX: Replace ONLY the first checksum value found.
-                      # This preserves multi-line checksums for things like licenses.
-                      content = re.sub(r'(checksum="?)([^\s"\n]+)', rf'\1{new_hash}', content, count=1)
+                      # Replace ONLY the first checksum (preserves Zen's license checksum)
+                      content = re.sub(r'(checksum=["\']?)[^\s"\']+', rf'\1{new_hash}', content, count=1)
                       
                       with open(info['file'], 'w') as f:
                           f.write(content)
@@ -133,7 +122,6 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # FLAT STRUCTURE SCANNER
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -185,6 +173,6 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           cat updated_packages.txt | while read pkg; do
-            echo "Triggering build factory for $pkg..."
+            echo "Triggering build for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
           done
