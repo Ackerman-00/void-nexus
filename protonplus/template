@@ -1,7 +1,7 @@
 # Template for ProtonPlus
 
 pkgname=protonplus
-version=0.5.15
+version=0.5.17
 revision=1
 archs="x86_64"
 
@@ -14,7 +14,7 @@ depends="gtk4 json-glib libadwaita libarchive libgee libsoup3"
 hostmakedepends="meson vala pkg-config glib-devel gettext gtk4-devel json-glib-devel libadwaita-devel libarchive-devel libgee-devel libsoup3-devel desktop-file-utils appstream-glib"
 
 distfiles="https://github.com/Vysp3r/ProtonPlus/archive/refs/tags/v${version}.tar.gz"
-checksum=e09bd8cdfe3d622a15b142b93b317af055858c50ddd058a5a3f009208f985edd
+checksum=0f19f254cc207c706e8f06cea07fdb47240529d6152c9d489b25bf76e7a71cda
 
 do_build() {
     cd "${wrksrc}"
