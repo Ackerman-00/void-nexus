@@ -1,5 +1,5 @@
 pkgname=vesktop
-version=1.6.4
+version=1.6.5
 revision=1
 archs="x86_64"
 short_desc="Custom Discord desktop client"
@@ -7,7 +7,7 @@ maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/Vencord/Vesktop"
 distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_amd64.deb"
-checksum=8e5c5ba0aacb83a6e9514bf63c17df7a1c16b01e150b6bd20441e6a127fbe845
+checksum=2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5
 hostmakedepends="binutils tar xz"
 depends="gtk+3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core util-linux-libs libsecret"
 
