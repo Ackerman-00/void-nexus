@@ -7,8 +7,8 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Silence deprecation warnings globally
-  ACTIONS_STEP_DEBUG: 'false'
+  # Suppress the aggressive deprecation warnings
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 permissions:
   contents: write
@@ -84,21 +84,25 @@ jobs:
               content = re.sub(r'version=[^\n\s]+', f'version={new_version}', content)
               content = re.sub(r'revision=\d+', 'revision=1', content)
               
-              # 2. Extract and resolve distfiles
-              distfiles_match = re.search(r'distfiles="([^"]+)"', content)
+              # 2. Extract and parse distfiles
+              distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              url_template = distfiles_match.group(1)
-              download_url = url_template.replace('${version}', new_version).replace('$version', new_version)
+              # FIX: Get only the FIRST URL from the distfiles list and strip redirects
+              raw_urls = distfiles_match.group(1).split()
+              if not raw_urls: return False
               
-              # THE FIX: Resolve shell variables like ${_upstream_arch}
-              # Since the runner is x86_64, we assume that architecture for the checksum check
+              primary_url_template = raw_urls.split('>')
+              
+              # 3. Resolve variables
+              download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
+              # Handle architecture variables for Zen Browser
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
               try:
-                  # Use a custom User-Agent to avoid being blocked by some servers
-                  headers = {'User-Agent': 'Mozilla/5.0 ApexLinux-BuildBot'}
+                  # Use browser-like headers to avoid being blocked
+                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) VoidLinux-BuildBot'}
                   resp = requests.get(download_url, timeout=45, allow_redirects=True, headers=headers)
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
@@ -166,7 +170,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
-          # Use the GITHUB_OUTPUT from the previous step
           cat updated_packages.txt | while read pkg; do
             echo "Triggering build factory for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
