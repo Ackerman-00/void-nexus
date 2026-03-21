@@ -31,7 +31,7 @@ c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
 do_install() {
     vmkdir opt/zen-browser
     
-    # 1. Dynamically locate the extracted folder
+    # 1. Dynamically locate the extracted folder (usually 'zen')
     local _zdir=$(find . -type d -name "browser" | head -n 1)
     _zdir=$(dirname "$_zdir")
     
