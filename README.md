@@ -1,52 +1,69 @@
+<div align="center">
+
+<img src="https://voidlinux.org/assets/img/void_bg.png" width="72" />
+
+# void-template
+
+**A cryptographically signed, fully automated custom package repository for Void Linux.**
+
+[![Packages](https://img.shields.io/badge/packages-x86__64-blue?style=flat-square)](https://ackerman-00.github.io/void-template/x86_64)
+[![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-template/build.yml?style=flat-square&label=build)](https://github.com/Ackerman-00/void-template/actions)
+[![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-template/check-updates.yml?style=flat-square&label=auto-update)](https://github.com/Ackerman-00/void-template/actions)
+
+</div>
+
 ---
 
-# 📦 Void Template Repository
+## Overview
 
-This repository is fully automated and **cryptographically signed**.  
-You don’t need to manually download, index, or track updates — just add it to your Void Linux system as a native repository, and packages will update **automatically** along with your regular system updates.
+Packages in this repo are built automatically, signed with a private key, and served via GitHub Pages as a native xbps repository. Once added, packages update alongside your regular system with `xbps-install -Su` — no manual intervention needed.
 
 ---
 
-## 🚀 Quick Setup
+## Setup
 
-### 1️⃣ Add the repository
-
-Run this single command to create a configuration file that tells `xbps` where to find our custom packages:
+### 1. Add the repository
 
 ```bash
-echo 'repository=https://ackerman-00.github.io/void-template/x86_64' | sudo tee /etc/xbps.d/10-void-template.conf
+echo 'repository=https://ackerman-00.github.io/void-template/x86_64' \
+  | sudo tee /etc/xbps.d/10-void-template.conf
 ```
 
-### 2️⃣ Sync and trust the key
-
-Update the package index. Because packages are signed, you'll be asked to verify the repository key:
+### 2. Sync and trust the signing key
 
 ```bash
 sudo xbps-install -S
 ```
 
-> **🔑 Important:**  
-> You will see a prompt asking if you want to import the RSA public key for  
-> **`Void Template Build Bot <actions@github.com>`**.  
-> Type **`y`** and press **Enter** to continue.
+You will be prompted to import the RSA public key for **`Void Template Build Bot <actions@github.com>`** — type `y` and press Enter.
 
-### 3️⃣ Install packages
-
-Now you can install any of the available custom packages using standard Void commands:
+### 3. Install packages
 
 ```bash
-# Examples
-sudo xbps-install zen-browser
-sudo xbps-install rootapp
-sudo xbps-install quickshell-git
-sudo xbps-install vesktop
+sudo xbps-install <package-name>
 ```
 
 ---
 
-## 🔄 Keeping everything updated
+## Available Packages
 
-Because this is a native repository, updates are handled automatically. Whenever a new version of a package is built, it will be available the next time you update your system:
+| Package | Description | Type |
+|---------|-------------|------|
+| `zen-browser` | Privacy-focused Firefox-based browser | Stable |
+| `vesktop` | Vencord-bundled Discord client | Stable |
+| `rootapp` | Discord alternative for gaming communities | Stable |
+| `dank-material-shell` | Material Design shell for niri/Hyprland | Stable |
+| `noctalia-qs` | Quickshell fork with extended audio/compositor support | Stable |
+| `niri-git` | Scrollable-tiling Wayland compositor | Git (HEAD) |
+| `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git (HEAD) |
+
+> Git packages track the latest upstream commit and update daily.
+
+---
+
+## Updating
+
+Updates are handled automatically. Run your normal system update and custom packages will be included:
 
 ```bash
 sudo xbps-install -Su
@@ -54,29 +71,22 @@ sudo xbps-install -Su
 
 ---
 
-## 📚 Available Packages
+## Troubleshooting
 
-| Package | Description |
-|---------|-------------|
-| `zen-browser` | A privacy‑focused browser |
-| `rootapp` | Some root application |
-| `quickshell-git` | A shell utility |
-| `vesktop` | A desktop environment component |
-| ... and more! | Check the repository for the full list |
+**Repository not found**
+Verify the config file contains exactly:
+```
+repository=https://ackerman-00.github.io/void-template/x86_64
+```
 
-> **Note:** The list above is illustrative — see the repository contents for the actual available packages.
+**Key import failed or was declined**
+Manually trust the key by placing the public `.plist` file in `/var/db/xbps/keys/`. The key file is available in the root of this repository.
 
----
-
-## ❓ Troubleshooting
-
-- **“Repository not found”** – Make sure the URL in `/etc/xbps.d/10-void-template.conf` is exactly:  
-  `https://ackerman-00.github.io/void-template/x86_64`
-
-- **Key import fails** – If you accidentally declined the key, you can manually add it by placing the public key file in `/var/db/xbps/keys/` (the key is named `ackerman-00-void-template.plist` and is available in the repository root).
-
-- **Package not found** – Not all packages are built for every architecture. Currently only `x86_64` (glibc) is supported.
+**Package not found**
+Only `x86_64` (glibc) is supported. musl and other architectures are not currently built.
 
 ---
 
-Enjoy the automated Void experience! 🚀
+<div align="center">
+<sub>Maintained by <a href="https://github.com/Ackerman-00">Ackerman-00</a> · Powered by <a href="https://voidlinux.org">Void Linux</a></sub>
+</div>
