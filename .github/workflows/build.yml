@@ -10,8 +10,9 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+# Protect against race conditions during repo indexing
 concurrency:
-  group: build-${{ github.event.inputs.package_name }}-${{ github.ref }}
+  group: build-repo-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -29,7 +30,6 @@ jobs:
       - name: Prepare container
         run: |
           REPO="https://repo-fastly.voidlinux.org/current"
-          # Upgrade XBPS and install core build tools
           xbps-install -S -R "$REPO" -yu xbps || xbps-install -S -R "$REPO" -yu xbps
           xbps-install -S -R "$REPO" -yu
           xbps-install -S -R "$REPO" -y sudo bash curl git grep openssl tar xz
@@ -37,7 +37,6 @@ jobs:
 
       - name: Clone Official Void-Packages
         run: |
-          # Depth 1 saves ~800MB of disk space on the runner
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
           chown -R builder:builder .
 
@@ -46,64 +45,52 @@ jobs:
         with:
           path: custom-templates-temp
 
-      - name: Inject Template & Double-Agent Pre-fetch
+      - name: Universal Injection & Smart Pre-fetch
         run: |
           PKG="${{ github.event.inputs.package_name }}"
           
-          # 1. Inject the template from your root repo into void-packages
-          cp -r custom-templates-temp/$PKG srcpkgs/
+          # 1. UNIVERSAL INJECTION: Copy EVERY custom folder into srcpkgs
+          # This allows dankmaterialshell to find quickshell-git automatically.
+          find custom-templates-temp -maxdepth 1 -type d ! -name ".*" ! -name "custom-templates-temp" -exec cp -v -r {} srcpkgs/ \;
           
-          # 2. Extract Version/Commit/URL for smart pre-fetching
-          # This handles both standard versions and Git snapshots
+          # 2. Extract Data for Pre-fetch
+          # Cleanly handles both double and single quotes in templates
           VERSION=$(grep '^version=' srcpkgs/$PKG/template | cut -d= -f2 | tr -d '"' | tr -d "'")
           COMMIT=$(grep '^_commit=' srcpkgs/$PKG/template | cut -d= -f2 | tr -d '"' | tr -d "'")
-          # Grab only the first URL in distfiles
           DISTURL=$(grep '^distfiles=' srcpkgs/$PKG/template | grep -o 'https://[^"[:space:]>]*' | head -n1)
           
-          # Resolve bash variables in the URL string
+          # Resolve variables in the URL string
           FETCH_URL=$(echo $DISTURL | sed "s/\${version}/$VERSION/g" | sed "s/\$version/$VERSION/g" | sed "s/\${_commit}/$COMMIT/g" | sed "s/\$_commit/$COMMIT/g")
           FILENAME=$(basename $FETCH_URL)
           
-          # 3. Create the source directory and fetch manually using "Double-Agent" headers.
-          # This mimics a Firefox 130 browser to bypass dec05eba.com's bot firewall.
+          # 3. DOUBLE-AGENT PRE-FETCH: Bypassing bot firewalls (Firefox 130 Emulation)
           mkdir -p hostdir/sources/$PKG-$VERSION
           echo "Bypassing firewall to fetch: $FETCH_URL"
           
           curl -L \
             -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0" \
             -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
-            -H "Accept-Language: en-US,en;q=0.5" \
             -H "Connection: keep-alive" \
-            -H "Upgrade-Insecure-Requests: 1" \
             "$FETCH_URL" -o "hostdir/sources/$PKG-$VERSION/$FILENAME"
           
-          # Safety Check: If we downloaded a "Bad Request" error page, it will be very small.
-          FILESIZE=$(stat -c%s "hostdir/sources/$PKG-$VERSION/$FILENAME")
-          if [ "$FILESIZE" -lt 5000 ]; then
-             echo "ERROR: Downloaded file is too small ($FILESIZE bytes). The server likely blocked the bot."
-             cat "hostdir/sources/$PKG-$VERSION/$FILENAME"
+          # Verification: Ensure it's not a tiny error page
+          if [ $(stat -c%s "hostdir/sources/$PKG-$VERSION/$FILENAME") -lt 5000 ]; then
+             echo "ERROR: Download failed or was blocked by the server firewall."
              exit 1
           fi
-          
-          # 4. Setup Build Environment
-          mkdir -p etc
-          echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
-          
-          # 5. REPO PERSISTENCE: Download all existing .xbps files from your live repo
-          # This prevents a "New Build" from wiping out your entire history.
+
+          # 4. Persistence Sync: Pull existing binaries to avoid repo wipe
           mkdir -p public/x86_64
-          echo "Syncing existing binaries from GitHub Pages..."
           curl -L https://ackerman-00.github.io/void-template/x86_64/x86_64-repodata -o public/x86_64/x86_64-repodata || true
-          
           if [ -f public/x86_64/x86_64-repodata ]; then
-              # Query your live URL for filenames and download them
               xbps-query -R https://ackerman-00.github.io/void-template -m | while read p; do
                   pkg_file=$(xbps-query -R https://ackerman-00.github.io/void-template -p filename "$p")
-                  echo "Restoring $pkg_file..."
                   curl -L "https://ackerman-00.github.io/void-template/x86_64/$pkg_file" -o "public/x86_64/$pkg_file" || true
               done
           fi
-          
+
+          mkdir -p etc
+          echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
           chown -R builder:builder .
 
       - name: Prepare Masterdir
@@ -115,28 +102,21 @@ jobs:
       - name: Build Package
         run: |
           echo "${{ github.event.inputs.package_name }}" > /tmp/templates
-          # We use the official Void travis build script for maximum compatibility
           sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
 
       - name: Sign & Index Repository
         run: |
-          # 1. Setup the signing key
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
           
-          # 2. Move newly built packages to our public folder
+          # Move new binaries and re-index the whole set
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
-          
           cd public/x86_64
           if ls *.xbps 1> /dev/null 2>&1; then
-            # Sign every individual package
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            # Index the entire directory (merges Old and New packages)
             xbps-rindex -a *.xbps
-            # Sign the repository metadata itself
             xbps-rindex --privkey /tmp/private.pem --signedby "Apex Linux Build Bot <actions@github.com>" --sign .
           fi
-          
           rm /tmp/private.pem
 
       - name: Upload Pages Artifact
