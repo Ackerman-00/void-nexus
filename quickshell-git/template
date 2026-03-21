@@ -7,7 +7,7 @@ revision=1
 build_style=cmake
 
 configure_args="-DDISTRIBUTOR=Void -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=YES
- -DINSTALL_QML_PREFIX=lib/qt6/qml -DCRASH_REPORTER=OFF -DNO_PCH=ON"
+ -DINSTALL_QML_PREFIX=lib/qt6/qml -DCRASH_HANDLER=OFF -DNO_PCH=ON"
 
 hostmakedepends="pkg-config wayland-devel qt6-base qt6-declarative-devel
  qt6-shadertools"
