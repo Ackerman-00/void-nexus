@@ -73,8 +73,7 @@ jobs:
           }
 
           def resolve_site_vars(url):
-              for var, repl in SITE_VARS.items():
-                  url = url.replace(var, repl)
+              for var, repl in SITE_VARS.items(): url = url.replace(var, repl)
               return url
 
           def fetch_file(url, dest_path):
@@ -83,18 +82,15 @@ jobs:
                   resp = requests.get(url, headers=headers, timeout=120, allow_redirects=True, stream=True)
                   if resp.status_code == 200:
                       with open(dest_path, 'wb') as f:
-                          for chunk in resp.iter_content(65536):
-                              f.write(chunk)
+                          for chunk in resp.iter_content(65536): f.write(chunk)
                       return True
-              except Exception:
-                  pass
+              except Exception: pass
               return False
 
           def sha256_file(path):
               h = hashlib.sha256()
               with open(path, 'rb') as f:
-                  for chunk in iter(lambda: f.read(65536), b''):
-                      h.update(chunk)
+                  for chunk in iter(lambda: f.read(65536), b''): h.update(chunk)
               return h.hexdigest()
 
           def get_appimage_version(filepath):
@@ -102,83 +98,57 @@ jobs:
                   os.chmod(filepath, stat.S_IRWXU)
                   res = subprocess.run([filepath, '--appimage-version'], capture_output=True, text=True, timeout=10)
                   m = re.search(r'(\d+\.\d+[\.\d]*)', res.stdout + res.stderr)
-                  if m:
-                      return m.group(1)
+                  if m: return m.group(1)
                   out = subprocess.run(['strings', filepath], capture_output=True, text=True, timeout=10).stdout
                   m = re.search(r'(\d+\.\d+\.\d+)', out)
-                  if m:
-                      return m.group(1)
-              except Exception:
-                  pass
+                  if m: return m.group(1)
+              except Exception: pass
               return None
 
           def get_latest_commit(repo_url):
               try:
                   out = subprocess.check_output(['git', 'ls-remote', repo_url, 'HEAD'], timeout=30, stderr=subprocess.DEVNULL).decode()
                   m = re.search(r'([a-f0-9]{40})', out)
-                  if m:
-                      return m.group(1), datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
-              except Exception:
-                  pass
+                  if m: return m.group(1), datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+              except Exception: pass
               return None, None
 
           def get_pypi_latest(pkgname):
               try:
                   names = [pkgname]
-                  if pkgname.startswith('python3-'):
-                      names.append(pkgname[8:])
-                  elif pkgname.startswith('python-'):
-                      names.append(pkgname[7:])
+                  if pkgname.startswith('python3-'): names.append(pkgname[8:])
+                  elif pkgname.startswith('python-'): names.append(pkgname[7:])
                   for name in names:
                       resp = requests.get(f'https://pypi.org/pypi/{name}/json', timeout=15)
-                      if resp.status_code == 200:
-                          return resp.json()['info']['version']
-              except Exception:
-                  pass
+                      if resp.status_code == 200: return resp.json()['info']['version']
+              except Exception: pass
               return None
 
-          def is_date_version(ver):
-              return bool(re.match(r'^\d{8}$', str(ver)))
-
-          def is_semver(ver):
-              return '.' in str(ver)
+          def is_date_version(ver): return bool(re.match(r'^\d{8}$', str(ver)))
+          def is_semver(ver): return '.' in str(ver)
 
           def version_is_newer(latest, current):
-              if not latest or latest == current:
-                  return False
-              if is_date_version(current) and is_semver(latest):
-                  return True
-              try:
-                  return pkg_version.parse(latest) > pkg_version.parse(current)
-              except Exception:
-                  return latest != current
+              if not latest or latest == current: return False
+              if is_date_version(current) and is_semver(latest): return True
+              try: return pkg_version.parse(latest) > pkg_version.parse(current)
+              except Exception: return latest != current
 
           def resolve_url(url_template, pkgname, ver, sha, curr_ver=None, curr_sha=None, template_vars=None):
               url = resolve_site_vars(url_template)
               url = url.replace('${pkgname}', pkgname).replace('$pkgname', pkgname)
-
               use_ver = ver if ver else curr_ver
               if use_ver:
                   url = url.replace('${version}', use_ver).replace('$version', use_ver)
                   short_ver = '.'.join(use_ver.split('.')[:-1]) if '.' in use_ver else use_ver
                   url = url.replace('${version%.*}', short_ver)
-
               use_sha = sha if sha else curr_sha
-              if use_sha:
-                  url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
-
-              for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE',
-                               '${XBPS_TARGET_MACHINE}', '${_machine}']:
+              if use_sha: url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
+              for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE', '${XBPS_TARGET_MACHINE}', '${_machine}']:
                   url = url.replace(arch_var, 'x86_64')
-
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
-
               if template_vars:
-                  for var, val in template_vars.items():
-                      url = url.replace('${' + var + '}', val).replace('$' + var, val)
-
-              if re.search(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', url):
-                  return None
+                  for var, val in template_vars.items(): url = url.replace('${' + var + '}', val).replace('$' + var, val)
+              if re.search(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', url): return None
               return url
 
           def extract_template_vars(content):
@@ -190,8 +160,7 @@ jobs:
 
           def extract_distfile_urls(content):
               m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#]|\Z)', content, re.MULTILINE | re.DOTALL)
-              if not m:
-                  return []
+              if not m: return []
               return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
 
           def replace_checksums(content, new_hashes):
@@ -201,8 +170,7 @@ jobs:
                   idx = counter
                   counter += 1
                   prefix = '@' if m.group(2).startswith('@') else ''
-                  if idx < len(new_hashes):
-                      return f'{m.group(1)}={prefix}{new_hashes[idx]}'
+                  if idx < len(new_hashes): return f'{m.group(1)}={prefix}{new_hashes[idx]}'
                   return m.group(0)
               return re.sub(r'^(_?checksum)=["\']?([a-fA-F0-9@]+)["\']?', replacer, content, flags=re.MULTILINE)
 
@@ -231,8 +199,7 @@ jobs:
               raw = tpath.read_text(encoding='utf-8')
               pkg_m = re.search(r'pkgname=["\']?([^"\'\s\n]+)', raw)
               ver_m = re.search(r'\bversion=["\']?([^"\'\n\s]+)', raw)
-              if not pkg_m or not ver_m:
-                  continue
+              if not pkg_m or not ver_m: continue
 
               pkgname, curr_ver = pkg_m.group(1), ver_m.group(1)
               commit_m = re.search(r'_commit=["\']?([a-fA-F0-9]{7,40})', raw)
@@ -259,61 +226,44 @@ jobs:
                       try:
                           resp = requests.get(f'https://api.github.com/repos/{owner}/{repo}/releases/latest', headers=gh_headers, timeout=20).json()
                           latest = resp.get('tag_name', '').lstrip('v')
-                          if version_is_newer(latest, curr_ver):
-                              new_ver = latest
-                      except Exception:
-                          pass
+                          if version_is_newer(latest, curr_ver): new_ver = latest
+                      except Exception: pass
 
                   if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
                       pypi_latest = get_pypi_latest(pkgname)
-                      if pypi_latest and version_is_newer(pypi_latest, curr_ver):
-                          new_ver = pypi_latest
+                      if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
               candidate = raw
-              if new_sha:
-                  candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: m.group(1) + new_sha, candidate)
-              if new_ver:
-                  candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: m.group(1) + new_ver, candidate)
+              if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: m.group(1) + new_sha, candidate)
+              if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: m.group(1) + new_ver, candidate)
 
               urls = extract_distfile_urls(candidate)
-              if not urls:
-                  print(f"  ⚠️ No distfiles — skipping")
-                  continue
+              if not urls: continue
 
               resolved_urls = []
               for url in urls:
-                  r = resolve_url(url, pkgname, ver=new_ver, sha=new_sha,
-                                  curr_ver=curr_ver, curr_sha=curr_sha,
-                                  template_vars=tmpl_vars)
+                  r = resolve_url(url, pkgname, ver=new_ver, sha=new_sha, curr_ver=curr_ver, curr_sha=curr_sha, template_vars=tmpl_vars)
                   if r is None:
-                      print(f"  ⚠️ Unresolved variable: {url}")
                       resolved_urls = None
                       break
                   resolved_urls.append(r)
 
-              if resolved_urls is None:
-                  continue
+              if resolved_urls is None: continue
 
               new_checksums = []
               fetch_ok = True
               for url in resolved_urls:
-                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp:
-                      tmp_path = tmp.name
+                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp: tmp_path = tmp.name
                   if fetch_file(url, tmp_path):
                       new_checksums.append(sha256_file(tmp_path))
                       os.unlink(tmp_path)
                   else:
-                      print(f"  ✗ Failed: {url}")
-                      try:
-                          os.unlink(tmp_path)
-                      except OSError:
-                          pass
+                      try: os.unlink(tmp_path)
+                      except OSError: pass
                       fetch_ok = False
                       break
 
-              if not fetch_ok:
-                  print(f"  ✗ Skipping {pkgname}")
-                  continue
+              if not fetch_ok: continue
 
               curr_hashes_plain = [c.lstrip('@') for c in re.findall(r'^_?checksum=["\']?([a-fA-F0-9@]+)["\']?', raw, re.MULTILINE)]
               checksum_changed = (new_checksums != curr_hashes_plain)
@@ -324,38 +274,36 @@ jobs:
 
               if checksum_changed and not new_ver and not new_sha:
                   sniffed_ver = None
-                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp:
-                      tmp_path = tmp.name
-                  if fetch_file(resolved_urls[0], tmp_path):
-                      sniffed_ver = get_appimage_version(tmp_path)
-                  try:
-                      os.unlink(tmp_path)
-                  except OSError:
-                      pass
+                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp: tmp_path = tmp.name
+                  if fetch_file(resolved_urls[0], tmp_path): sniffed_ver = get_appimage_version(tmp_path)
+                  try: os.unlink(tmp_path)
+                  except OSError: pass
                   if sniffed_ver:
                       new_ver = sniffed_ver
-                      candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+',
-                                         lambda m: m.group(1) + new_ver, candidate)
+                      candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: m.group(1) + new_ver, candidate)
 
               candidate = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate)
               candidate = replace_checksums(candidate, new_checksums)
 
-              tpath.write_text(candidate, encoding='utf-8')
-              changed_packages.append(pkgname)
-              changed_files.append(str(tpath))
-
-              ver_display = new_ver if new_ver else curr_ver
-              sha_suffix = f' ({new_sha[:8]})' if new_sha else ''
-              ck_suffix = ' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''
-              print(f"  ✨ {pkgname}: {curr_ver} → {ver_display}{sha_suffix}{ck_suffix}")
+              # SAFETY VALVE: Only append if the file content actually changed!
+              if candidate != raw:
+                  tpath.write_text(candidate, encoding='utf-8')
+                  changed_packages.append(pkgname)
+                  changed_files.append(str(tpath))
+                  
+                  ver_display = new_ver if new_ver else curr_ver
+                  sha_suffix = f' ({new_sha[:8]})' if new_sha else ''
+                  ck_suffix = ' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''
+                  print(f"  ✨ {pkgname}: {curr_ver} → {ver_display}{sha_suffix}{ck_suffix}")
+              else:
+                  print(f"  ✓ Up to date (content identical)")
 
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
               Path('changed_files.txt').write_text('\n'.join(changed_files) + '\n')
           else:
               for f in ['changed_packages.txt', 'changed_files.txt']:
-                  if Path(f).exists():
-                      Path(f).unlink()
+                  if Path(f).exists(): Path(f).unlink()
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
@@ -373,14 +321,11 @@ jobs:
             exit 0
           fi
 
-          # Add all potentially modified files
           while IFS= read -r file; do
             [ -n "$file" ] && git add "$file"
           done < changed_files.txt
 
-          # SAFETY VALVE: Only commit if there is a real diff!
           if git diff --cached --quiet; then
-            echo "Checksums were refreshed but the file contents are identical."
             echo "No actual changes to commit. Exiting cleanly."
             exit 0
           fi
@@ -397,9 +342,8 @@ jobs:
           set -e
           WORKFLOW_NAME="Build and Deploy Custom XBPS"
 
-          # Only run if Git successfully committed changes
-          if git diff --quiet HEAD~1 HEAD; then
-             echo "No new commit was made (files were identical). Skipping builds."
+          if git diff --quiet HEAD~1 HEAD 2>/dev/null; then
+             echo "No new commit was made. Skipping builds."
              exit 0
           fi
 
@@ -412,18 +356,18 @@ jobs:
             [ -z "$pkg" ] && continue
             echo "🚀 Dispatching build for $pkg"
             before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
+            
             gh workflow run "${WORKFLOW_NAME}" \
               --ref "${GITHUB_REF_NAME}" \
               -f package_name="${pkg}"
-
+            
             sleep 8
-
+            
             run_id=$(gh run list \
               --workflow="${WORKFLOW_NAME}" \
               --json databaseId,createdAt \
               --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | .[0].databaseId // empty")
-
+            
             if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then
               echo "  Watching run ${run_id}"
               gh run watch "${run_id}" --exit-status
