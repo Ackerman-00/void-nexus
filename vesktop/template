@@ -1,39 +1,30 @@
 # Template file for 'vesktop'
 pkgname=vesktop
 version=1.6.5
-revision=1
+revision=2
 archs="x86_64"
 build_style=fetch
 hostmakedepends="bsdtar"
 depends="gtk+3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core util-linux-libs libsecret"
-
-short_desc="Custom Discord desktop client"
+short_desc="Custom Discord desktop client with Vencord preinstalled"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/Vencord/Vesktop"
 
 distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_amd64.deb"
 checksum=2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5
-
-# CRITICAL for Electron apps on Void
 nostrip_files="/opt/Vesktop/vesktop"
 
 do_extract() {
-    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_amd64.deb data.tar.xz
-    bsdtar xf data.tar.xz -C .
+    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_amd64.deb data.tar.*
+    bsdtar xf data.tar.* -C .
 }
 
 do_install() {
     vmkdir opt
     cp -a opt/Vesktop ${DESTDIR}/opt/
-
-    vmkdir usr/share
-    cp -a usr/share/applications ${DESTDIR}/usr/share/
-    cp -a usr/share/icons ${DESTDIR}/usr/share/
-    
     vmkdir usr/bin
     ln -sf /opt/Vesktop/vesktop ${DESTDIR}/usr/bin/vesktop
-
     if [ -f ${DESTDIR}/opt/Vesktop/chrome-sandbox ]; then
         chmod 4755 ${DESTDIR}/opt/Vesktop/chrome-sandbox
     fi
