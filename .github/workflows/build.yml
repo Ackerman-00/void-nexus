@@ -34,10 +34,10 @@ jobs:
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
           
-          # Install base-devel to give 'ethereal' mode the compilers it needs
+          # Install base-devel natively so 'ethereal' mode has the compilers
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel
           
-          # Global Git safe directory to prevent dubious ownership fatal errors
+          # Fix the Git "Dubious Ownership" security block for the root user
           git config --global --add safe.directory '*'
 
       - name: Cache repository
@@ -50,15 +50,13 @@ jobs:
       - name: Clone void-packages
         run: |
           set -e
-          # CRITICAL: Fix ownership of the GitHub Actions workspace before cloning
-          chown -R root:root .
-          
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
           
-          # Double check ownership after clone so xbps-src doesn't crash internally
-          chown -R root:root .
+          # THE ULTIMATE HACK: Tell xbps-src the container IS the masterdir
+          ln -s / masterdir
+          echo "x86_64" > /.xbps_chroot_init
           
-          # Force xbps-src to run natively without namespace mapping
+          # Force xbps-src to run natively
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
@@ -107,8 +105,6 @@ jobs:
             set -o pipefail || true
           fi
 
-      # Notice: No binary-bootstrap step here! We skip straight to the build.
-
       - name: Build package
         run: ./xbps-src pkg "${{ github.event.inputs.package_name }}"
 
@@ -118,7 +114,8 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
+          # Because masterdir is /, the hostdir is created at the root of the container
+          find /hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
