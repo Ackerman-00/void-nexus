@@ -34,8 +34,8 @@ jobs:
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
           
-          # Install base-devel natively so 'ethereal' mode has the compilers
-          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel
+          # Added 'file' so xbps-src can properly strip debug symbols
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file
           
           # Fix the Git "Dubious Ownership" security block for the root user
           git config --global --add safe.directory '*'
@@ -114,8 +114,8 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          # Because masterdir is /, the hostdir is created at the root of the container
-          find /hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
+          # Ethereal mode exports the finished packages to /host/binpkgs
+          find /host/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
