@@ -29,27 +29,57 @@ checksum="${_checksum}
 c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
 
 do_install() {
-    vmkdir opt
-    cp -a zen ${DESTDIR}/opt/zen-browser
+    vmkdir opt/zen-browser
+    
+    # 1. locate and install the application files
+    if [ -f "zen" ] || [ -f "zen-bin" ]; then
+        # Files were dumped directly into the root of wrksrc
+        for f in *; do
+            if [ "$f" != "LICENSE" ]; then
+                cp -a "$f" ${DESTDIR}/opt/zen-browser/
+            fi
+        done
+    elif [ -d "zen" ]; then
+        # Extracted to 'zen' directory
+        cp -a zen/* ${DESTDIR}/opt/zen-browser/
+    elif [ -d "zen-browser" ]; then
+        # Extracted to 'zen-browser' directory
+        cp -a zen-browser/* ${DESTDIR}/opt/zen-browser/
+    else
+        # Find where the core 'browser' directory is hiding
+        local _zdir=$(find . -maxdepth 2 -name "browser" -type d | head -n 1)
+        if [ -n "$_zdir" ]; then
+            cp -a $(dirname "$_zdir")/* ${DESTDIR}/opt/zen-browser/
+        fi
+    fi
 
+    # 2. Symlink the executable to the user's PATH dynamically
     vmkdir usr/bin
-    ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
+    if [ -f "${DESTDIR}/opt/zen-browser/zen" ]; then
+        ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
+    elif [ -f "${DESTDIR}/opt/zen-browser/zen-bin" ]; then
+        ln -sf /opt/zen-browser/zen-bin ${DESTDIR}/usr/bin/zen
+    fi
 
+    # 3. Install desktop entries and policies
     vinstall ${FILESDIR}/zen.desktop 0644 usr/share/applications/
     
     vmkdir opt/zen-browser/distribution
     vinstall ${FILESDIR}/policies.json 644 opt/zen-browser/distribution/
 
-    vinstall browser/chrome/icons/default/default48.png 0644 usr/share/pixmaps zen.png
+    # 4. Install icons directly from newly copied directory
+    vinstall ${DESTDIR}/opt/zen-browser/browser/chrome/icons/default/default48.png 0644 usr/share/pixmaps zen.png
     for size in 16 32 48 64 128; do
         vmkdir usr/share/icons/hicolor/${size}x${size}/apps
-        vinstall browser/chrome/icons/default/default${size}.png 0644 usr/share/icons/hicolor/${size}x${size}/apps zen.png
+        vinstall ${DESTDIR}/opt/zen-browser/browser/chrome/icons/default/default${size}.png 0644 usr/share/icons/hicolor/${size}x${size}/apps zen.png
     done
 
-    # Safe to link dictionaries
+    # 5. Link system dictionaries
     ln -sf /usr/share/hunspell ${DESTDIR}/opt/zen-browser/dictionaries
     ln -sf /usr/share/hyphen ${DESTDIR}/opt/zen-browser/hyphenation
     
-    # License is already downloaded from distfiles, so we just install it
-    vlicense ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE
+    # 6. Install License
+    if [ -f "LICENSE" ]; then
+        vlicense LICENSE
+    fi
 }
