@@ -5,7 +5,8 @@ revision=1
 archs="x86_64 aarch64"
 build_style=fetch
 hostmakedepends="xz"
-depends="desktop-file-utils hicolor-icon-theme libnotify libavcodec xdg-utils"
+# ADDED: nss and nspr to dependencies for the system-library link
+depends="desktop-file-utils hicolor-icon-theme libnotify libavcodec xdg-utils nss nspr"
 short_desc="Welcome to a calmer internet"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MPL-2.0"
@@ -31,7 +32,7 @@ c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
 do_install() {
     vmkdir opt/zen-browser
     
-    # 1. Dynamically locate the extracted folder (usually 'zen')
+    # 1. Dynamically locate the extracted folder
     local _zdir=$(find . -type d -name "browser" | head -n 1)
     _zdir=$(dirname "$_zdir")
     
@@ -42,7 +43,7 @@ do_install() {
     vmkdir usr/bin
     ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
 
-    # 3. Install desktop entries and policies (from files/ dir)
+    # 3. Install desktop entries and policies
     if [ -f "${FILESDIR}/zen.desktop" ]; then
         vinstall ${FILESDIR}/zen.desktop 0644 usr/share/applications/
     fi
@@ -52,7 +53,7 @@ do_install() {
         vinstall ${FILESDIR}/policies.json 644 opt/zen-browser/distribution/
     fi
 
-    # 4. Install icons correctly using paths relative to the extracted source
+    # 4. Install icons 
     local _icon_path="${_zdir}/browser/chrome/icons/default"
     if [ -d "$_icon_path" ]; then
         vinstall ${_icon_path}/default48.png 0644 usr/share/pixmaps zen.png
@@ -62,11 +63,20 @@ do_install() {
         done
     fi
 
-    # 5. Link system dictionaries (so spellcheck works)
+    # 5. Link system dictionaries (for spellcheck)
     ln -sf /usr/share/hunspell ${DESTDIR}/opt/zen-browser/dictionaries
     ln -sf /usr/share/hyphen ${DESTDIR}/opt/zen-browser/hyphenation
+
+    # 6. Force Zen to use Void's native NSS/NSPR libraries and certificates
+    for f in libnspr4.so libnss3.so libnssutil3.so libplc4.so \
+             libplds4.so libsmime3.so libssl3.so libnssckbi.so; do
+        if [ -f "${DESTDIR}/opt/zen-browser/${f}" ]; then
+            rm -f ${DESTDIR}/opt/zen-browser/${f}
+            ln -sf /usr/lib/${f} ${DESTDIR}/opt/zen-browser/${f}
+        fi
+    done
     
-    # 6. Install License
+    # 7. Install License
     if [ -f "LICENSE" ]; then
         vlicense LICENSE
     fi
