@@ -22,6 +22,7 @@ configure_args="
 hostmakedepends="pkg-config ninja cmake qt6-base-devel qt6-declarative-devel 
  qt6-shadertools wayland-devel SPIRV-Tools"
 
+# Target dependencies
 makedepends="qt6-base-devel qt6-declarative-devel qt6-wayland-devel 
  qt6-svg-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
  wayland-protocols libgbm-devel Vulkan-Headers libxcb-devel 
@@ -35,8 +36,7 @@ license="LGPL-3.0-only"
 homepage="https://github.com/noctalia-dev/noctalia-qs"
 
 distfiles="https://github.com/noctalia-dev/noctalia-qs/archive/refs/tags/v${version}.tar.gz"
-
-checksum=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+checksum=fccbf3d7b723df62610e6ba7fd1922701b52f7345f699b6a04c9c86b40e60f55
 
 provides="quickshell-${version}_${revision}"
 conflicts="quickshell>=0 quickshell-git>=0"
