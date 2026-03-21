@@ -18,17 +18,18 @@ configure_args="
  -DSERVICE_PAM=ON
  -DSERVICE_POLKIT=ON"
 
-# Host dependencies (tools needed to build)
+# Host dependencies
+# FIXED: Capitalized SPIRV-Tools
 hostmakedepends="pkg-config ninja cmake qt6-base-devel qt6-declarative-devel 
- qt6-shadertools wayland-devel spirv-tools"
+ qt6-shadertools wayland-devel SPIRV-Tools"
 
-# Target dependencies (libraries linked against the binary)
+# Target dependencies
+# FIXED: Capitalized Vulkan-Headers
 makedepends="qt6-base-devel qt6-declarative-devel qt6-wayland-devel 
  qt6-svg-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
- wayland-protocols libgbm-devel vulkan-headers libxcb-devel 
+ wayland-protocols libgbm-devel Vulkan-Headers libxcb-devel 
  pipewire-devel pam-devel polkit-devel glib-devel"
 
-# Runtime requirements
 depends="qt6-declarative qt6-wayland qt6-svg"
 
 short_desc="Custom high-performance Quickshell fork for Noctalia Shell"
@@ -37,8 +38,8 @@ license="LGPL-3.0-only"
 homepage="https://github.com/noctalia-dev/noctalia-qs"
 
 distfiles="https://github.com/noctalia-dev/noctalia-qs/archive/refs/tags/v${version}.tar.gz"
+# Keep your 0000000 checksum here so you can catch the real hash!
 checksum=0000000000000000000000000000000000000000000000000000000000000000
 
-# Seamlessly replaces standard quickshell
 provides="quickshell-${version}_${revision}"
 conflicts="quickshell>=0 quickshell-git>=0"
