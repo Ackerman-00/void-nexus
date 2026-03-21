@@ -71,7 +71,6 @@ jobs:
       - name: Restore existing repository (if not cached)
         run: |
           set -e
-          # Only run if the cache didn't already restore the files
           if [ -f public/x86_64/x86_64-repodata ]; then
             echo "Repository already present (cache hit). Skipping download."
             exit 0
@@ -82,14 +81,14 @@ jobs:
 
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
             echo "Index found, syncing current binaries..."
-            xbps-query --repository=./public/x86_64 -s '' 2>/dev/null | awk '{print $2}' | while IFS= read -r pkgver; do
-              [ -z "$pkgver" ] && continue
-              fname=$(xbps-query --repository=./public/x86_64 -p filename "$pkgver" 2>/dev/null) || continue
+            grep -E '^filename: ' public/x86_64/x86_64-repodata | sed 's/^filename: //' > /tmp/filenames.txt
+            while IFS= read -r fname; do
               [ -z "$fname" ] && continue
               echo "Restoring $fname"
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
-            done
+            done < /tmp/filenames.txt
+            rm -f /tmp/filenames.txt
           fi
 
       - name: Bootstrap masterdir
