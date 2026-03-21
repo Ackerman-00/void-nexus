@@ -1,7 +1,7 @@
 # Template file for 'dankmaterialshell'
 pkgname=dankmaterialshell
 version=1.4.4
-revision=1
+revision=2
 wrksrc="DankMaterialShell-${version}"
 
 # 1. Compile the Go Backend (The 'dms' CLI)
