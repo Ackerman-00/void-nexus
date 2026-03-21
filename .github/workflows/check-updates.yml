@@ -83,17 +83,17 @@ jobs:
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Parse distfiles block (Handles multi-line blocks like Zen Browser)
+              # 2. Parse distfiles using pure Regex (NO SPLIT = NO LIST ERRORS)
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              # Creates a list of all URLs
-              urls = distfiles_match.group(1).strip().split()
-              if not urls: return False
+              dist_content = distfiles_match.group(1)
               
-              # THE ABSOLUTE FIX: Grab index 0 of the list, THEN split the string
-              first_url_string = urls 
-              primary_url_template = first_url_string.split('>')
+              # Outside the box: Just find the very first valid URL and ignore the rest
+              first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
+              if not first_url_match: return False
+              
+              primary_url_template = first_url_match.group(1)
               
               # 3. Resolve variables for download
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
@@ -124,7 +124,7 @@ jobs:
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # Scanner for your flat repository structure
+          # Scanner for flat repository structure
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
