@@ -4,7 +4,7 @@ version=1.19.3b
 revision=1
 archs="x86_64 aarch64"
 build_style=fetch
-hostmakedepends="xz"
+hostmakedepends="tar xz"
 depends="desktop-file-utils hicolor-icon-theme libnotify libavcodec xdg-utils nss nspr"
 short_desc="Welcome to a calmer internet"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
@@ -30,16 +30,13 @@ c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
 
 do_install() {
     vmkdir opt/zen-browser
-    
-    # 1. Dynamically locate the extracted folder
-    local _zdir=$(find . -type d -name "browser" | head -n 1)
-    _zdir=$(dirname "$_zdir")
-    
-    # Copy all application files to the opt directory
-    cp -a ${_zdir}/* ${DESTDIR}/opt/zen-browser/
+    vmkdir usr/bin
+
+    # 1. The Bypass: Extract the binary package directly into the destination folder
+    # We use -xf (quiet) instead of -xvf so it doesn't spam the GitHub Actions logs
+    tar -xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/zen.linux-${_upstream_arch}.tar.xz -C ${DESTDIR}/opt/zen-browser --strip-components=1
 
     # 2. Symlink the executable
-    vmkdir usr/bin
     ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
 
     # 3. Install desktop entries and policies
@@ -49,11 +46,11 @@ do_install() {
     
     if [ -f "${FILESDIR}/policies.json" ]; then
         vmkdir opt/zen-browser/distribution
-        vinstall ${FILESDIR}/policies.json 644 opt/zen-browser/distribution/
+        vinstall ${FILESDIR}/policies.json 0644 opt/zen-browser/distribution/
     fi
 
-    # 4. Install icons 
-    local _icon_path="${_zdir}/browser/chrome/icons/default"
+    # 4. Install icons
+    local _icon_path="${DESTDIR}/opt/zen-browser/browser/chrome/icons/default"
     if [ -d "$_icon_path" ]; then
         vinstall ${_icon_path}/default48.png 0644 usr/share/pixmaps zen.png
         for size in 16 32 48 64 128; do
@@ -75,8 +72,6 @@ do_install() {
         fi
     done
     
-    # 7. Install License
-    if [ -f "LICENSE" ]; then
-        vlicense LICENSE
-    fi
+    # 7. Install License directly from the source distribution directory
+    vlicense ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE
 }
