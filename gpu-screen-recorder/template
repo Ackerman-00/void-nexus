@@ -1,12 +1,13 @@
 # Template file for 'gpu-screen-recorder'
 pkgname=gpu-screen-recorder
+_gitrepo="https://git.dec05eba.com/gpu-screen-recorder"
 _commit=4ed04830c1ffc1e0fd7286b8558e8a61eec6041e
 version=20260321
 revision=1
 build_style=meson
+distfiles="https://git.dec05eba.com/gpu-screen-recorder/snapshot/gpu-screen-recorder-${_commit}.tar.gz"
 
-distfiles="https://github.com/dec05eba/gpu-screen-recorder/archive/${_commit}.tar.gz"
-checksum=8e2207c4240cc38be1c4d4d3b5b5e5f0033f83b39db49099d861347d8a6e71a1
+checksum=00c25a6988220074f67c1340a6b16e4f3f0196884e16a2436d861347d8a6e71a1
 wrksrc="gpu-screen-recorder-${_commit}"
 
 configure_args="-Dsystemd=false"
@@ -22,11 +23,10 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-only"
 homepage="https://git.dec05eba.com/gpu-screen-recorder"
 
-# Provides the -git name to satisfy dependencies of other packages
 conflicts="gpu-screen-recorder-git>=0"
 provides="gpu-screen-recorder-git-${version}_${revision}"
 
 post_install() {
-    # Setuid is required for lag-free recording on certain GPUs
+    # Setuid is required for low-latency recording on AMD/Intel/Nvidia
     chmod u+s ${DESTDIR}/usr/bin/gpu-screen-recorder
 }
