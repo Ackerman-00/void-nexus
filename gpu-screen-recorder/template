@@ -1,5 +1,5 @@
 # Template file for 'gpu-screen-recorder-git'
-pkgname=gpu-screen-recorder-git
+pkgname=gpu-screen-recorder
 _gitrepo="https://repo.dec05eba.com/gpu-screen-recorder"
 _commit=4ed04830c1ffc1e0fd7286b8558e8a61eec6041e
 version=20260321
