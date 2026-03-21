@@ -7,7 +7,6 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Silence the Node.js punycode warning
   NODE_OPTIONS: '--no-warnings'
 
 permissions:
@@ -45,22 +44,45 @@ jobs:
               except Exception:
                   return None
               
-              if '_commit=' not in content or '_gitrepo=' not in content:
+              # If it doesn't even have a commit hash, it's not a git package
+              if '_commit=' not in content:
                   return None
                   
-              pkg_match = re.search(r'pkgname="?([^"\n\s]+)"?', content)
-              commit_match = re.search(r'_commit="?([a-fA-F0-9]+)"?', content)
-              repo_match = re.search(r'_gitrepo="?([^"\n]+)"?', content)
-              dist_match = re.search(r'distfiles="([^"]+)"', content)
+              # Forgiving regexes (handles quotes, single quotes, or unquoted variables)
+              pkg_match = re.search(r'pkgname=["\']?([^"\'\s\n]+)', content)
+              commit_match = re.search(r'_commit=["\']?([a-fA-F0-9]+)', content)
               
-              if not (pkg_match and commit_match and repo_match and dist_match):
+              # Distfiles can be multi-line or unquoted
+              dist_match = re.search(r'distfiles=["\'](.*?)["\']', content, re.DOTALL)
+              if not dist_match:
+                  dist_match = re.search(r'distfiles=([^\s\n]+)', content)
+                  
+              if not (pkg_match and commit_match and dist_match):
                   return None
+                  
+              dist_str = dist_match.group(1)
+              
+              # AUTO-DEDUCTION ENGINE for the Git Repository URL
+              repo_match = re.search(r'_gitrepo=["\']?([^"\'\n]+)', content)
+              if repo_match:
+                  gitrepo = repo_match.group(1)
+              else:
+                  # If _gitrepo is missing, deduce it from the first 3 segments of the distfiles URL
+                  # e.g., https://github.com/niri-wm/niri/archive/ -> https://github.com/niri-wm/niri
+                  domain_repo_match = re.search(r'(https?://[^/]+/[^/]+/[^/\s"\'\$]+)', dist_str)
+                  if domain_repo_match:
+                      gitrepo = domain_repo_match.group(1)
+                      # Clean up common archive path fragments
+                      gitrepo = gitrepo.replace('/-/archive', '').replace('/archive', '').replace('/releases', '')
+                  else:
+                      print(f"  [Skipping {pkg_match.group(1)}] - Cannot deduce Git repository from distfiles.")
+                      return None
                   
               return {
                   'name': pkg_match.group(1),
                   'commit': commit_match.group(1),
-                  'gitrepo': repo_match.group(1).strip('"'),
-                  'distfiles': dist_match.group(1),
+                  'gitrepo': gitrepo,
+                  'distfiles': dist_str,
                   'file': filepath,
                   'content': content
               }
@@ -70,7 +92,6 @@ jobs:
                   out = subprocess.check_output(['git', 'ls-remote', gitrepo, 'HEAD'], timeout=15)
                   
                   # PURE REGEX FIX: Look exclusively for the 40-character Git Hash. 
-                  # This mathematically guarantees 'sha' is a string, never a list.
                   match = re.search(r'([a-f0-9]{40})', out.decode('utf-8'))
                   if not match:
                       return None, None
@@ -79,22 +100,26 @@ jobs:
                   date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
                   return sha, date_str
               except Exception as e:
-                  print(f"Git error on {gitrepo}: {e}")
+                  print(f"  [!] Git error checking {gitrepo}: {e}")
               return None, None
 
           def update_git_template(info, new_sha, new_date):
               content = info['content']
               
-              # 1. Update variables safely using \g<1> to prevent capture group errors
+              # 1. Update variables safely (preserving original quote styles)
               content = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', rf'\g<1>{new_sha}', content)
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_date}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
               # 2. Extract pure URL using pure Regex
-              distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
+              distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', content, re.DOTALL)
+              if not distfiles_match:
+                  distfiles_match = re.search(r'distfiles=([^\s\n]+)', content)
+                  
               if not distfiles_match: return False
               
-              first_url_match = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1))
+              dist_content = distfiles_match.group(1)
+              first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
               if not first_url_match: return False
               
               primary_url_template = first_url_match.group(1)
@@ -141,6 +166,11 @@ jobs:
               if not info: continue
               
               print(f"Checking {info['name']}...")
+              
+              # If we deduced the repo, let the user know what we found
+              if '_gitrepo' not in info['content']:
+                 print(f"  --> Auto-deduced Repo: {info['gitrepo']}")
+                 
               latest_sha, latest_date = get_latest_commit(info['gitrepo'])
               
               if not latest_sha: continue
