@@ -7,6 +7,8 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # Silences the harmless Node.js 'punycode' warning during cleanup
+  NODE_OPTIONS: '--no-warnings'
 
 permissions:
   contents: write
@@ -83,13 +85,13 @@ jobs:
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Parse distfiles using pure Regex (NO SPLIT COMMANDS)
+              # 2. Parse distfiles using pure Regex (NO SPLIT = NO LIST ERRORS)
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
               dist_content = distfiles_match.group(1)
               
-              # Outside the box: Just find the very first valid URL and ignore the rest
+              # Just find the very first valid URL and ignore the rest
               first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
               if not first_url_match: return False
               
