@@ -1,6 +1,6 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=0.9.105
+version=20260321
 revision=1
 archs="x86_64 aarch64"
 build_style=fetch
@@ -15,7 +15,7 @@ homepage="https://www.rootapp.com"
 case "${XBPS_TARGET_MACHINE}" in
 x86_64*)
     _arch_url="X64"
-    _checksum=0000000000000000000000000000000000000000000000000000000000000000
+    _checksum=b81d23935e1db25e5dc5f857944fe71e072e3895db1c0c8195bd178374737206
     ;;
 aarch64*)
     _arch_url="Arm64"
