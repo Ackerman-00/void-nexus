@@ -1,8 +1,8 @@
 # Template file for 'vesktop'
 pkgname=vesktop
 version=1.6.5
-revision=2
-archs="x86_64"
+revision=3
+archs="x86_64 aarch64"
 build_style=fetch
 hostmakedepends="bsdtar"
 depends="gtk+3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core util-linux-libs libsecret"
@@ -11,20 +11,47 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/Vencord/Vesktop"
 
-distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_amd64.deb"
-checksum=2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5
+case "${XBPS_TARGET_MACHINE}" in
+    x86_64*)
+        _deb_arch=amd64
+        _deb_checksum=2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5
+        ;;
+    aarch64*)
+        _deb_arch=arm64
+        _deb_checksum=3ba8e5b14d4eafa641f407c8720fb0ec489a9ee6276423f98e967218b5d6cd38
+        ;;
+    *)
+        broken="Unsupported architecture: ${XBPS_TARGET_MACHINE}"
+        ;;
+esac
+
+distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_${_deb_arch}.deb"
+checksum="${_deb_checksum}"
+
+# CRITICAL: Do not strip electron binaries or they will corrupt!
 nostrip_files="/opt/Vesktop/vesktop"
 
 do_extract() {
-    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_amd64.deb data.tar.*
+    # Using our wildcard trick to handle .xz or .zst compression safely
+    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_${_deb_arch}.deb data.tar.*
     bsdtar xf data.tar.* -C .
 }
 
 do_install() {
+    # 1. Install the main app
     vmkdir opt
     cp -a opt/Vesktop ${DESTDIR}/opt/
+
+    # 2. Install Desktop entries and Icons (THIS FIXES YOUR LAUNCHER BUG)
+    vmkdir usr/share
+    cp -a usr/share/applications ${DESTDIR}/usr/share/
+    cp -a usr/share/icons ${DESTDIR}/usr/share/
+
+    # 3. Create the executable symlink
     vmkdir usr/bin
     ln -sf /opt/Vesktop/vesktop ${DESTDIR}/usr/bin/vesktop
+
+    # 4. Sandbox permissions
     if [ -f ${DESTDIR}/opt/Vesktop/chrome-sandbox ]; then
         chmod 4755 ${DESTDIR}/opt/Vesktop/chrome-sandbox
     fi
