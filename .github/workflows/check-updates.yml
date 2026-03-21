@@ -83,7 +83,7 @@ jobs:
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Parse distfiles using pure Regex (NO SPLIT = NO LIST ERRORS)
+              # 2. Parse distfiles using pure Regex (NO SPLIT COMMANDS)
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
