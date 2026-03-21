@@ -27,9 +27,13 @@ jobs:
         run: |
           set -euo pipefail
           REPO="https://repo-fastly.voidlinux.org/current"
-          xbps-install -S -R "$REPO" -yu xbps || xbps-install -S -R "$REPO" -yu xbps
-          xbps-install -S -R "$REPO" -yu
-          xbps-install -S -R "$REPO" -y sudo bash curl git grep openssl tar xz
+
+          # xbps exit code 2 means "nothing to do" (already up to date) — treat as success
+          xbps_install() { xbps-install "$@"; local rc=$?; [ $rc -eq 0 ] || [ $rc -eq 2 ] || return $rc; }
+
+          xbps_install -S -R "$REPO" -yu xbps
+          xbps_install -S -R "$REPO" -yu
+          xbps_install -S -R "$REPO" -y sudo bash curl git grep openssl tar xz shadow
           useradd -G xbuilder -M builder
 
       - name: Clone void-packages
