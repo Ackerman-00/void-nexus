@@ -15,11 +15,11 @@ homepage="https://www.rootapp.com"
 case "${XBPS_TARGET_MACHINE}" in
 x86_64*)
     _arch_url="X64"
-    _checksum=b81d23935e1db25e5dc5f857944fe71e072e3895db1c0c8195bd178374737206
+    _checksum=0000000000000000000000000000000000000000000000000000000000000000
     ;;
 aarch64*)
     _arch_url="Arm64"
-    _checksum=a18f0e050a4c42f6e6eb77cfb7e54b531c9c13de37d7e64e353b8b10c8022fc8
+    _checksum=0000000000000000000000000000000000000000000000000000000000000000
     ;;
 *) broken="Architecture not supported" ;;
 esac
