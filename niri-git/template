@@ -2,7 +2,7 @@
 pkgname=niri-git
 _commit=b07bde3ee82dd73115e6b949e4f3f63695da35ea
 version=20260321
-revision=1
+revision=2
 build_style=cargo
 build_helper="qemu"
 configure_args="--no-default-features --features dbus,xdp-gnome-screencast"
@@ -10,7 +10,7 @@ hostmakedepends="pkg-config clang19-devel"
 makedepends="eudev-libudev-devel libxkbcommon-devel libinput-devel libgbm-devel
  libdisplay-info-devel pipewire-devel pango-devel libseat-devel clang19-devel
  gdk-pixbuf-devel graphene-devel gtk4-devel libadwaita-devel"
-depends="wayland"
+depends="wayland xwayland-satellite-git"
 checkdepends="wayland"
 short_desc="Scrollable-tiling Wayland compositor (Git Snapshot)"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"

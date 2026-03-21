@@ -1,9 +1,13 @@
-name: Check for Package Updates
+name: Check All Updates
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  
+    - cron: '0 2 * * *'
   workflow_dispatch:
+
+concurrency:
+  group: check-updates-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -31,220 +35,356 @@ jobs:
       - name: Install dependencies
         run: pip install requests packaging
 
-      - name: Check for updates and update templates
-        id: check
-        run: |
-          python3 << 'EOF'
-          import os, re, requests, subprocess, hashlib, datetime
-          from packaging import version
-
-          def extract_info_from_template(filepath):
-              try:
-                  with open(filepath, 'r') as f:
-                      content = f.read()
-              except Exception:
-                  return None
-                  
-              pkg_match = re.search(r'pkgname=["\']?([^"\n\s]+)', content)
-              ver_match = re.search(r'version=["\']?([^"\n\s]+)', content)
-              
-              if not pkg_match or not ver_match:
-                  return None
-                  
-              github_match = re.search(r'https://github\.com/([^/]+)/([^/\s"$}]+)', content)
-              
-              return {
-                  'name': pkg_match.group(1),
-                  'version': ver_match.group(1),
-                  'github': github_match.groups() if github_match else None,
-                  'file': filepath,
-                  'content': content
-              }
-
-          def get_live_hash(url):
-              try:
-                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) VoidLinux-BuildBot'}
-                  resp = requests.get(url, timeout=60, allow_redirects=True, headers=headers)
-                  if resp.status_code == 200:
-                      return hashlib.sha256(resp.content).hexdigest()
-              except Exception as e:
-                  print(f"  [!] Hash fetch error: {e}")
-              return None
-
-          def get_latest_version(info):
-              # 1. Primary: GitHub Releases
-              if info['github']:
-                  owner, repo = info['github']
-                  try:
-                      url = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
-                      headers = {'Accept': 'application/vnd.github.v3+json'}
-                      token = os.environ.get('GITHUB_TOKEN')
-                      if token: headers['Authorization'] = f'token {token}'
-                      
-                      resp = requests.get(url, headers=headers, timeout=15)
-                      if resp.status_code == 200:
-                          return resp.json()['tag_name'].lstrip('v')
-                  except Exception as e:
-                      print(f"  [!] GitHub API Error: {e}")
-              
-              # 2. Smart Header / Redirect Extractor (For static URLs like RootApp)
-              distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', info['content'], re.DOTALL)
-              if not distfiles_match: distfiles_match = re.search(r'distfiles=([^\s\n]+)', info['content'])
-              
-              if distfiles_match:
-                  try:
-                      first_url = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1)).group(1)
-                      test_url = first_url.replace('${version}', info['version']).replace('$version', info['version'])
-                      test_url = test_url.replace('${_arch_url}', 'X64').replace('${XBPS_TARGET_MACHINE}', 'x86_64')
-                      
-                      # Ping the server to see if it redirects to a versioned file or gives a header
-                      resp = requests.head(test_url, allow_redirects=True, timeout=15)
-                      
-                      # Look for a version in the final URL (e.g. /downloads/1.0.0/app.AppImage)
-                      v_match = re.search(r'[-_/]([0-9]+\.[0-9]+\.[0-9]+)[-_\.]', resp.url)
-                      if v_match: return v_match.group(1)
-                      
-                      # Look for a version in the Content-Disposition (e.g. filename="Root-0.9.106.AppImage")
-                      cd = resp.headers.get('Content-Disposition', '')
-                      v_match = re.search(r'([0-9]+\.[0-9]+\.[0-9]+)', cd)
-                      if v_match: return v_match.group(1)
-                  except:
-                      pass
-                      
-              return None
-
-          def update_template(info, new_tag, precalculated_hash=None):
-              content = info['content']
-              new_version = new_tag.lstrip('v')
-              
-              # 1. Update Version and Reset Revision
-              content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
-              content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
-              
-              # 2. Hash-Tracked Injection (If hash was calculated during NIX fallback mode)
-              if precalculated_hash:
-                  content = re.sub(r'((?:_?)checksum=["\']?)[a-fA-F0-9]{64}', rf'\g<1>{precalculated_hash}', content, count=1)
-                  with open(info['file'], 'w') as f:
-                      f.write(content)
-                  return True
-              
-              # 3. Standard Download & Parse
-              distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', content, re.DOTALL)
-              if not distfiles_match: 
-                  distfiles_match = re.search(r'distfiles=([^\s\n]+)', content)
-              if not distfiles_match: return False
-              
-              dist_content = distfiles_match.group(1)
-              first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
-              if not first_url_match: return False
-              
-              primary_url_template = first_url_match.group(1)
-              
-              download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
-              download_url = download_url.replace('${_arch_url}', 'X64').replace('$_arch_url', 'X64')
-              download_url = download_url.replace('${XBPS_TARGET_MACHINE}', 'x86_64')
-              
-              print(f"  --> Fetching: {download_url}")
-              try:
-                  headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) VoidLinux-BuildBot'}
-                  resp = requests.get(download_url, timeout=45, allow_redirects=True, headers=headers)
-                  if resp.status_code == 200:
-                      new_hash = hashlib.sha256(resp.content).hexdigest()
-                      content = re.sub(r'((?:_?)checksum=["\']?)[a-fA-F0-9]{64}', rf'\g<1>{new_hash}', content, count=1)
-                      
-                      with open(info['file'], 'w') as f:
-                          f.write(content)
-                      return True
-                  else:
-                      print(f"  [!] HTTP {resp.status_code} - Download failed.")
-                      return False
-              except Exception as e:
-                  print(f"  [!] Download error: {e}")
-              return False
-
-          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
-          subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
-
-          templates = []
-          for d in os.listdir('.'):
-              t_path = os.path.join(d, 'template')
-              if os.path.isdir(d) and os.path.isfile(t_path):
-                  templates.append(t_path)
-          
-          updates = []
-          for path in templates:
-              info = extract_info_from_template(path)
-              if not info or '_commit=' in info['content']: continue
-                  
-              print(f"Checking {info['name']}...")
-              latest_ver = get_latest_version(info)
-              
-              # THE NIX FLAKE FALLBACK: Hash Tracking Logic
-              if not latest_ver:
-                  print(f"  [!] No version API found. Tracking live file hash...")
-                  
-                  distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', info['content'], re.DOTALL)
-                  if not distfiles_match: distfiles_match = re.search(r'distfiles=([^\s\n]+)', info['content'])
-                  
-                  if distfiles_match:
-                      first_url = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1)).group(1)
-                      current_url = first_url.replace('${version}', info['version']).replace('$version', info['version'])
-                      current_url = current_url.replace('${_arch_url}', 'X64').replace('${XBPS_TARGET_MACHINE}', 'x86_64')
-                      
-                      live_hash = get_live_hash(current_url)
-                      checksum_match = re.search(r'(?:_?)checksum=["\']?([a-fA-F0-9]{64})', info['content'])
-                      
-                      if live_hash and checksum_match:
-                          current_hash = checksum_match.group(1)
-                          if live_hash != current_hash:
-                              new_pseudo_version = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
-                              print(f"  [!] Hash changed! {current_hash[:8]}... -> {live_hash[:8]}...")
-                              print(f"  [!] Bumping pseudo-version: {new_pseudo_version}")
-                              
-                              if update_template(info, new_pseudo_version, precalculated_hash=live_hash):
-                                  subprocess.run(['git', 'add', info['file']], check=True)
-                                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} (Hash Updated)"], check=True)
-                                  updates.append(info['name'])
-                          else:
-                              print(f"  {info['name']} is up to date (Live Hash matches).")
-                  continue
-              
-              # Standard Semantic Version Logic
-              try:
-                  if version.parse(latest_ver) <= version.parse(info['version']):
-                      print(f"  {info['name']} is up to date.")
-                      continue
-              except Exception:
-                  if latest_ver == info['version']: 
-                      print(f"  {info['name']} is up to date.")
-                      continue
-
-              print(f"  [!] Update Found: {info['version']} -> {latest_ver}")
-              if update_template(info, latest_ver):
-                  subprocess.run(['git', 'add', info['file']], check=True)
-                  subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_ver}"], check=True)
-                  updates.append(info['name'])
-
-          if updates:
-              subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True)
-              subprocess.run(['git', 'push', 'origin', 'main'], check=True)
-
-          with open('updated_packages.txt', 'w') as f:
-              for u in updates: f.write(f"{u}\n")
-
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f"updates_found={'true' if updates else 'false'}\n")
-          EOF
+      - name: Scan and update templates
+        id: scan
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import os, re, requests, subprocess, hashlib, datetime, tempfile, stat
+          from packaging import version as pkg_version
+          from pathlib import Path
 
-      - name: Trigger Build Factory
-        if: steps.check.outputs.updates_found == 'true'
+          SITE_VARS = {
+              '${GNOME_SITE}':        'https://download.gnome.org/sources',
+              '$GNOME_SITE':          'https://download.gnome.org/sources',
+              '${KDE_SITE}':          'https://download.kde.org/stable',
+              '$KDE_SITE':            'https://download.kde.org/stable',
+              '${PYPI_SITE}':         'https://files.pythonhosted.org/packages/source',
+              '$PYPI_SITE':           'https://files.pythonhosted.org/packages/source',
+              '${GNU_SITE}':          'https://ftp.gnu.org/gnu',
+              '$GNU_SITE':            'https://ftp.gnu.org/gnu',
+              '${XFCE_SITE}':         'https://archive.xfce.org/src',
+              '$XFCE_SITE':           'https://archive.xfce.org/src',
+              '${SOURCEFORGE_SITE}':  'https://downloads.sourceforge.net',
+              '$SOURCEFORGE_SITE':    'https://downloads.sourceforge.net',
+              '${MOZILLA_SITE}':      'https://releases.mozilla.org/pub',
+              '$MOZILLA_SITE':        'https://releases.mozilla.org/pub',
+              '${NONGNU_SITE}':       'https://download.savannah.nongnu.org/releases',
+              '$NONGNU_SITE':         'https://download.savannah.nongnu.org/releases',
+              '${KERNEL_SITE}':       'https://www.kernel.org/pub',
+              '$KERNEL_SITE':         'https://www.kernel.org/pub',
+              '${CPAN_SITE}':         'https://cpan.metacpan.org/modules/by-module',
+              '$CPAN_SITE':           'https://cpan.metacpan.org/modules/by-module',
+              '${FREEDESKTOP_SITE}':  'https://freedesktop.org/software',
+              '$FREEDESKTOP_SITE':    'https://freedesktop.org/software',
+              '${DEBIAN_SITE}':       'https://ftp.debian.org/debian/pool',
+              '$DEBIAN_SITE':         'https://ftp.debian.org/debian/pool',
+          }
+
+          def resolve_site_vars(url):
+              for var, repl in SITE_VARS.items():
+                  url = url.replace(var, repl)
+              return url
+
+          def fetch_file(url, dest_path):
+              headers = {'User-Agent': 'VoidLinux-BuildBot/1.0 (Apex-Linux)'}
+              try:
+                  resp = requests.get(url, headers=headers, timeout=120,
+                                      allow_redirects=True, stream=True)
+                  if resp.status_code == 200:
+                      with open(dest_path, 'wb') as f:
+                          for chunk in resp.iter_content(65536):
+                              f.write(chunk)
+                      return True
+              except Exception as exc:
+                  print(f"    fetch error: {exc}")
+              return False
+
+          def sha256_file(path):
+              h = hashlib.sha256()
+              with open(path, 'rb') as f:
+                  for chunk in iter(lambda: f.read(65536), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def get_appimage_version(filepath):
+              try:
+                  os.chmod(filepath, stat.S_IRWXU)
+                  res = subprocess.run([filepath, '--appimage-version'],
+                                       capture_output=True, text=True, timeout=10)
+                  m = re.search(r'(\d+\.\d+[\.\d]*)', res.stdout + res.stderr)
+                  if m:
+                      return m.group(1)
+                  out = subprocess.run(['strings', filepath],
+                                       capture_output=True, text=True, timeout=10).stdout
+                  m = re.search(r'(\d+\.\d+\.\d+)', out)
+                  if m:
+                      return m.group(1)
+              except Exception:
+                  pass
+              return None
+
+          def get_latest_commit(repo_url):
+              try:
+                  out = subprocess.check_output(
+                      ['git', 'ls-remote', repo_url, 'HEAD'],
+                      timeout=30, stderr=subprocess.DEVNULL
+                  ).decode()
+                  m = re.search(r'([a-f0-9]{40})', out)
+                  if m:
+                      date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+                      return m.group(1), date_str
+              except Exception as exc:
+                  print(f"    get_latest_commit error: {exc}")
+              return None, None
+
+          def get_pypi_latest(pkgname):
+              try:
+                  names = [pkgname]
+                  if pkgname.startswith('python3-'):
+                      names.append(pkgname[8:])
+                  elif pkgname.startswith('python-'):
+                      names.append(pkgname[7:])
+                  for name in names:
+                      resp = requests.get(f'https://pypi.org/pypi/{name}/json', timeout=15)
+                      if resp.status_code == 200:
+                          return resp.json()['info']['version']
+              except Exception:
+                  pass
+              return None
+
+          def resolve_url(url_template, pkgname, ver, sha, curr_ver=None, curr_sha=None):
+              url = resolve_site_vars(url_template)
+              url = url.replace('${pkgname}', pkgname).replace('$pkgname', pkgname)
+
+              use_ver = ver if ver else curr_ver
+              if use_ver:
+                  url = url.replace('${version}', use_ver).replace('$version', use_ver)
+                  short_ver = '.'.join(use_ver.split('.')[:-1]) if '.' in use_ver else use_ver
+                  url = url.replace('${version%.*}', short_ver)
+
+              use_sha = sha if sha else curr_sha
+              if use_sha:
+                  url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
+
+              for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE',
+                               '${XBPS_TARGET_MACHINE}', '${_machine}']:
+                  url = url.replace(arch_var, 'x86_64')
+
+              if re.search(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', url):
+                  return None
+              return url
+
+          def extract_distfile_urls(content):
+              m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#]|\Z)',
+                            content, re.MULTILINE | re.DOTALL)
+              if not m:
+                  return []
+              return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
+
+          def replace_checksums(content, new_hashes):
+              counter = [0]
+              def replacer(m):
+                  idx = counter[0]
+                  counter[0] += 1
+                  prefix = '@' if m.group(2).startswith('@') else ''
+                  if idx < len(new_hashes):
+                      return f'{m.group(1)}={prefix}{new_hashes[idx]}'
+                  return m.group(0)
+              return re.sub(r'^(_?checksum)=["\']?([a-fA-F0-9@]+)["\']?',
+                            replacer, content, flags=re.MULTILINE)
+
+          git_user = "github-actions[bot]"
+          subprocess.run(['git', 'config', 'user.name', git_user], check=True)
+          subprocess.run(['git', 'config', 'user.email',
+                          f'{git_user}@users.noreply.github.com'], check=True)
+
+          branch = os.environ.get('GITHUB_REF_NAME', 'main')
+          subprocess.run(['git', 'checkout', '-B', branch], check=True)
+
+          templates        = list(Path('.').rglob('template'))
+          changed_packages = []
+          changed_files    = []
+          today_ver        = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+          gh_token         = os.environ.get('GITHUB_TOKEN')
+          gh_headers       = {
+              'Accept': 'application/vnd.github.v3+json',
+              **(({'Authorization': f'token {gh_token}'}) if gh_token else {})
+          }
+
+          for tpath in templates:
+              raw   = tpath.read_text(encoding='utf-8')
+              pkg_m = re.search(r'pkgname=["\']?([^"\'\s\n]+)', raw)
+              ver_m = re.search(r'\bversion=["\']?([^"\'\n\s]+)', raw)
+              if not pkg_m or not ver_m:
+                  continue
+
+              pkgname  = pkg_m.group(1)
+              curr_ver = ver_m.group(1)
+              commit_m = re.search(r'_commit=["\']?([a-fA-F0-9]{7,40})', raw)
+              curr_sha = commit_m.group(1) if commit_m else None
+
+              print(f"🔍 {pkgname} (current: {curr_ver})")
+
+              new_ver = None
+              new_sha = None
+
+              if curr_sha is not None:
+                  repo_m   = re.search(r'_gitrepo=["\']?([^"\'\n\s]+)', raw)
+                  repo_url = repo_m.group(1) if repo_m else None
+                  if not repo_url:
+                      gh_m     = re.search(r'https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
+                      repo_url = f'https://github.com/{gh_m.group(1)}' if gh_m else None
+                  if repo_url:
+                      found_sha, found_date = get_latest_commit(repo_url)
+                      if found_sha and found_sha != curr_sha:
+                          new_sha = found_sha
+                          new_ver = found_date
+              else:
+                  gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
+                  if gh_m:
+                      owner, repo = gh_m.group(1), gh_m.group(2)
+                      try:
+                          resp   = requests.get(
+                              f'https://api.github.com/repos/{owner}/{repo}/releases/latest',
+                              headers=gh_headers, timeout=20).json()
+                          latest = resp.get('tag_name', '').lstrip('v')
+                          if latest and pkg_version.parse(latest) > pkg_version.parse(curr_ver):
+                              new_ver = latest
+                      except Exception as exc:
+                          print(f"  GitHub API error: {exc}")
+
+                  if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
+                      pypi_latest = get_pypi_latest(pkgname)
+                      if pypi_latest:
+                          try:
+                              if pkg_version.parse(pypi_latest) > pkg_version.parse(curr_ver):
+                                  new_ver = pypi_latest
+                                  print(f"  PyPI: {pypi_latest}")
+                          except Exception:
+                              pass
+
+              candidate = raw
+              if new_sha:
+                  candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+',
+                                     lambda m: m.group(1) + new_sha, candidate)
+              if new_ver:
+                  candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+',
+                                     lambda m: m.group(1) + new_ver, candidate)
+
+              urls = extract_distfile_urls(candidate)
+              if not urls:
+                  print(f"  ⚠️ No distfiles — skipping")
+                  continue
+
+              resolved_urls = []
+              for url in urls:
+                  r = resolve_url(url, pkgname, ver=new_ver, sha=new_sha,
+                                  curr_ver=curr_ver, curr_sha=curr_sha)
+                  if r is None:
+                      print(f"  ⚠️ Unresolved variable: {url}")
+                      resolved_urls = None
+                      break
+                  resolved_urls.append(r)
+
+              if resolved_urls is None:
+                  continue
+
+              new_checksums = []
+              fetch_ok      = True
+              for url in resolved_urls:
+                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp:
+                      tmp_path = tmp.name
+                  if fetch_file(url, tmp_path):
+                      new_checksums.append(sha256_file(tmp_path))
+                      os.unlink(tmp_path)
+                  else:
+                      print(f"  ✗ Failed: {url}")
+                      try:
+                          os.unlink(tmp_path)
+                      except OSError:
+                          pass
+                      fetch_ok = False
+                      break
+
+              if not fetch_ok:
+                  print(f"  ✗ Skipping {pkgname}")
+                  continue
+
+              curr_hashes_plain = [
+                  c.lstrip('@') for c in
+                  re.findall(r'^_?checksum=["\']?([a-fA-F0-9@]+)["\']?', raw, re.MULTILINE)
+              ]
+              checksum_changed = (new_checksums != curr_hashes_plain)
+
+              if not new_ver and not new_sha and not checksum_changed:
+                  print(f"  ✓ Up to date")
+                  continue
+
+              if checksum_changed and not new_ver and not new_sha:
+                  sniffed_ver = None
+                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp:
+                      tmp_path = tmp.name
+                  if fetch_file(resolved_urls[0], tmp_path):
+                      sniffed_ver = get_appimage_version(tmp_path)
+                  try:
+                      os.unlink(tmp_path)
+                  except OSError:
+                      pass
+                  new_ver   = sniffed_ver if sniffed_ver else today_ver
+                  candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+',
+                                     lambda m: m.group(1) + new_ver, candidate)
+
+              candidate = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate)
+              candidate = replace_checksums(candidate, new_checksums)
+
+              tpath.write_text(candidate, encoding='utf-8')
+              changed_packages.append(pkgname)
+              changed_files.append(str(tpath))
+              print(f"  ✨ {pkgname}: {curr_ver} → {new_ver or curr_ver}"
+                    f"{' (' + new_sha[:8] + ')' if new_sha else ''}")
+
+          if changed_packages:
+              Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
+              Path('changed_files.txt').write_text('\n'.join(changed_files) + '\n')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
+          EOF
+
+      - name: Commit and push template updates
+        if: steps.scan.outputs.updates_found == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          xargs -a changed_files.txt git add
+          git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
+
+      - name: Trigger builds sequentially
+        if: steps.scan.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
-          cat updated_packages.txt | while read pkg; do
-            echo "Triggering build factory for $pkg..."
-            gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
-          done
+          set -euo pipefail
+          WORKFLOW_NAME="Build and Deploy Custom XBPS"
+
+          while IFS= read -r pkg; do
+            [ -z "$pkg" ] && continue
+            echo "🚀 Dispatching build for $pkg"
+
+            before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+            gh workflow run "${WORKFLOW_NAME}" \
+              --ref "${GITHUB_REF_NAME}" \
+              -f package_name="${pkg}"
+
+            sleep 8
+
+            run_id=$(gh run list \
+              --workflow="${WORKFLOW_NAME}" \
+              --json databaseId,createdAt \
+              --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | .[0].databaseId // empty")
+
+            if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then
+              echo "  Watching run ${run_id}"
+              gh run watch "${run_id}" --exit-status
+            else
+              echo "  ⚠️ Could not get run ID — waiting 90s"
+              sleep 90
+            fi
+
+          done < changed_packages.txt

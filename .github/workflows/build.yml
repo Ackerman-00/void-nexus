@@ -7,10 +7,6 @@ on:
         description: 'Package to build (e.g., niri-git)'
         required: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
-# Protect against race conditions during repo indexing
 concurrency:
   group: build-repo-${{ github.ref }}
   cancel-in-progress: false
@@ -25,111 +21,88 @@ jobs:
     env:
       ARCH: 'x86_64'
       BOOTSTRAP: 'x86_64'
-      TEST: '1'
+      TEST: '0'
     steps:
       - name: Prepare container
         run: |
+          set -euo pipefail
           REPO="https://repo-fastly.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || xbps-install -S -R "$REPO" -yu xbps
           xbps-install -S -R "$REPO" -yu
           xbps-install -S -R "$REPO" -y sudo bash curl git grep openssl tar xz
           useradd -G xbuilder -M builder
 
-      - name: Clone Official Void-Packages
+      - name: Clone void-packages
         run: |
+          set -euo pipefail
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
+          echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
+          echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
           chown -R builder:builder .
 
-      - name: Checkout Your Custom Templates
+      - name: Checkout custom templates
         uses: actions/checkout@v5
         with:
           path: custom-templates-temp
 
-      - name: Universal Injection & Smart Pre-fetch
+      - name: Inject custom templates
         run: |
-          PKG="${{ github.event.inputs.package_name }}"
-          
-          # 1. UNIVERSAL INJECTION: Copy EVERY custom folder into srcpkgs
-          # Resolves inter-dependencies (e.g., dankmaterialshell finding quickshell-git)
-          find custom-templates-temp -maxdepth 1 -type d ! -name ".*" ! -name "custom-templates-temp" -exec cp -v -r {} srcpkgs/ \;
-          
-          # 2. Extract Data for Pre-fetch (Safe Extraction)
-          VERSION=$(grep '^version=' srcpkgs/$PKG/template | cut -d= -f2 | tr -d '"' | tr -d "'")
-          COMMIT=$(grep '^_commit=' srcpkgs/$PKG/template | cut -d= -f2 | tr -d '"' | tr -d "'")
-          # Safely match http or https
-          DISTURL=$(grep '^distfiles=' srcpkgs/$PKG/template | grep -o 'https\?://[^"[:space:]>]*' | head -n1)
-          
-          # 3. DOUBLE-AGENT PRE-FETCH (Best Effort)
-          if [ -n "$DISTURL" ]; then
-            FETCH_URL=$(echo $DISTURL | sed "s/\${version}/$VERSION/g" | sed "s/\$version/$VERSION/g" | sed "s/\${_commit}/$COMMIT/g" | sed "s/\$_commit/$COMMIT/g")
-            FILENAME=$(basename "$FETCH_URL")
-            
-            mkdir -p "hostdir/sources/$PKG-$VERSION"
-            echo "Attempting firewall bypass fetch: $FETCH_URL"
-            
-            # Using -f (fail silently on HTTP errors) so we don't save error pages
-            curl -f -L \
-              -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0" \
-              -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
-              -H "Connection: keep-alive" \
-              "$FETCH_URL" -o "hostdir/sources/$PKG-$VERSION/$FILENAME" || echo "Pre-fetch bypassed or failed. Deferring to xbps-src native fetch."
-              
-            # Cleanup if the file is suspiciously small (e.g., a blocked HTML page)
-            if [ -f "hostdir/sources/$PKG-$VERSION/$FILENAME" ]; then
-               if [ $(stat -c%s "hostdir/sources/$PKG-$VERSION/$FILENAME") -lt 5000 ]; then
-                  echo "Warning: Downloaded file too small. Deleting so xbps-src can try natively."
-                  rm -f "hostdir/sources/$PKG-$VERSION/$FILENAME"
-               fi
-            fi
-          fi
+          set -euo pipefail
+          for dir in custom-templates-temp/*/; do
+            [ -f "${dir}template" ] && cp -r "$dir" srcpkgs/
+          done
+          chown -R builder:builder srcpkgs/
 
-          # 4. PERSISTENCE SYNC: Pull existing binaries AND SIGNATURES to avoid repo wipe
+      - name: Restore existing repository
+        run: |
+          set -euo pipefail
+          PAGES_URL="https://ackerman-00.github.io/void-template"
           mkdir -p public/x86_64
-          echo "Syncing existing repository metadata..."
-          curl -f -L https://ackerman-00.github.io/void-template/x86_64/x86_64-repodata -o public/x86_64/x86_64-repodata || true
-          
-          if [ -f public/x86_64/x86_64-repodata ]; then
-              xbps-query -R https://ackerman-00.github.io/void-template -m | while read p; do
-                  pkg_file=$(xbps-query -R https://ackerman-00.github.io/void-template -p filename "$p")
-                  echo "Restoring $pkg_file and its signature..."
-                  # -f prevents saving 404 pages if a file is missing
-                  curl -f -L "https://ackerman-00.github.io/void-template/x86_64/$pkg_file" -o "public/x86_64/$pkg_file" || true
-                  curl -f -L "https://ackerman-00.github.io/void-template/x86_64/${pkg_file}.sig2" -o "public/x86_64/${pkg_file}.sig2" || true
-              done
+
+          if curl -sf "${PAGES_URL}/x86_64/x86_64-repodata" \
+               -o public/x86_64/x86_64-repodata 2>/dev/null; then
+            xbps-query --repository=./public/x86_64 -s '' 2>/dev/null \
+              | awk '{print $2}' \
+              | while IFS= read -r pkgver; do
+                  fname=$(xbps-query --repository=./public/x86_64 \
+                            -p filename "$pkgver" 2>/dev/null) || continue
+                  [ -z "$fname" ] && continue
+                  curl -sf "${PAGES_URL}/x86_64/${fname}" \
+                    -o "public/x86_64/${fname}" || true
+                  curl -sf "${PAGES_URL}/x86_64/${fname}.sig2" \
+                    -o "public/x86_64/${fname}.sig2" || true
+                done
           fi
 
-          mkdir -p etc
-          echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
-          chown -R builder:builder .
-
-      - name: Prepare Masterdir
+      - name: Bootstrap masterdir
         run: |
-          sudo -Eu builder common/travis/set_mirror.sh
-          sudo -Eu builder common/travis/prepare.sh
-          common/travis/fetch-xtools.sh
+          set -euo pipefail
+          sudo -Eu builder ./xbps-src binary-bootstrap
 
-      - name: Build Package
+      - name: Build package
         run: |
-          echo "${{ github.event.inputs.package_name }}" > /tmp/templates
-          sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
+          set -euo pipefail
+          sudo -Eu builder ./xbps-src pkg "${{ github.event.inputs.package_name }}"
 
-      - name: Sign & Index Repository
+      - name: Sign and index repository
         run: |
+          set -euo pipefail
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
-          
-          # Move new binaries and re-index the whole set
+
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
+
           cd public/x86_64
-          if ls *.xbps 1> /dev/null 2>&1; then
+          if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
             xbps-rindex -a *.xbps
-            # Corrected the signature to match your current project name
-            xbps-rindex --privkey /tmp/private.pem --signedby "Void Template Build Bot <actions@github.com>" --sign .
+            xbps-rindex --privkey /tmp/private.pem \
+              --signedby "Void Template Build Bot <actions@github.com>" --sign .
           fi
-          rm /tmp/private.pem
 
-      - name: Upload Pages Artifact
+          rm -f /tmp/private.pem
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: public/
