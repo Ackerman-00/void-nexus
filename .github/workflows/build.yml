@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package_name:
-        description: 'Package to build'
+        description: 'Package to build (e.g., niri-git)'
         required: true
 
 concurrency:
@@ -20,16 +20,21 @@ jobs:
       options: --privileged
     defaults:
       run:
-        shell: bash          # Force bash for all steps
+        shell: bash
+    env:
+      ARCH: 'x86_64'
+      BOOTSTRAP: 'x86_64'
+      TEST: '0'
     steps:
       - name: Prepare container
+        shell: sh                           # Use sh because bash is not yet installed
         run: |
           set -e
-          # Update xbps and install required tools
-          xbps-install -S -y xbps
-          xbps-install -S -yu
-          xbps-install -S -y bash curl git grep openssl tar xz shadow
-          # Create builder user if it doesn't exist
+          REPO="https://repo-default.voidlinux.org/current"
+          # xbps-install returns 2 when updating itself – treat as success
+          xbps-install -S -R "$REPO" -yu xbps || true
+          xbps-install -S -R "$REPO" -yu || true
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo
           id -u builder >/dev/null 2>&1 || useradd -m builder
           chown -R builder:builder .
 
@@ -49,7 +54,6 @@ jobs:
       - name: Inject custom templates
         run: |
           set -e
-          # Copy only folders that contain a template file, skip hidden directories
           find custom-templates-temp -maxdepth 2 -name "template" | while read -r tmpl; do
             pkg_dir=$(dirname "$tmpl")
             pkg_name=$(basename "$pkg_dir")
@@ -63,20 +67,22 @@ jobs:
           set -e
           PAGES_URL="https://ackerman-00.github.io/void-template"
           mkdir -p public/x86_64
+
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
-            echo "Repository index found. Syncing existing binaries..."
-            xbps-query --repository=./public/x86_64 -s '' | awk '{print $2}' | while read -r pkgver; do
+            echo "Index found, syncing current binaries..."
+            xbps-query --repository=./public/x86_64 -s '' 2>/dev/null | awk '{print $2}' | while IFS= read -r pkgver; do
               fname=$(xbps-query --repository=./public/x86_64 -p filename "$pkgver" 2>/dev/null) || continue
+              [ -z "$fname" ] && continue
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
             done
           fi
 
       - name: Bootstrap masterdir
-        run: sudo -u builder ./xbps-src binary-bootstrap
+        run: sudo -Eu builder ./xbps-src binary-bootstrap
 
       - name: Build package
-        run: sudo -u builder ./xbps-src pkg "${{ github.event.inputs.package_name }}"
+        run: sudo -Eu builder ./xbps-src pkg "${{ github.event.inputs.package_name }}"
 
       - name: Sign and index repository
         run: |
@@ -84,7 +90,7 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          find hostdir/binpkgs -name "*.xbps" -exec cp -v {} public/x86_64/ \;
+          find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
@@ -92,6 +98,7 @@ jobs:
             xbps-rindex -a *.xbps
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Template Build Bot <actions@github.com>" --sign .
           fi
+
           rm -f /tmp/private.pem
 
       - name: Upload Pages artifact
