@@ -145,21 +145,14 @@ jobs:
               return None
 
           def is_date_version(ver):
-              """Returns True if version looks like YYYYMMDD — a corrupted/fallback value."""
               return bool(re.match(r'^\d{8}$', str(ver)))
 
           def is_semver(ver):
-              """Returns True if version contains a dot — looks like a real release version."""
               return '.' in str(ver)
 
           def version_is_newer(latest, current):
-              """
-              Compare latest vs current. Handles the case where current is a date-version
-              (YYYYMMDD) but upstream provides a real semver — always prefer the semver.
-              """
               if not latest or latest == current:
                   return False
-              # If current is a date-version and latest is a real semver, always update.
               if is_date_version(current) and is_semver(latest):
                   return True
               try:

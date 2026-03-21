@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package_name:
-        description: 'Package to build (e.g., niri-git)'
+        description: 'Package to build'
         required: true
 
 concurrency:
@@ -20,25 +20,22 @@ jobs:
       options: --privileged
     defaults:
       run:
-        shell: bash
-    env:
-      ARCH: 'x86_64'
-      BOOTSTRAP: 'x86_64'
-      TEST: '0'
+        shell: bash        
     steps:
       - name: Prepare container
         run: |
-          set -euo pipefail
-          REPO="https://repo-fastly.voidlinux.org/current"
-          xbps_install() { xbps-install "$@"; local rc=$?; [ $rc -eq 0 ] || [ $rc -eq 2 ] || return $rc; }
-          xbps_install -S -R "$REPO" -yu xbps
-          xbps_install -S -R "$REPO" -yu
-          xbps_install -S -R "$REPO" -y sudo bash curl git grep openssl tar xz shadow
-          useradd -G xbuilder -M builder
+          set -e
+          # Update xbps and install required tools
+          xbps-install -S -y xbps
+          xbps-install -S -yu
+          xbps-install -S -y bash curl git grep openssl tar xz shadow
+          # Create builder user if it doesn't exist
+          id -u builder >/dev/null 2>&1 || useradd -m builder
+          chown -R builder:builder .
 
       - name: Clone void-packages
         run: |
-          set -euo pipefail
+          set -e
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
           echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
@@ -51,59 +48,50 @@ jobs:
 
       - name: Inject custom templates
         run: |
-          set -euo pipefail
-          for dir in custom-templates-temp/*/; do
-            [ -f "${dir}template" ] && cp -r "$dir" srcpkgs/
+          set -e
+          # Copy only folders that contain a template file, skip hidden directories
+          find custom-templates-temp -maxdepth 2 -name "template" | while read -r tmpl; do
+            pkg_dir=$(dirname "$tmpl")
+            pkg_name=$(basename "$pkg_dir")
+            [ "$pkg_name" = ".github" ] && continue
+            cp -r "$pkg_dir" srcpkgs/
           done
           chown -R builder:builder srcpkgs/
 
       - name: Restore existing repository
         run: |
-          set -euo pipefail
+          set -e
           PAGES_URL="https://ackerman-00.github.io/void-template"
           mkdir -p public/x86_64
-
-          if curl -sf "${PAGES_URL}/x86_64/x86_64-repodata" \
-               -o public/x86_64/x86_64-repodata 2>/dev/null; then
-            xbps-query --repository=./public/x86_64 -s '' 2>/dev/null \
-              | awk '{print $2}' \
-              | while IFS= read -r pkgver; do
-                  fname=$(xbps-query --repository=./public/x86_64 \
-                            -p filename "$pkgver" 2>/dev/null) || continue
-                  [ -z "$fname" ] && continue
-                  curl -sf "${PAGES_URL}/x86_64/${fname}" \
-                    -o "public/x86_64/${fname}" || true
-                  curl -sf "${PAGES_URL}/x86_64/${fname}.sig2" \
-                    -o "public/x86_64/${fname}.sig2" || true
-                done
+          if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
+            echo "Repository index found. Syncing existing binaries..."
+            xbps-query --repository=./public/x86_64 -s '' | awk '{print $2}' | while read -r pkgver; do
+              fname=$(xbps-query --repository=./public/x86_64 -p filename "$pkgver" 2>/dev/null) || continue
+              curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
+              curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
+            done
           fi
 
       - name: Bootstrap masterdir
-        run: |
-          set -euo pipefail
-          sudo -Eu builder ./xbps-src binary-bootstrap
+        run: sudo -u builder ./xbps-src binary-bootstrap
 
       - name: Build package
-        run: |
-          set -euo pipefail
-          sudo -Eu builder ./xbps-src pkg "${{ github.event.inputs.package_name }}"
+        run: sudo -u builder ./xbps-src pkg "${{ github.event.inputs.package_name }}"
 
       - name: Sign and index repository
         run: |
-          set -euo pipefail
+          set -e
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
+          find hostdir/binpkgs -name "*.xbps" -exec cp -v {} public/x86_64/ \;
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
             xbps-rindex -a *.xbps
-            xbps-rindex --privkey /tmp/private.pem \
-              --signedby "Void Template Build Bot <actions@github.com>" --sign .
+            xbps-rindex --privkey /tmp/private.pem --signedby "Void Template Build Bot <actions@github.com>" --sign .
           fi
-
           rm -f /tmp/private.pem
 
       - name: Upload Pages artifact
