@@ -5,7 +5,6 @@ revision=1
 archs="x86_64 aarch64"
 build_style=fetch
 hostmakedepends="xz"
-# ADDED: nss and nspr to dependencies for the system-library link
 depends="desktop-file-utils hicolor-icon-theme libnotify libavcodec xdg-utils nss nspr"
 short_desc="Welcome to a calmer internet"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
