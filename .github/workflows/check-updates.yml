@@ -144,6 +144,29 @@ jobs:
                   pass
               return None
 
+          def is_date_version(ver):
+              """Returns True if version looks like YYYYMMDD — a corrupted/fallback value."""
+              return bool(re.match(r'^\d{8}$', str(ver)))
+
+          def is_semver(ver):
+              """Returns True if version contains a dot — looks like a real release version."""
+              return '.' in str(ver)
+
+          def version_is_newer(latest, current):
+              """
+              Compare latest vs current. Handles the case where current is a date-version
+              (YYYYMMDD) but upstream provides a real semver — always prefer the semver.
+              """
+              if not latest or latest == current:
+                  return False
+              # If current is a date-version and latest is a real semver, always update.
+              if is_date_version(current) and is_semver(latest):
+                  return True
+              try:
+                  return pkg_version.parse(latest) > pkg_version.parse(current)
+              except Exception:
+                  return latest != current
+
           def resolve_url(url_template, pkgname, ver, sha, curr_ver=None, curr_sha=None,
                           template_vars=None):
               url = resolve_site_vars(url_template)
@@ -159,15 +182,12 @@ jobs:
               if use_sha:
                   url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
 
-              # FIX: resolve common distro/arch template-local variables
               for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE',
                                '${XBPS_TARGET_MACHINE}', '${_machine}']:
                   url = url.replace(arch_var, 'x86_64')
 
-              # FIX: resolve debian arch variable (_deb_arch) — always amd64 for x86_64
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
 
-              # Apply any extra template-local variables extracted from the template
               if template_vars:
                   for var, val in template_vars.items():
                       url = url.replace('${' + var + '}', val).replace('$' + var, val)
@@ -177,11 +197,6 @@ jobs:
               return url
 
           def extract_template_vars(content):
-              """
-              Extract simple scalar variable assignments from a template that might
-              appear in distfiles URLs (e.g. _deb_arch=amd64, _upstream=foo).
-              Only extracts vars whose values are plain strings with no substitutions.
-              """
               vars_ = {}
               for m in re.finditer(r'^_([A-Za-z0-9_]+)=["\']?([A-Za-z0-9._-]+)["\']?',
                                    content, re.MULTILINE):
@@ -219,7 +234,6 @@ jobs:
           templates        = list(Path('.').rglob('template'))
           changed_packages = []
           changed_files    = []
-          today_ver        = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
           gh_token         = os.environ.get('GITHUB_TOKEN')
           gh_headers       = {
               'Accept': 'application/vnd.github.v3+json',
@@ -233,11 +247,11 @@ jobs:
               if not pkg_m or not ver_m:
                   continue
 
-              pkgname      = pkg_m.group(1)
-              curr_ver     = ver_m.group(1)
-              commit_m     = re.search(r'_commit=["\']?([a-fA-F0-9]{7,40})', raw)
-              curr_sha     = commit_m.group(1) if commit_m else None
-              tmpl_vars    = extract_template_vars(raw)
+              pkgname   = pkg_m.group(1)
+              curr_ver  = ver_m.group(1)
+              commit_m  = re.search(r'_commit=["\']?([a-fA-F0-9]{7,40})', raw)
+              curr_sha  = commit_m.group(1) if commit_m else None
+              tmpl_vars = extract_template_vars(raw)
 
               print(f"🔍 {pkgname} (current: {curr_ver})")
 
@@ -264,26 +278,16 @@ jobs:
                               f'https://api.github.com/repos/{owner}/{repo}/releases/latest',
                               headers=gh_headers, timeout=20).json()
                           latest = resp.get('tag_name', '').lstrip('v')
-                          if latest:
-                              try:
-                                  if pkg_version.parse(latest) > pkg_version.parse(curr_ver):
-                                      new_ver = latest
-                              except Exception:
-                                  # Non-PEP-440 version string — fall back to string comparison
-                                  if latest != curr_ver:
-                                      new_ver = latest
+                          if version_is_newer(latest, curr_ver):
+                              new_ver = latest
                       except Exception as exc:
                           print(f"  GitHub API error: {exc}")
 
                   if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
                       pypi_latest = get_pypi_latest(pkgname)
-                      if pypi_latest:
-                          try:
-                              if pkg_version.parse(pypi_latest) > pkg_version.parse(curr_ver):
-                                  new_ver = pypi_latest
-                                  print(f"  PyPI: {pypi_latest}")
-                          except Exception:
-                              pass
+                      if pypi_latest and version_is_newer(pypi_latest, curr_ver):
+                          new_ver = pypi_latest
+                          print(f"  PyPI: {pypi_latest}")
 
               candidate = raw
               if new_sha:
@@ -344,7 +348,6 @@ jobs:
                   continue
 
               if checksum_changed and not new_ver and not new_sha:
-                  # Try AppImage version sniff first
                   sniffed_ver = None
                   with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp:
                       tmp_path = tmp.name
@@ -354,14 +357,10 @@ jobs:
                       os.unlink(tmp_path)
                   except OSError:
                       pass
-
                   if sniffed_ver:
                       new_ver   = sniffed_ver
                       candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+',
                                          lambda m: m.group(1) + new_ver, candidate)
-                  # FIX: if sniff fails (non-AppImage), keep curr_ver — do NOT assign
-                  # today_ver. The checksum changed but the upstream version is the same.
-                  # We only bump revision in this case.
 
               candidate = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate)
               candidate = replace_checksums(candidate, new_checksums)
@@ -370,9 +369,9 @@ jobs:
               changed_packages.append(pkgname)
               changed_files.append(str(tpath))
               ver_display = new_ver if new_ver else curr_ver
-              print(f"  ✨ {pkgname}: {curr_ver} → {ver_display}"
-                    f"{' (' + new_sha[:8] + ')' if new_sha else ''}"
-                    f"{' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''}")
+              sha_suffix  = f' ({new_sha[:8]})' if new_sha else ''
+              ck_suffix   = ' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''
+              print(f"  ✨ {pkgname}: {curr_ver} → {ver_display}{sha_suffix}{ck_suffix}")
 
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
