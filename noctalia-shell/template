@@ -1,9 +1,9 @@
 pkgname=noctalia-shell
 version=4.7.0
-revision=1
+revision=2
 hostmakedepends=""
 maintainer="Ackerman <https://github.com/Ackerman-00>"
-depends="noctalia-qs qt6-plugin-tls-openssl power-profiles-daemon font-inter brightnessctl ddcutil"
+depends="noctalia-qs matugen qt6-plugin-tls-openssl power-profiles-daemon font-inter brightnessctl ddcutil"
 short_desc="A sleek and minimal desktop shell thoughtfully crafted for Wayland, built with Quickshell."
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 license="MIT"
