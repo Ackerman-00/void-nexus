@@ -33,7 +33,9 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo
+          # Fix Git dubious ownership error when running as root inside the container
+          git config --global --add safe.directory '*'
 
       - name: Cache repository
         uses: actions/cache@v4
@@ -46,6 +48,7 @@ jobs:
         run: |
           set -e
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
+          # Force xbps-src to run natively without namespace mapping
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
@@ -78,15 +81,15 @@ jobs:
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
             echo "Index found, syncing current binaries..."
             REPO_DIR="$PWD/public/x86_64"
-
-            # Temporarily disable pipefail so harmless xbps-query warnings don't stop the script
+            
             set +o pipefail || true
             xbps-query --repository="$REPO_DIR" -l 2>/dev/null | awk '{print $2}' > /tmp/pkgs.txt || true
-
+            
             while IFS= read -r pkg; do
               [ -z "$pkg" ] && continue
               fname=$(xbps-query --repository="$REPO_DIR" -p filename "$pkg" 2>/dev/null) || continue
               [ -z "$fname" ] && continue
+              
               echo "Downloading $fname..."
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
