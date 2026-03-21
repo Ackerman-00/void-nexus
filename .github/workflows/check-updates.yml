@@ -224,7 +224,13 @@ jobs:
           branch = os.environ.get('GITHUB_REF_NAME', 'main')
           subprocess.run(['git', 'checkout', '-B', branch], check=True)
 
-          templates        = list(Path('.').rglob('template'))
+          # Only scan top-level directories (avoid scanning inside custom-templates-temp)
+          templates = []
+          for d in os.listdir('.'):
+              tpath = os.path.join(d, 'template')
+              if os.path.isdir(d) and os.path.isfile(tpath):
+                  templates.append(Path(tpath))
+
           changed_packages = []
           changed_files    = []
           gh_token         = os.environ.get('GITHUB_TOKEN')
@@ -366,9 +372,17 @@ jobs:
               ck_suffix   = ' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''
               print(f"  ✨ {pkgname}: {curr_ver} → {ver_display}{sha_suffix}{ck_suffix}")
 
+          # Write output files and debug
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
               Path('changed_files.txt').write_text('\n'.join(changed_files) + '\n')
+              print(f"DEBUG: changed_packages = {changed_packages}")
+              print(f"DEBUG: changed_files = {changed_files}")
+          else:
+              # Ensure files don't exist if no changes
+              for f in ['changed_packages.txt', 'changed_files.txt']:
+                  if Path(f).exists():
+                      Path(f).unlink()
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
@@ -377,9 +391,16 @@ jobs:
       - name: Commit and push template updates
         if: steps.scan.outputs.updates_found == 'true'
         run: |
-          set -euo pipefail
+          set -e
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only proceed if changed_files.txt exists and is non-empty
+          if [ ! -s changed_files.txt ]; then
+            echo "No changed files to commit"
+            exit 0
+          fi
+
           xargs -a changed_files.txt git add
           git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
           git pull --rebase origin "${GITHUB_REF_NAME}"
@@ -390,8 +411,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
-          set -euo pipefail
+          set -e
           WORKFLOW_NAME="Build and Deploy Custom XBPS"
+
+          # Only run if changed_packages.txt exists and is non-empty
+          if [ ! -s changed_packages.txt ]; then
+            echo "No packages to build"
+            exit 0
+          fi
 
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
