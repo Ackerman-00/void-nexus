@@ -72,7 +72,7 @@ jobs:
               return None
 
           def get_latest_version(info):
-              # Only run the API check if it's actually hosted on GitHub
+              # 1. Primary: GitHub Releases
               if info['github']:
                   owner, repo = info['github']
                   try:
@@ -86,6 +86,31 @@ jobs:
                           return resp.json()['tag_name'].lstrip('v')
                   except Exception as e:
                       print(f"  [!] GitHub API Error: {e}")
+              
+              # 2. Smart Header / Redirect Extractor (For static URLs like RootApp)
+              distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', info['content'], re.DOTALL)
+              if not distfiles_match: distfiles_match = re.search(r'distfiles=([^\s\n]+)', info['content'])
+              
+              if distfiles_match:
+                  try:
+                      first_url = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1)).group(1)
+                      test_url = first_url.replace('${version}', info['version']).replace('$version', info['version'])
+                      test_url = test_url.replace('${_arch_url}', 'X64').replace('${XBPS_TARGET_MACHINE}', 'x86_64')
+                      
+                      # Ping the server to see if it redirects to a versioned file or gives a header
+                      resp = requests.head(test_url, allow_redirects=True, timeout=15)
+                      
+                      # Look for a version in the final URL (e.g. /downloads/1.0.0/app.AppImage)
+                      v_match = re.search(r'[-_/]([0-9]+\.[0-9]+\.[0-9]+)[-_\.]', resp.url)
+                      if v_match: return v_match.group(1)
+                      
+                      # Look for a version in the Content-Disposition (e.g. filename="Root-0.9.106.AppImage")
+                      cd = resp.headers.get('Content-Disposition', '')
+                      v_match = re.search(r'([0-9]+\.[0-9]+\.[0-9]+)', cd)
+                      if v_match: return v_match.group(1)
+                  except:
+                      pass
+                      
               return None
 
           def update_template(info, new_tag, precalculated_hash=None):
@@ -96,15 +121,14 @@ jobs:
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Hash-Tracked Injection (For RootApp)
+              # 2. Hash-Tracked Injection (If hash was calculated during NIX fallback mode)
               if precalculated_hash:
-                  # If we already hashed the live file, inject it directly into the first _checksum we find!
                   content = re.sub(r'((?:_?)checksum=["\']?)[a-fA-F0-9]{64}', rf'\g<1>{precalculated_hash}', content, count=1)
                   with open(info['file'], 'w') as f:
                       f.write(content)
                   return True
               
-              # 3. Standard Download & Parse (For Zen, Heroic, etc)
+              # 3. Standard Download & Parse
               distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', content, re.DOTALL)
               if not distfiles_match: 
                   distfiles_match = re.search(r'distfiles=([^\s\n]+)', content)
@@ -151,7 +175,6 @@ jobs:
           updates = []
           for path in templates:
               info = extract_info_from_template(path)
-              # Skip Git snapshots 
               if not info or '_commit=' in info['content']: continue
                   
               print(f"Checking {info['name']}...")
@@ -166,7 +189,6 @@ jobs:
                   
                   if distfiles_match:
                       first_url = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1)).group(1)
-                      # Resolve variables as they are currently in the file
                       current_url = first_url.replace('${version}', info['version']).replace('$version', info['version'])
                       current_url = current_url.replace('${_arch_url}', 'X64').replace('${XBPS_TARGET_MACHINE}', 'x86_64')
                       
@@ -186,8 +208,6 @@ jobs:
                                   updates.append(info['name'])
                           else:
                               print(f"  {info['name']} is up to date (Live Hash matches).")
-                      else:
-                          print(f"  [!] Could not parse URL or Checksum for Hash Tracking.")
                   continue
               
               # Standard Semantic Version Logic
