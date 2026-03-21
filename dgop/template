@@ -11,7 +11,7 @@ license="MIT"
 homepage="https://github.com/AvengeMedia/dgop"
 
 distfiles="https://github.com/AvengeMedia/dgop/archive/refs/tags/v${version}.tar.gz"
-checksum=0000000000000000000000000000000000000000000000000000000000000000
+checksum=2e45d94d2227bb596844681e66f948aeea4a09be3f7ee88dcbbf38938cabec32
 
 post_install() {
     # Install the sample config if it exists in the root of the source
