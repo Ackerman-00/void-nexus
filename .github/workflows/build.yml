@@ -25,6 +25,8 @@ jobs:
       ARCH: 'x86_64'
       BOOTSTRAP: 'x86_64'
       TEST: '0'
+      XBPS_ALLOW_CHROOT_BREAKOUT: 'yes'
+      XBPS_CHROOT_CMD: 'ethereal'
     steps:
       - name: Prepare container
         shell: sh
@@ -33,8 +35,7 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo
-          # Fix Git dubious ownership error when running as root inside the container
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-chroot
           git config --global --add safe.directory '*'
 
       - name: Cache repository
@@ -48,9 +49,7 @@ jobs:
         run: |
           set -e
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
-          # Force xbps-src to run natively without namespace mapping
-          echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
-          echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
+          ln -s / masterdir
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
 
       - name: Checkout custom templates
@@ -96,9 +95,6 @@ jobs:
             done < /tmp/pkgs.txt
             set -o pipefail || true
           fi
-
-      - name: Bootstrap masterdir
-        run: ./xbps-src binary-bootstrap
 
       - name: Build package
         run: ./xbps-src pkg "${{ github.event.inputs.package_name }}"
