@@ -81,14 +81,18 @@ jobs:
 
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
             echo "Index found, syncing current binaries..."
-            grep -E '^filename: ' public/x86_64/x86_64-repodata | sed 's/^filename: //' > /tmp/filenames.txt
-            while IFS= read -r fname; do
+            
+            REPO_DIR="$PWD/public/x86_64"
+            
+            xbps-query --repository="$REPO_DIR" -s '' | awk '{print $2}' | while IFS= read -r pkg; do
+              [ -z "$pkg" ] && continue
+              fname=$(xbps-query --repository="$REPO_DIR" -p filename "$pkg" 2>/dev/null) || continue
               [ -z "$fname" ] && continue
-              echo "Restoring $fname"
+              
+              echo "Downloading $fname..."
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
-            done < /tmp/filenames.txt
-            rm -f /tmp/filenames.txt
+            done
           fi
 
       - name: Bootstrap masterdir
