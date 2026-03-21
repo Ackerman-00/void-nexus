@@ -18,13 +18,13 @@ configure_args="
  -DSERVICE_PAM=ON
  -DSERVICE_POLKIT=ON"
 
-# Host dependencies
+# Host dependencies (tools needed to run during build)
 hostmakedepends="pkg-config ninja cmake qt6-base-devel qt6-declarative-devel 
  qt6-shadertools wayland-devel SPIRV-Tools"
 
-# Target dependencies
+# Target dependencies (headers and libraries linked into the binary)
 makedepends="qt6-base-devel qt6-declarative-devel qt6-wayland-devel 
- qt6-svg-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
+ qt6-svg-devel qt6-shadertools-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
  wayland-protocols libgbm-devel Vulkan-Headers libxcb-devel 
  pipewire-devel pam-devel polkit-devel glib-devel"
 
