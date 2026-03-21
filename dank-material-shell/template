@@ -1,7 +1,7 @@
 # Template file for 'dankmaterialshell'
 pkgname=dank-material-shell
-version=1.4.4
-revision=5
+version=1.4.3
+revision=6
 wrksrc="DankMaterialShell-${version}"
 
 build_style=go
