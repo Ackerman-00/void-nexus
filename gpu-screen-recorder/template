@@ -8,13 +8,15 @@ build_style=meson
 configure_args="-Dsystemd=false"
 
 hostmakedepends="pkg-config wayland-devel"
+
 makedepends="libX11-devel libXcomposite-devel libXrandr-devel libXfixes-devel
- libXdamage-devel libpulse-devel libva-devel libdrm-devel wayland-devel
- pipewire-devel dbus-devel ffmpeg-devel libcap-devel vulkan-loader-devel"
+ libXdamage-devel libXext-devel pulseaudio-devel libva-devel libdrm-devel
+ wayland-devel pipewire-devel dbus-devel ffmpeg-devel libcap-devel
+ vulkan-loader-devel Vulkan-Headers"
 
 depends="desktop-file-utils"
 
-short_desc="A shadowplay-like screen recorder for Linux (Git Snapshot)"
+short_desc="Shadowplay-like screen recorder for Linux (Git Snapshot)"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-only"
 homepage="https://git.dec05eba.com/gpu-screen-recorder"
@@ -24,3 +26,8 @@ provides="gpu-screen-recorder-${version}_${revision}"
 
 distfiles="https://git.dec05eba.com/gpu-screen-recorder/snapshot/gpu-screen-recorder-${_commit}.tar.gz"
 checksum=8e2207c4240cc38be1c4d4d3b5b5e5f0033f83b39db49099d861347d8a6e71a1
+
+# gpu-screen-recorder requires setuid to access the GPU for recording without lag/root
+post_install() {
+	chmod u+s ${DESTDIR}/usr/bin/gpu-screen-recorder
+}
