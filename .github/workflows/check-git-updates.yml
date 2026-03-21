@@ -7,7 +7,6 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Silences the harmless Node.js 'punycode' warning during cleanup
   NODE_OPTIONS: '--no-warnings'
 
 permissions:
@@ -68,12 +67,12 @@ jobs:
           def get_latest_commit(gitrepo):
               try:
                   out = subprocess.check_output(['git', 'ls-remote', gitrepo, 'HEAD'], timeout=15)
-                  decoded_out = out.decode('utf-8').split()
+                  decoded_out = out.decode('utf-8').strip()
                   if not decoded_out:
                       return None, None
                   
-                  # THE FIX: Grab the first element (the string hash) only!
-                  sha = decoded_out
+                  # EXPLICIT STRING FIX: Grab characters up to the first space/tab
+                  sha = decoded_out.split()
                   
                   date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
                   return sha, date_str
@@ -84,16 +83,17 @@ jobs:
           def update_git_template(info, new_sha, new_date):
               content = info['content']
               
-              # 1. Update variables safely (preserving quotes)
+              # 1. Update variables safely
               content = re.sub(r'(_commit=["\']?)[^\n\s"\']+', rf'\g<1>{new_sha}', content)
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_date}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Extract pure URL using Regex (NO SPLIT = NO LIST ERRORS)
+              # 2. Extract pure URL using pure Regex
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              first_url_match = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1))
+              dist_content = distfiles_match.group(1)
+              first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
               if not first_url_match: return False
               
               primary_url_template = first_url_match.group(1)
@@ -147,7 +147,9 @@ jobs:
                   print(f"  {info['name']} is up to date.")
                   continue
 
+              # Ensure we are printing a string, not a list
               print(f"  [!] New commit found: {latest_sha[:7]}")
+              
               if update_git_template(info, latest_sha, latest_date):
                   subprocess.run(['git', 'add', info['file']], check=True)
                   subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_sha[:7]}"], check=True)
