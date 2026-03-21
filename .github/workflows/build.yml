@@ -10,7 +10,6 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
-# Build Concurrency: Allows parallel builds for DIFFERENT packages.
 concurrency:
   group: build-${{ github.event.inputs.package_name }}-${{ github.ref }}
   cancel-in-progress: false
@@ -45,27 +44,41 @@ jobs:
         with:
           path: custom-templates-temp
 
-      - name: Inject Template & Persistence
+      - name: Inject Template & Pre-fetch
         run: |
-          # 1. Inject the specific package (Flat structure fix: directly from root)
-          cp -r custom-templates-temp/${{ github.event.inputs.package_name }} srcpkgs/
+          PKG="${{ github.event.inputs.package_name }}"
           
-          # 2. Setup Build Environment
+          # 1. Inject the template
+          cp -r custom-templates-temp/$PKG srcpkgs/
+          
+          # 2. Extract info for pre-fetching
+          # This helps bypass 400 Bad Request errors on stubborn servers
+          VERSION=$(grep '^version=' srcpkgs/$PKG/template | cut -d= -f2)
+          COMMIT=$(grep '^_commit=' srcpkgs/$PKG/template | cut -d= -f2)
+          DISTURL=$(grep '^distfiles=' srcpkgs/$PKG/template | cut -d'"' -f2 | head -n1)
+          
+          # Resolve variables in URL
+          FETCH_URL=$(echo $DISTURL | sed "s/\${version}/$VERSION/g" | sed "s/\${_commit}/$COMMIT/g")
+          FILENAME=$(basename $FETCH_URL)
+          
+          # 3. Create the source directory and fetch manually with a proper User-Agent
+          mkdir -p hostdir/sources/$PKG-$VERSION
+          echo "Pre-fetching $FETCH_URL..."
+          curl -L -A "Mozilla/5.0 (X11; Linux x86_64) VoidLinux-BuildBot" "$FETCH_URL" -o "hostdir/sources/$PKG-$VERSION/$FILENAME"
+          
+          # 4. Setup Build Environment
           mkdir -p etc
           echo "XBPS_ALLOW_CHROOT_BREAKROOT=yes" >> etc/conf
           
-          # 3. REPO PERSISTENCE: Sync existing binaries from GitHub Pages
+          # 5. REPO PERSISTENCE
           mkdir -p public/x86_64
-          echo "Fetching existing repository index..."
           curl -L https://ackerman-00.github.io/void-template/x86_64/x86_64-repodata -o public/x86_64/x86_64-repodata || true
           
           if [ -f public/x86_64/x86_64-repodata ]; then
-             echo "Syncing existing binaries to prevent repo wipe..."
-             # Extract current package list and download existing .xbps files
-             xbps-query -R https://ackerman-00.github.io/void-template -m | while read pkg; do
-                pkg_file=$(xbps-query -R https://ackerman-00.github.io/void-template -p filename "$pkg")
-                curl -L "https://ackerman-00.github.io/void-template/x86_64/$pkg_file" -o "public/x86_64/$pkg_file" || true
-             done
+              xbps-query -R https://ackerman-00.github.io/void-template -m | while read p; do
+                  pkg_file=$(xbps-query -R https://ackerman-00.github.io/void-template -p filename "$p")
+                  curl -L "https://ackerman-00.github.io/void-template/x86_64/$pkg_file" -o "public/x86_64/$pkg_file" || true
+              done
           fi
           
           chown -R builder:builder .
@@ -81,28 +94,17 @@ jobs:
           echo "${{ github.event.inputs.package_name }}" > /tmp/templates
           sudo -Eu builder common/travis/build.sh "$BOOTSTRAP" "$ARCH" "$TEST"
 
-      - name: Setup Private Key for Signing
+      - name: Sign & Index Repository
         run: |
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
-
-      - name: Sign & Index Repository
-        run: |
-          # Copy newly built packages to public folder
           find hostdir/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
           cd public/x86_64
-          
           if ls *.xbps 1> /dev/null 2>&1; then
-            # Sign the individual packages
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            
-            # Index the entire folder (Old + New)
             xbps-rindex -a *.xbps
-            
-            # Sign the repository metadata
             xbps-rindex --privkey /tmp/private.pem --signedby "Apex Linux Build Bot <actions@github.com>" --sign .
           fi
-          
           rm /tmp/private.pem
 
       - name: Upload Pages Artifact
@@ -114,7 +116,6 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
-    # Prevents deployment race conditions
     concurrency:
       group: "pages-deploy"
       cancel-in-progress: false
@@ -123,7 +124,6 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
