@@ -7,7 +7,6 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Silences the harmless Node.js 'punycode' warning during cleanup
   NODE_OPTIONS: '--no-warnings'
 
 permissions:
@@ -46,8 +45,8 @@ jobs:
               except Exception:
                   return None
                   
-              pkg_match = re.search(r'pkgname="?([^"\n\s]+)"?', content)
-              ver_match = re.search(r'version="?([^"\n\s]+)"?', content)
+              pkg_match = re.search(r'pkgname=["\']?([^"\n\s]+)', content)
+              ver_match = re.search(r'version=["\']?([^"\n\s]+)', content)
               
               if not pkg_match or not ver_match:
                   return None
@@ -62,46 +61,71 @@ jobs:
                   'content': content
               }
 
-          def get_latest_github_release(owner, repo):
-              try:
-                  url = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
-                  headers = {'Accept': 'application/vnd.github.v3+json'}
-                  token = os.environ.get('GITHUB_TOKEN')
-                  if token: headers['Authorization'] = f'token {token}'
-                  
-                  resp = requests.get(url, headers=headers, timeout=15)
-                  if resp.status_code == 200:
-                      data = resp.json()
-                      return data['tag_name']
-              except Exception as e:
-                  print(f"  [!] API Error for {owner}/{repo}: {e}")
+          def get_latest_version(info):
+              # 1. Primary: GitHub Releases
+              if info['github']:
+                  owner, repo = info['github']
+                  try:
+                      url = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
+                      headers = {'Accept': 'application/vnd.github.v3+json'}
+                      token = os.environ.get('GITHUB_TOKEN')
+                      if token: headers['Authorization'] = f'token {token}'
+                      
+                      resp = requests.get(url, headers=headers, timeout=15)
+                      if resp.status_code == 200:
+                          return resp.json()['tag_name'].lstrip('v')
+                  except Exception as e:
+                      print(f"  [!] GitHub API Error: {e}")
+              
+              # 2. Advanced Fallback: Electron Builder YAML (Specifically for RootApp)
+              if "rootapp" in info['name'].lower():
+                  try:
+                      resp = requests.get('https://installer.rootapp.com/installer/Linux/X64/latest-linux.yml', timeout=15)
+                      if resp.status_code == 200:
+                          match = re.search(r'version:\s*([0-9\.]+)', resp.text)
+                          if match: return match.group(1)
+                  except:
+                      pass
+              
+              # 3. Generic Fallback: Scrape Homepage for Semantic Versions
+              homepage_match = re.search(r'homepage=["\']?(https?://[^\s"\']+)', info['content'])
+              if homepage_match:
+                  try:
+                      resp = requests.get(homepage_match.group(1), headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
+                      if resp.status_code == 200:
+                          versions = re.findall(r'v([0-9]+\.[0-9]+\.[0-9]+)', resp.text)
+                          if versions:
+                              versions.sort(key=version.parse, reverse=True)
+                              return versions
+                  except:
+                      pass
+                      
               return None
 
-          def update_template(info, new_tag):
+          def update_template(info, new_version):
               content = info['content']
-              new_version = new_tag.lstrip('v')
               
               # 1. Update Version and Reset Revision
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Parse distfiles using pure Regex (NO SPLIT = NO LIST ERRORS)
-              distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
+              # 2. Parse distfiles
+              distfiles_match = re.search(r'distfiles=["\'](.*?)["\']', content, re.DOTALL)
+              if not distfiles_match: 
+                  distfiles_match = re.search(r'distfiles=([^\s\n]+)', content)
               if not distfiles_match: return False
               
               dist_content = distfiles_match.group(1)
-              
-              # Just find the very first valid URL and ignore the rest
               first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
               if not first_url_match: return False
               
               primary_url_template = first_url_match.group(1)
               
-              # 3. Resolve variables for download
+              # 3. Universal Variable Resolver (Handles RootApp's custom variables)
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              
-              # Handle Zen's arch variable for the x86_64 checksum fetch
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
+              download_url = download_url.replace('${_arch_url}', 'X64').replace('$_arch_url', 'X64')
+              download_url = download_url.replace('${XBPS_TARGET_MACHINE}', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
               try:
@@ -110,8 +134,9 @@ jobs:
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
                       
-                      # Replace ONLY the first checksum (preserves License hashes)
-                      content = re.sub(r'(checksum=["\']?)[^\s"\']+', rf'\g<1>{new_hash}', content, count=1)
+                      # Bulletproof Hash Replacement: Only replace actual 64-char hex strings.
+                      # Prevents destroying variable assignments like checksum="${_checksum}"
+                      content = re.sub(r'(checksum=["\']?)([a-fA-F0-9]{64})', rf'\g<1>{new_hash}', content, count=1)
                       
                       with open(info['file'], 'w') as f:
                           f.write(content)
@@ -120,13 +145,13 @@ jobs:
                       print(f"  [!] HTTP {resp.status_code} - Download failed.")
                       return False
               except Exception as e:
-                  print(f"  [!] Error: {e}")
+                  print(f"  [!] Download error: {e}")
               return False
 
+          # Main Execution Loop
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
-          # Scanner for flat repository structure
           templates = []
           for d in os.listdir('.'):
               t_path = os.path.join(d, 'template')
@@ -136,25 +161,28 @@ jobs:
           updates = []
           for path in templates:
               info = extract_info_from_template(path)
-              if not info or not info['github'] or '_commit=' in info['content']:
-                  continue
+              # Skip Git snapshots (handled by the other bot)
+              if not info or '_commit=' in info['content']: continue
                   
               print(f"Checking {info['name']}...")
-              owner, repo = info['github']
-              latest_tag = get_latest_github_release(owner, repo)
-              if not latest_tag: continue
               
-              latest_ver = latest_tag.lstrip('v')
+              latest_ver = get_latest_version(info)
+              if not latest_ver: 
+                  print(f"  [!] Could not determine latest version for {info['name']}")
+                  continue
               
               try:
                   if version.parse(latest_ver) <= version.parse(info['version']):
+                      print(f"  {info['name']} is up to date.")
                       continue
               except Exception:
-                  if latest_ver == info['version']: continue
+                  if latest_ver == info['version']: 
+                      print(f"  {info['name']} is up to date.")
+                      continue
 
               print(f"  [!] Update Found: {info['version']} -> {latest_ver}")
               
-              if update_template(info, latest_tag):
+              if update_template(info, latest_ver):
                   subprocess.run(['git', 'add', info['file']], check=True)
                   subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_ver}"], check=True)
                   updates.append(info['name'])
@@ -178,6 +206,6 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           cat updated_packages.txt | while read pkg; do
-            echo "Triggering build for $pkg..."
+            echo "Triggering build factory for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
           done
