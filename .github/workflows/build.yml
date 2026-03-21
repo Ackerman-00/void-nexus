@@ -114,8 +114,8 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          # Ethereal mode exports the finished packages to /host/binpkgs
-          find /host/binpkgs -name "*.xbps" -exec cp {} public/x86_64/ \;
+          # FIXED: Look in the local hostdir relative to the checkout!
+          find hostdir/binpkgs -type f -name "*.xbps" -exec cp {} public/x86_64/ \;
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
