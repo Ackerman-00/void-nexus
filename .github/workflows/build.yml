@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package_name:
-        description: 'Package to build (e.g., niri-git)'
+        description: 'Package to build'
         required: true
 
 concurrency:
@@ -27,16 +27,22 @@ jobs:
       TEST: '0'
     steps:
       - name: Prepare container
-        shell: sh                           # Use sh because bash is not yet installed
+        shell: sh
         run: |
           set -e
           REPO="https://repo-default.voidlinux.org/current"
-          # xbps-install returns 2 when updating itself – treat as success
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo
           id -u builder >/dev/null 2>&1 || useradd -m builder
           chown -R builder:builder .
+
+      - name: Cache repository
+        uses: actions/cache@v4
+        with:
+          path: public/x86_64
+          key: public-x86_64-${{ github.run_id }}
+          restore-keys: public-x86_64-
 
       - name: Clone void-packages
         run: |
@@ -62,17 +68,25 @@ jobs:
           done
           chown -R builder:builder srcpkgs/
 
-      - name: Restore existing repository
+      - name: Restore existing repository (if not cached)
         run: |
           set -e
+          # Only run if the cache didn't already restore the files
+          if [ -f public/x86_64/x86_64-repodata ]; then
+            echo "Repository already present (cache hit). Skipping download."
+            exit 0
+          fi
+
           PAGES_URL="https://ackerman-00.github.io/void-template"
           mkdir -p public/x86_64
 
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
             echo "Index found, syncing current binaries..."
             xbps-query --repository=./public/x86_64 -s '' 2>/dev/null | awk '{print $2}' | while IFS= read -r pkgver; do
+              [ -z "$pkgver" ] && continue
               fname=$(xbps-query --repository=./public/x86_64 -p filename "$pkgver" 2>/dev/null) || continue
               [ -z "$fname" ] && continue
+              echo "Restoring $fname"
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
             done
