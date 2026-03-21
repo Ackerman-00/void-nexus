@@ -56,6 +56,7 @@ sudo xbps-install <package-name>
 | `noctalia-qs` | Quickshell fork with extended audio/compositor support | Stable |
 | `niri-git` | Scrollable-tiling Wayland compositor | Git (HEAD) |
 | `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git (HEAD) |
+| `many....more` | Other packages | Stable/Git (HEAD)|
 
 > Git packages track the latest upstream commit and update daily.
 
