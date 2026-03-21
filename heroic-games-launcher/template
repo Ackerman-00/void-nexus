@@ -1,7 +1,7 @@
 # Template file for 'heroic-games-launcher'
 pkgname=heroic-games-launcher
 version=2.20.1
-revision=1
+revision=2
 archs="x86_64"
 build_style=fetch
 short_desc="Open source launcher for GOG, Epic, and Amazon Games"
@@ -12,12 +12,14 @@ homepage="https://heroicgameslauncher.com"
 distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
 checksum=4e9957436bc270318b00a1107910a3c7d30ad72da530af4dee5c2860866a6272
 
-# Added desktop-file-utils and hicolor-icon-theme
-depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
+# Dependencies
+depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm 
+ libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
 
-# bsdtar natively handles .deb files much cleaner than 'ar'
+# bsdtar is mandatory for clean .deb handling
 hostmakedepends="bsdtar"
 
+# These internal binaries must NOT be stripped or they will break
 _helper_path="opt/Heroic/resources/app.asar.unpacked/build/bin/x64/linux"
 nopie_files="
  /opt/Heroic/heroic
@@ -31,28 +33,27 @@ nopie_files="
 nostrip_files="${nopie_files}"
 
 do_extract() {
-    # Extract the data tarball using the newly formatted filename
-    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/Heroic-${version}-linux-amd64.deb data.tar.xz
-    bsdtar xf data.tar.xz -C .
+    # CRITICAL: Using wildcard (*) to support both .xz and .zst compression
+    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/Heroic-${version}-linux-amd64.deb data.tar.*
+    bsdtar xf data.tar.* -C .
 }
 
 do_install() {
-    # Install the main application preserving all original permissions (-a)
+    # 1. Install the main application folder
     vmkdir opt
     cp -a opt/Heroic ${DESTDIR}/opt/
 
-    # Install desktop entries and icons
+    # 2. Install desktop entries and icons
     vmkdir usr/share
     cp -a usr/share/applications ${DESTDIR}/usr/share/
     cp -a usr/share/icons ${DESTDIR}/usr/share/
 
-    # Symlink the executable to the user's PATH
+    # 3. Create the executable symlink
     vmkdir usr/bin
     ln -sf /opt/Heroic/heroic ${DESTDIR}/usr/bin/heroic
 
+    # 4. Set correct permissions for the binary and SUID sandbox
     chmod 755 ${DESTDIR}/opt/Heroic/heroic
-    
-    # SUID sandbox
     if [ -f ${DESTDIR}/opt/Heroic/chrome-sandbox ]; then
         chmod 4755 ${DESTDIR}/opt/Heroic/chrome-sandbox
     fi
