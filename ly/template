@@ -1,7 +1,7 @@
 # Template file for 'ly'
 pkgname=ly
 version=1.3.2
-revision=4
+revision=5
 
 # Host dependencies (tools needed to compile)
 hostmakedepends="pkg-config zig git"
@@ -21,8 +21,11 @@ distfiles="https://github.com/fairyglade/ly/archive/refs/tags/v${version}.tar.gz
 checksum=73254acc3c8974a24dbf308e77b096ad6fa2c8818da4d5b865173225602e87d1
 
 post_patch() {
-    # Fix for Zig 0.13+ syntax change: .name must be a string literal, not an enum
+    # Fix 1: Zig 0.13+ syntax change - .name must be a string literal
     sed -i 's/\.name = \.ly,/.name = "ly",/g' build.zig.zon
+    
+    # Fix 2: Zig 0.13+ multihash change - Bare SHA256 hashes must be prefixed with 1220
+    sed -i 's/\.hash = "/\.hash = "1220/g' build.zig.zon
 }
 
 # Manually commanding the Zig compiler
@@ -30,7 +33,7 @@ do_build() {
     zig build -Doptimize=ReleaseSafe -Dinit_system=runit -Dpam=true -Dxcb=true
 }
 
-# Manually placing all compiled files where Void expects them
+# Manually placing all compiled files
 do_install() {
     # 1. Install the main executable
     vbin zig-out/bin/ly
