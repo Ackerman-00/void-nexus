@@ -2,7 +2,6 @@ name: Check for Package Updates
 
 on:
   schedule:
-    # Runs every 4 hours to catch new stable releases
     - cron: '0 */4 * * *'  
   workflow_dispatch:
 
@@ -81,24 +80,25 @@ jobs:
               new_version = new_tag.lstrip('v')
               
               # 1. Update Version and Reset Revision
-              # Using \g<1> to avoid ambiguity with literal numbers following the group
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_version}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
-              # 2. Parse distfiles block (Handle multi-line blocks like Zen Browser)
+              # 2. Parse distfiles block (Handles multi-line blocks like Zen Browser)
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              # split() creates a list of strings
+              # Creates a list of all URLs
               urls = distfiles_match.group(1).strip().split()
               if not urls: return False
               
-              # FIX: Get the first string in the list, THEN split by the arrow
-              primary_url_template = urls.split('>')
+              # THE ABSOLUTE FIX: Grab index 0 of the list, THEN split the string
+              first_url_string = urls 
+              primary_url_template = first_url_string.split('>')
               
-              # 3. Resolve variables for the checksum check download
+              # 3. Resolve variables for download
               download_url = primary_url_template.replace('${version}', new_version).replace('$version', new_version)
-              # Specific arch fix for Zen Browser fetch
+              
+              # Handle Zen's arch variable for the x86_64 checksum fetch
               download_url = download_url.replace('${_upstream_arch}', 'x86_64').replace('$_upstream_arch', 'x86_64')
               
               print(f"  --> Fetching: {download_url}")
@@ -108,7 +108,7 @@ jobs:
                   if resp.status_code == 200:
                       new_hash = hashlib.sha256(resp.content).hexdigest()
                       
-                      # Replace ONLY the first checksum found (preserves License hashes)
+                      # Replace ONLY the first checksum (preserves License hashes)
                       content = re.sub(r'(checksum=["\']?)[^\s"\']+', rf'\g<1>{new_hash}', content, count=1)
                       
                       with open(info['file'], 'w') as f:
@@ -121,7 +121,6 @@ jobs:
                   print(f"  [!] Error: {e}")
               return False
 
-          # Git Configuration
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
           subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
 
@@ -135,7 +134,6 @@ jobs:
           updates = []
           for path in templates:
               info = extract_info_from_template(path)
-              # Skip non-GitHub or Git-Snapshot templates
               if not info or not info['github'] or '_commit=' in info['content']:
                   continue
                   
@@ -159,7 +157,6 @@ jobs:
                   subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_ver}"], check=True)
                   updates.append(info['name'])
 
-          # Atomic push
           if updates:
               subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True)
               subprocess.run(['git', 'push', 'origin', 'main'], check=True)
@@ -179,6 +176,6 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           cat updated_packages.txt | while read pkg; do
-            echo "Triggering build factory for $pkg..."
+            echo "Triggering build for $pkg..."
             gh workflow run "Build and Deploy Custom XBPS" -f package_name="$pkg"
           done
