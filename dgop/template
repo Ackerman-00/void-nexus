@@ -1,0 +1,27 @@
+# Template file for 'dgop'
+pkgname=dgop
+version=0.2.2
+revision=1
+build_style=go
+go_import_path="github.com/AvengeMedia/dgop"
+go_package="${go_import_path}/cmd/dgop"
+short_desc="Stateless, cursor-based system and process monitoring tool"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="MIT"
+homepage="https://github.com/AvengeMedia/dgop"
+
+distfiles="https://github.com/AvengeMedia/dgop/archive/refs/tags/v${version}.tar.gz"
+checksum=0000000000000000000000000000000000000000000000000000000000000000
+
+post_install() {
+    # Install the sample config if it exists in the root of the source
+    if [ -f "config.sample.toml" ]; then
+        vmkdir etc/dgop
+        vinstall config.sample.toml 0644 etc/dgop config.toml
+    fi
+    
+    # Optional: Install a license file if present
+    if [ -f "LICENSE" ]; then
+        vlicense LICENSE
+    fi
+}

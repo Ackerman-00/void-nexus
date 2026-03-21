@@ -1,0 +1,44 @@
+# Template file for 'noctalia-qs'
+pkgname=noctalia-qs
+version=0.0.9
+revision=1
+build_style=cmake
+configure_args="
+ -GNinja
+ -DCMAKE_BUILD_TYPE=Release
+ -DDISTRIBUTOR='Void Linux (Quietcraft)'
+ -DINSTALL_QML_PREFIX='lib/qt6/qml'
+ -DUSE_JEMALLOC=ON
+ -DCRASH_HANDLER=OFF
+ -DNO_PCH=ON
+ -DWAYLAND=ON
+ -DWAYLAND_WLR_LAYERSHELL=ON
+ -DSCREENCOPY=ON
+ -DSERVICE_PIPEWIRE=ON
+ -DSERVICE_PAM=ON
+ -DSERVICE_POLKIT=ON"
+
+# Host dependencies (tools needed to build)
+hostmakedepends="pkg-config ninja cmake qt6-base-devel qt6-declarative-devel 
+ qt6-shadertools wayland-devel spirv-tools"
+
+# Target dependencies (libraries linked against the binary)
+makedepends="qt6-base-devel qt6-declarative-devel qt6-wayland-devel 
+ qt6-svg-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
+ wayland-protocols libgbm-devel vulkan-headers libxcb-devel 
+ pipewire-devel pam-devel polkit-devel glib-devel"
+
+# Runtime requirements
+depends="qt6-declarative qt6-wayland qt6-svg"
+
+short_desc="Custom high-performance Quickshell fork for Noctalia Shell"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="LGPL-3.0-only"
+homepage="https://github.com/noctalia-dev/noctalia-qs"
+
+distfiles="https://github.com/noctalia-dev/noctalia-qs/archive/refs/tags/v${version}.tar.gz"
+checksum=0000000000000000000000000000000000000000000000000000000000000000
+
+# Seamlessly replaces standard quickshell
+provides="quickshell-${version}_${revision}"
+conflicts="quickshell>=0 quickshell-git>=0"
