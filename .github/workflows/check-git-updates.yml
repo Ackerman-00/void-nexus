@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # Silence the Node.js punycode warning
   NODE_OPTIONS: '--no-warnings'
 
 permissions:
@@ -67,13 +68,14 @@ jobs:
           def get_latest_commit(gitrepo):
               try:
                   out = subprocess.check_output(['git', 'ls-remote', gitrepo, 'HEAD'], timeout=15)
-                  decoded_out = out.decode('utf-8').strip()
-                  if not decoded_out:
+                  
+                  # PURE REGEX FIX: Look exclusively for the 40-character Git Hash. 
+                  # This mathematically guarantees 'sha' is a string, never a list.
+                  match = re.search(r'([a-f0-9]{40})', out.decode('utf-8'))
+                  if not match:
                       return None, None
                   
-                  # EXPLICIT STRING FIX: Grab characters up to the first space/tab
-                  sha = decoded_out.split()
-                  
+                  sha = match.group(1)
                   date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
                   return sha, date_str
               except Exception as e:
@@ -83,8 +85,8 @@ jobs:
           def update_git_template(info, new_sha, new_date):
               content = info['content']
               
-              # 1. Update variables safely
-              content = re.sub(r'(_commit=["\']?)[^\n\s"\']+', rf'\g<1>{new_sha}', content)
+              # 1. Update variables safely using \g<1> to prevent capture group errors
+              content = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', rf'\g<1>{new_sha}', content)
               content = re.sub(r'(version=["\']?)[^\n\s"\']+', rf'\g<1>{new_date}', content)
               content = re.sub(r'(revision=["\']?)\d+', r'\g<1>1', content)
               
@@ -92,8 +94,7 @@ jobs:
               distfiles_match = re.search(r'distfiles="([^"]+)"', content, re.DOTALL)
               if not distfiles_match: return False
               
-              dist_content = distfiles_match.group(1)
-              first_url_match = re.search(r'(https?://[^\s>]+)', dist_content)
+              first_url_match = re.search(r'(https?://[^\s>]+)', distfiles_match.group(1))
               if not first_url_match: return False
               
               primary_url_template = first_url_match.group(1)
@@ -147,9 +148,7 @@ jobs:
                   print(f"  {info['name']} is up to date.")
                   continue
 
-              # Ensure we are printing a string, not a list
               print(f"  [!] New commit found: {latest_sha[:7]}")
-              
               if update_git_template(info, latest_sha, latest_date):
                   subprocess.run(['git', 'add', info['file']], check=True)
                   subprocess.run(['git', 'commit', '-m', f"auto-update: {info['name']} to {latest_sha[:7]}"], check=True)
