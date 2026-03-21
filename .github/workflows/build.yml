@@ -70,7 +70,6 @@ jobs:
 
       - name: Restore existing repository (if not cached)
         run: |
-          set -e
           if [ -f public/x86_64/x86_64-repodata ]; then
             echo "Repository already present (cache hit). Skipping download."
             exit 0
@@ -81,10 +80,15 @@ jobs:
 
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
             echo "Index found, syncing current binaries..."
-            
             REPO_DIR="$PWD/public/x86_64"
             
-            xbps-query --repository="$REPO_DIR" -s '' | awk '{print $2}' | while IFS= read -r pkg; do
+            # Disable pipefail temporarily so empty queries don't crash the script
+            set +o pipefail || true
+            
+            # Use -l to list all packages, output to a temp file safely
+            xbps-query --repository="$REPO_DIR" -l 2>/dev/null | awk '{print $2}' > /tmp/pkgs.txt || true
+            
+            while IFS= read -r pkg; do
               [ -z "$pkg" ] && continue
               fname=$(xbps-query --repository="$REPO_DIR" -p filename "$pkg" 2>/dev/null) || continue
               [ -z "$fname" ] && continue
@@ -92,7 +96,10 @@ jobs:
               echo "Downloading $fname..."
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
-            done
+            done < /tmp/pkgs.txt
+            
+            # Re-enable pipefail for safety
+            set -o pipefail || true
           fi
 
       - name: Bootstrap masterdir
