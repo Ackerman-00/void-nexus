@@ -1,17 +1,15 @@
 # Template file for 'dankmaterialshell'
 pkgname=dankmaterialshell
 version=1.4.4
-revision=2
+revision=3
 wrksrc="DankMaterialShell-${version}"
 
-# 1. Compile the Go Backend (The 'dms' CLI)
 build_style=go
 build_wrksrc="core"
 go_import_path="github.com/AvengeMedia/DankMaterialShell/core"
 go_package="${go_import_path}/cmd/dms"
 
-# 2. Dependencies
-depends="quickshell qt6-declarative qt6-wayland pam accountsservice"
+depends="quickshell-git qt6-declarative qt6-wayland pam accountsservice"
 
 short_desc="A Material You inspired shell for Wayland"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
@@ -23,6 +21,6 @@ checksum=9a23a717eef088da3d25b355d4f13feff7499bbafe5e93c9fa379ee15e962709
 
 post_install() {
     cd ..
-    vmkdir etc/xdg/quickshell/DankMaterialShell
-    cp -a quickshell/* ${DESTDIR}/etc/xdg/quickshell/DankMaterialShell/
+    vmkdir usr/share/quickshell/dms
+    cp -a quickshell/* ${DESTDIR}/usr/share/quickshell/dms/
 }
