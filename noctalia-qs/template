@@ -1,7 +1,7 @@
 # Template file for 'noctalia-qs'
 pkgname=noctalia-qs
 version=0.0.9
-revision=1
+revision=2
 build_style=cmake
 configure_args="
  -GNinja
@@ -18,12 +18,12 @@ configure_args="
  -DSERVICE_PAM=ON
  -DSERVICE_POLKIT=ON"
 
-# Host dependencies (tools needed to run during build)
+# Host dependencies
 hostmakedepends="pkg-config ninja cmake qt6-base-devel qt6-declarative-devel 
  qt6-shadertools wayland-devel SPIRV-Tools"
 
-# Target dependencies (headers and libraries linked into the binary)
-makedepends="qt6-base-devel qt6-declarative-devel qt6-wayland-devel 
+# Target dependencies
+makedepends="qt6-base-devel qt6-declarative-devel qt6-declarative-private-devel qt6-wayland-devel 
  qt6-svg-devel qt6-shadertools-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
  wayland-protocols libgbm-devel Vulkan-Headers libxcb-devel 
  pipewire-devel pam-devel polkit-devel glib-devel"
