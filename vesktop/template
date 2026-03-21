@@ -1,6 +1,6 @@
 # Template file for 'vesktop'
 pkgname=vesktop
-version=1.6.3
+version=1.6.5
 revision=1
 archs="x86_64 aarch64"
 build_style=fetch
