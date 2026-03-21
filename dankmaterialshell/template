@@ -9,7 +9,7 @@ build_wrksrc="core"
 go_import_path="github.com/AvengeMedia/DankMaterialShell/core"
 go_package="${go_import_path}/cmd/dms"
 
-depends="quickshell-git qt6-declarative qt6-wayland pam accountsservice"
+depends="quickshell-git dgop matugen qt6-declarative qt6-wayland pam accountsservice"
 
 short_desc="A Material You inspired shell for Wayland"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
