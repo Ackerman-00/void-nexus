@@ -98,9 +98,28 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          find hostdir/binpkgs -type f -name "*.xbps" -exec cp {} public/x86_64/ \;
+          # 1. SMART COPY: Only copy packages that explicitly belong to your custom templates
+          find hostdir/binpkgs -type f -name "*.xbps" | while read -r file; do
+            srcpkg=$(xbps-query -p sourcepkg "$file" 2>/dev/null || echo "")
+            if [ -n "$srcpkg" ] && [ -d "custom-templates-temp/$srcpkg" ]; then
+              cp "$file" public/x86_64/
+            fi
+          done
 
           cd public/x86_64
+          
+          # 2. THE PURGE: Delete any existing bloat/dependencies from the folder before indexing
+          if ls *.xbps 1>/dev/null 2>&1; then
+            for file in *.xbps; do
+              srcpkg=$(xbps-query -p sourcepkg "$file" 2>/dev/null || echo "")
+              if [ -z "$srcpkg" ] || [ ! -d "../../custom-templates-temp/$srcpkg" ]; then
+                echo "Purging unwanted dependency: $file"
+                rm -f "$file"
+              fi
+            done
+          fi
+
+          # 3. Securely sign and index the clean folder
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
             xbps-rindex -c $PWD
@@ -108,6 +127,7 @@ jobs:
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
+          # --- THE UI DATA BRIDGE ---
           cd ..
           if [ -f ../custom-templates-temp/index.html ]; then
             cp ../custom-templates-temp/index.html ./
@@ -117,17 +137,13 @@ jobs:
           first=1
           xbps-query --repository=./x86_64 -l 2>/dev/null | awk '{print $2}' | while read -r pkg_full; do
             [ -z "$pkg_full" ] && continue
-            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
-            
-            # VIP FILTER: Only allow packages that have a custom template folder
-            if [ ! -d "../custom-templates-temp/$name" ]; then
-              continue
-            fi
-            
             [ "$first" -eq 0 ] && echo "," >> packages.json
             first=0
+            
+            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
             ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" | sed "s/^$name-//")
             desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
+            
             echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
           done
           echo "]" >> packages.json
