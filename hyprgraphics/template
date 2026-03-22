@@ -18,6 +18,8 @@ makedepends="
   libjxl-devel
   libspng
   libwebp-devel
+  pango-devel
+  librsvg-devel
   pixman-devel
 "
 short_desc="hyprland graphics resources and utilities"
