@@ -2,13 +2,9 @@
 
 <img src="https://voidlinux.org/assets/img/void_bg.png" width="80" />
 
-<br />
+<h1>void-nexus</h1>
 
-# void-nexus
-
-### A cryptographically signed, self-updating package repository for Void Linux.
-
-<br />
+<p>A cryptographically signed, self-updating package repository for Void Linux.</p>
 
 [![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/build.yml?style=for-the-badge&label=BUILD&logo=githubactions&logoColor=white)](https://github.com/Ackerman-00/void-nexus/actions)
 &nbsp;
@@ -16,21 +12,13 @@
 &nbsp;
 [![Website](https://img.shields.io/badge/BROWSE_PACKAGES-%E2%86%92-478061?style=for-the-badge)](https://ackerman-00.github.io/void-nexus/)
 
-<br />
-
-> Packages built nightly · Signed & indexed automatically · Drop-in native xbps repo
+<p><sup>Packages built nightly · Signed & indexed automatically · Drop-in native xbps repo</sup></p>
 
 </div>
 
 ---
 
-<br />
-
 ## ⚡ Quick Setup
-
-**Three commands and you're done.**
-
-<br />
 
 **① Add the repository**
 
@@ -53,11 +41,7 @@ sudo xbps-install -S
 sudo xbps-install <package-name>
 ```
 
-<br />
-
 ---
-
-<br />
 
 ## 📦 Packages
 
@@ -67,14 +51,11 @@ sudo xbps-install <package-name>
   <img src="https://img.shields.io/badge/🌐_View_All_Packages-ackerman--00.github.io%2Fvoid--nexus-478061?style=for-the-badge&logoColor=white" alt="Browse Packages" />
 </a>
 
-<br /><br />
-<sup>Full package list with versions, descriptions, and changelogs.</sup>
+<sub>Full package list with versions, descriptions, and changelogs.</sub>
 
 </div>
 
 <br />
-
-A few highlights:
 
 | Package | Description | Type |
 |---------|-------------|:----:|
@@ -88,11 +69,7 @@ A few highlights:
 
 > `Git` packages track upstream HEAD and rebuild on every new commit.
 
-<br />
-
 ---
-
-<br />
 
 ## 🔄 Staying Updated
 
@@ -102,11 +79,17 @@ No extra steps — packages update with your system:
 sudo xbps-install -Su
 ```
 
-<br />
-
 ---
 
-<br />
+## 🤝 Contributing
+
+Want a package added, or spotted something broken?
+
+- **[Open an issue](https://github.com/Ackerman-00/void-nexus/issues/new)** — request a new package or report a build failure
+- **[Submit a PR](https://github.com/Ackerman-00/void-nexus/pulls)** — add your own template following the existing structure (one directory per package, containing a `template` file)
+- **Package updates** are handled automatically by the workflow — no need to bump versions manually
+
+---
 
 ## 🛠 Troubleshooting
 
@@ -132,11 +115,7 @@ Place the public <code>.plist</code> key file manually into <code>/var/db/xbps/k
 Only <code>x86_64</code> glibc is currently supported. musl and other architectures are not built.
 </details>
 
-<br />
-
 ---
-
-<br />
 
 <div align="center">
 
