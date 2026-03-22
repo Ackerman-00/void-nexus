@@ -3,7 +3,6 @@ pkgname=hyprland-qtutils
 version=0.1.5
 revision=1
 build_style=cmake
-configure_args="-DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr -DQT_FIND_PACKAGE_FOR_PRIVATE_APIS=ON"
 hostmakedepends="
   cmake
   pkgconf
@@ -29,6 +28,14 @@ license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/hyprland-qtutils"
 distfiles="https://github.com/hyprwm/hyprland-qtutils/archive/refs/tags/v${version}.tar.gz"
 checksum=c02e47c9f720c20a5adca1baebbcfee0db5d3d36ce9595779563a2e5d27bafca
+
+post_patch() {
+  # Fix for Qt 6.10+: explicitly require WaylandClientPrivate
+  vsed -i 's/WaylandClient)/WaylandClient WaylandClientPrivate)/' \
+    utils/dialog/CMakeLists.txt \
+    utils/donate-screen/CMakeLists.txt \
+    utils/update-screen/CMakeLists.txt
+}
 
 post_install() {
   vlicense LICENSE
