@@ -1,95 +1,142 @@
 <div align="center">
 
-<img src="https://voidlinux.org/assets/img/void_bg.png" width="72" />
+<img src="https://voidlinux.org/assets/img/void_bg.png" width="80" />
+
+<br />
 
 # void-nexus
 
-**A cryptographically signed, fully automated custom package repository for Void Linux.**
+### A cryptographically signed, self-updating package repository for Void Linux.
 
-[![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/build.yml?style=flat-square&label=build)](https://github.com/Ackerman-00/void-nexus/actions)
-[![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/check-updates.yml?style=flat-square&label=auto-update)](https://github.com/Ackerman-00/void-nexus/actions)
-[![Packages](https://img.shields.io/badge/browse-packages-green?style=flat-square)](https://ackerman-00.github.io/void-nexus/)
+<br />
+
+[![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/build.yml?style=for-the-badge&label=BUILD&logo=githubactions&logoColor=white)](https://github.com/Ackerman-00/void-nexus/actions)
+&nbsp;
+[![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/check-updates.yml?style=for-the-badge&label=AUTO-UPDATE&logo=github&logoColor=white)](https://github.com/Ackerman-00/void-nexus/actions)
+&nbsp;
+[![Website](https://img.shields.io/badge/BROWSE_PACKAGES-%E2%86%92-478061?style=for-the-badge)](https://ackerman-00.github.io/void-nexus/)
+
+<br />
+
+> Packages built nightly · Signed & indexed automatically · Drop-in native xbps repo
 
 </div>
 
 ---
 
-## Overview
+<br />
 
-Packages in this repo are built automatically, signed with a private key, and served via GitHub Pages as a native xbps repository. Once added, packages update alongside your regular system with `xbps-install -Su` — no manual intervention needed.
+## ⚡ Quick Setup
 
-Browse all available packages at **[ackerman-00.github.io/void-nexus](https://ackerman-00.github.io/void-nexus/)**.
+**Three commands and you're done.**
 
----
+<br />
 
-## Setup
-
-### 1. Add the repository
+**① Add the repository**
 
 ```bash
 echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' \
   | sudo tee /etc/xbps.d/10-nexus.conf
 ```
 
-### 2. Sync and trust the signing key
+**② Sync and trust the signing key**
 
 ```bash
 sudo xbps-install -S
 ```
 
-You will be prompted to import the RSA public key for **`Void Template Build Bot <actions@github.com>`** — type `y` and press Enter.
+> You'll be asked to import the RSA key for **`Void Template Build Bot <actions@github.com>`** — press `y` to continue.
 
-### 3. Install packages
+**③ Install anything**
 
 ```bash
 sudo xbps-install <package-name>
 ```
 
+<br />
+
 ---
 
-## Available Packages
+<br />
 
-Browse the full list with descriptions at **[ackerman-00.github.io/void-nexus](https://ackerman-00.github.io/void-nexus/)**.
+## 📦 Packages
+
+<div align="center">
+
+### → [ackerman-00.github.io/void-nexus](https://ackerman-00.github.io/void-nexus/) ←
+
+*Full package list with versions, descriptions, and changelogs.*
+
+</div>
+
+<br />
+
+A few highlights:
 
 | Package | Description | Type |
-|---------|-------------|------|
+|---------|-------------|:----:|
 | `zen-browser` | Privacy-focused Firefox-based browser | Stable |
 | `vesktop` | Vencord-bundled Discord client | Stable |
 | `rootapp` | Discord alternative for gaming communities | Stable |
-| `dank-material-shell` | Material Design shell for niri/Hyprland | Stable |
-| `noctalia-qs` | Quickshell fork with extended audio/compositor support | Stable |
-| `niri-git` | Scrollable-tiling Wayland compositor | Git (HEAD) |
-| `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git (HEAD) |
-| and more... | See the website for the full list | Stable / Git |
+| `dank-material-shell` | Material Design shell for niri / Hyprland | Stable |
+| `noctalia-qs` | Quickshell fork with extended audio support | Stable |
+| `niri-git` | Scrollable-tiling Wayland compositor | Git |
+| `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git |
 
-> Git packages track the latest upstream commit and update daily.
+> `Git` packages track upstream HEAD and rebuild on every new commit.
+
+<br />
 
 ---
 
-## Updating
+<br />
+
+## 🔄 Staying Updated
+
+No extra steps — packages update with your system:
 
 ```bash
 sudo xbps-install -Su
 ```
 
+<br />
+
 ---
 
-## Troubleshooting
+<br />
 
-**Repository not found**
-Verify `/etc/xbps.d/10-nexus.conf` contains exactly:
+## 🛠 Troubleshooting
+
+<details>
+<summary><b>Repository not found</b></summary>
+<br />
+Verify <code>/etc/xbps.d/10-nexus.conf</code> contains exactly:
+
 ```
 repository=https://ackerman-00.github.io/void-nexus/x86_64
 ```
+</details>
 
-**Key import failed or was declined**
-Manually trust the key by placing the public `.plist` file in `/var/db/xbps/keys/`. The key file is available in the root of this repository.
+<details>
+<summary><b>Key import failed or was declined</b></summary>
+<br />
+Place the public <code>.plist</code> key file manually into <code>/var/db/xbps/keys/</code>. The key is available in the root of this repository.
+</details>
 
-**Package not found**
-Only `x86_64` (glibc) is supported. musl and other architectures are not currently built.
+<details>
+<summary><b>Package not found</b></summary>
+<br />
+Only <code>x86_64</code> glibc is currently supported. musl and other architectures are not built.
+</details>
+
+<br />
 
 ---
 
+<br />
+
 <div align="center">
-<sub>Maintained by <a href="https://github.com/Ackerman-00">Ackerman-00</a> · Packages at <a href="https://ackerman-00.github.io/void-nexus/">ackerman-00.github.io/void-nexus</a> · Powered by <a href="https://voidlinux.org">Void Linux</a></sub>
+
+Made with 🖤 by [Ackerman-00](https://github.com/Ackerman-00) &nbsp;·&nbsp; Powered by [Void Linux](https://voidlinux.org)
+
 </div>
