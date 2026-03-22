@@ -59,29 +59,30 @@ homepage="https://hyprland.org/"
 changelog="https://github.com/hyprwm/Hyprland/releases"
 distfiles="https://github.com/hyprwm/Hyprland/releases/download/v${version}/source-v${version}.tar.gz"
 checksum=723d9cf86ad09b2f01d2cc403ac5799f9d6ad69a438b43a8f7b7589122eafd1b
-
 if [ "$XBPS_TARGET_LIBC" = "musl" ]; then
   configure_args+=" -DCMAKE_CXX_FLAGS=\"-lexecinfo\""
   makedepends+=" libexecinfo-devel"
   depends+=" libexecinfo"
 fi
+pre_configure() {
+  find ${wrksrc} -name "CMakeLists.txt" -exec sed -i \
+    -e 's/CMAKE_CXX_STANDARD 26/CMAKE_CXX_STANDARD 23/g' \
+    -e 's/-std=gnu++26/-std=gnu++23/g' \
+    -e 's/-std=c++26/-std=c++23/g' {} +
 
+  find ${wrksrc} -name "*.cpp" -exec sed -i \
+    's|+ "/" + \(instanceSignature\) + "/" + \(filename\)|+ "/" + std::string(\1) + "/" + std::string(\2)|g' {} +
+}
 post_install() {
-  # license
   vlicense LICENSE
-
-  # headers
   vmkdir usr/include/hyprland
   vmkdir usr/include/hyprland/protocols
   vmkdir usr/share/pkgconfig
-
   cmake --build ./build --config Release --target generate-protocol-headers
-
   find src -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.inc' \) -print0 | cpio --quiet -0dump ${DESTDIR}/usr/include/hyprland
   install -Dm0644 protocols/*.h* ${DESTDIR}/usr/include/hyprland/protocols
   vinstall build/hyprland.pc 644 usr/share/pkgconfig
 }
-
 hyprland-devel_package() {
   depends="${sourcepkg}>=${version}_${revision} ${othermakedepends} ${makedepends}"
   short_desc="Dynamic tiling Wayland compositor - development files"
@@ -90,4 +91,3 @@ hyprland-devel_package() {
     vmove usr/share/pkgconfig
   }
 }
-
