@@ -17,6 +17,7 @@ hostmakedepends="
 makedepends="
   alsa-lib-devel
   fontconfig-devel
+  libX11-devel
   libgit2-devel
   libxcb-devel
   libxkbcommon-devel
@@ -35,6 +36,7 @@ homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
 checksum=12c0385514ca0615eb9b8f4ec81b7a2e5ecc124f3b528130c663da7e07a08822
+
 post_install() {
 	vlicense ${wrksrc}/LICENSE-AGPL
 	APP_NAME="Zed" DO_STARTUP_NOTIFY="true" APP_ICON="zed" APP_CLI="zedit" \
