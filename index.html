@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Void Nexus | Custom XBPS Repository</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,6 +29,7 @@
     </script>
     <style>
         body { background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        
         .glass-panel {
             background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(16px);
@@ -35,26 +37,38 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
+        
         .glass-card {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.02), 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
+        
         .glass-card:hover {
-            border-color: rgba(99, 102, 241, 0.4);
-            box-shadow: 0 15px 40px -10px rgba(99, 102, 241, 0.2);
-            transform: translateY(-4px) scale(1.01);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: inset 0 0 20px rgba(99,102,241,0.05), 0 15px 40px -10px rgba(99, 102, 241, 0.3);
+            transform: translateY(-5px);
         }
+
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
         #toast.show { transform: translateY(0); opacity: 1; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+    <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" class="absolute top-4 right-4 sm:top-6 sm:right-6 glass-panel px-4 py-2.5 rounded-full text-slate-300 hover:text-white hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center gap-2 text-sm font-medium z-50">
+        <i class="fab fa-github text-lg"></i> <span class="hidden sm:inline">View Source</span>
+    </a>
 
     <div class="fixed inset-0 z-[-1] pointer-events-none">
         <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob"></div>
@@ -62,7 +76,7 @@
         <div class="absolute -bottom-32 left-1/3 w-96 h-96 bg-purple-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob animation-delay-4000"></div>
     </div>
 
-    <header class="pt-24 pb-16 text-center px-4 relative z-10">
+    <header class="pt-28 pb-16 text-center px-4 relative z-10">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-panel text-xs font-medium text-cyan-400 mb-6">
             <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span></span>
             Repository Online
@@ -74,31 +88,34 @@
             A high-performance, automated XBPS repository for Void Linux. Discover and install bleeding-edge packages instantly.
         </p>
         
-        <div class="max-w-2xl mx-auto glass-panel rounded-2xl p-2 flex items-center justify-between group hover:border-indigo-500/30 transition-colors">
-            <code class="text-sm text-indigo-200 font-mono text-left px-4 truncate select-all">
-                echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' | sudo tee /etc/xbps.d/10-nexus.conf
-            </code>
-            <button onclick="copyToClipboard('echo \'repository=https://ackerman-00.github.io/void-nexus/x86_64\' | sudo tee /etc/xbps.d/10-nexus.conf')" class="shrink-0 bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-xl transition-all active:scale-95" aria-label="Copy command">
+        <div class="max-w-3xl mx-auto glass-panel rounded-2xl p-2 flex items-center justify-between group hover:border-indigo-500/30 transition-colors relative">
+            <div class="overflow-x-auto hide-scroll whitespace-nowrap w-full pl-4 pr-4">
+                <code class="text-sm text-indigo-200 font-mono select-all block py-2">
+                    echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' | sudo tee /etc/xbps.d/10-nexus.conf
+                </code>
+            </div>
+            <button onclick="copyToClipboard('echo \'repository=https://ackerman-00.github.io/void-nexus/x86_64\' | sudo tee /etc/xbps.d/10-nexus.conf')" class="shrink-0 bg-slate-800 hover:bg-indigo-600 text-white p-3 ml-2 rounded-xl transition-all active:scale-95 z-10 shadow-md" aria-label="Copy command">
                 <i class="far fa-copy"></i>
             </button>
+            <div class="absolute right-14 top-0 bottom-0 w-12 bg-gradient-to-r from-transparent to-slate-900/50 pointer-events-none rounded-r-xl"></div>
         </div>
     </header>
 
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 pb-24 z-10">
         <div class="relative mb-12 max-w-2xl mx-auto group">
-            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+            <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors z-10">
                 <i class="fas fa-search text-lg"></i>
             </div>
-            <input type="text" id="searchInput" class="block w-full pl-14 pr-16 py-4 glass-panel rounded-2xl leading-5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 sm:text-lg transition-all" placeholder="Search packages...">
-            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                <kbd class="hidden sm:inline-flex items-center px-2 py-1 border border-slate-700 rounded text-xs font-sans font-medium text-slate-400 bg-slate-800/50">/ </kbd>
+            <input type="text" id="searchInput" class="block w-full pl-16 pr-16 py-4 glass-panel rounded-2xl leading-5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 sm:text-lg transition-all relative" placeholder="Search packages...">
+            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none z-10">
+                <kbd class="hidden sm:inline-flex items-center px-2.5 py-1 border border-slate-700 rounded-md text-xs font-sans font-medium text-slate-400 bg-slate-800/80 shadow-sm">/ </kbd>
             </div>
         </div>
 
         <div id="packagesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
             <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
                 <i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-indigo-500/50"></i>
-                <p class="text-lg animate-pulse">Establishing connection to Nexus...</p>
+                <p class="text-lg animate-pulse font-light">Establishing connection to Nexus...</p>
             </div>
         </div>
     </main>
@@ -107,9 +124,9 @@
         <p>Maintained by Ackerman &bull; Automated via GitHub Actions</p>
     </footer>
 
-    <div id="toast" class="fixed bottom-6 right-6 glass-panel border-indigo-500/30 text-slate-200 px-6 py-4 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
-        <i class="fas fa-check-circle text-emerald-400 text-lg"></i>
-        <span class="font-medium" id="toastMsg">Command copied to clipboard</span>
+    <div id="toast" class="fixed bottom-6 right-6 glass-panel border-indigo-500/30 text-slate-200 px-6 py-4 rounded-xl shadow-2xl transform translate-y-24 opacity-0 transition-all duration-400 z-50 flex items-center gap-3">
+        <i class="fas fa-check-circle text-emerald-400 text-lg shadow-emerald-500/50 drop-shadow-md"></i>
+        <span class="font-medium tracking-wide" id="toastMsg">Copied</span>
     </div>
 
     <script>
@@ -138,16 +155,16 @@
             .catch(() => {
                 grid.innerHTML = `
                     <div class="col-span-full flex flex-col items-center justify-center py-24 glass-panel rounded-3xl border-dashed border-slate-700/50">
-                        <div class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 rotate-12">
+                        <div class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 rotate-12 shadow-lg">
                             <i class="fas fa-database text-3xl text-slate-500 -rotate-12"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-slate-200 mb-2">Awaiting Synchronization</h3>
-                        <p class="text-slate-400 text-center max-w-md">The repository index will populate automatically after your first successful GitHub Actions build.</p>
+                        <h3 class="text-2xl font-bold text-slate-200 mb-2 tracking-tight">Awaiting Synchronization</h3>
+                        <p class="text-slate-400 text-center max-w-md font-light leading-relaxed">The repository index will populate automatically after your first successful GitHub Actions build.</p>
                     </div>`;
             });
 
         searchInput.addEventListener('input', (e) => {
-            const terms = e.target.value.toLowerCase().split(' ').filter(t => t);
+            const terms = e.target.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
             const filtered = allPackages.filter(pkg => {
                 const text = `${pkg.name} ${pkg.description}`.toLowerCase();
                 return terms.every(term => text.includes(term));
@@ -157,48 +174,48 @@
 
         function categorize(name, desc) {
             const t = (name + " " + desc).toLowerCase();
-            if (t.match(/game|gaming|wine|proton|emulator/)) return { icon: 'fa-gamepad', label: 'Gaming', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20' };
-            if (t.match(/discord|chat|social|message|client/)) return { icon: 'fa-comments', label: 'Social', cls: 'bg-violet-500/10 text-violet-400 border-violet-500/20' };
-            if (t.match(/browser|web|internet/)) return { icon: 'fa-globe', label: 'Web', cls: 'bg-sky-500/10 text-sky-400 border-sky-500/20' };
-            if (t.match(/wm|shell|desktop|hypr|wayland|x11/)) return { icon: 'fa-layer-group', label: 'Desktop', cls: 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' };
-            if (t.match(/media|video|audio|music|player/)) return { icon: 'fa-play-circle', label: 'Media', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
-            if (t.match(/dev|code|compiler|editor|ide/)) return { icon: 'fa-code', label: 'Development', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
-            return { icon: 'fa-box', label: 'Utility', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20' };
+            if (t.match(/game|gaming|wine|proton|emulator/)) return { icon: 'fa-gamepad', label: 'Gaming', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/10' };
+            if (t.match(/discord|chat|social|message|client/)) return { icon: 'fa-comments', label: 'Social', cls: 'bg-violet-500/10 text-violet-400 border-violet-500/20 shadow-violet-500/10' };
+            if (t.match(/browser|web|internet/)) return { icon: 'fa-globe', label: 'Web', cls: 'bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-sky-500/10' };
+            if (t.match(/wm|shell|desktop|hypr|wayland|x11/)) return { icon: 'fa-layer-group', label: 'Desktop', cls: 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20 shadow-fuchsia-500/10' };
+            if (t.match(/media|video|audio|music|player/)) return { icon: 'fa-play-circle', label: 'Media', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' };
+            if (t.match(/dev|code|compiler|editor|ide/)) return { icon: 'fa-code', label: 'Development', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' };
+            return { icon: 'fa-box', label: 'Utility', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20 shadow-slate-500/10' };
         }
 
         function render(packages) {
             if (!packages.length) {
-                grid.innerHTML = `<div class="col-span-full text-center text-slate-500 py-16 text-lg"><i class="fas fa-ghost text-4xl mb-4 opacity-50 block"></i>No packages found.</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center text-slate-500 py-16 text-lg font-light"><i class="fas fa-ghost text-4xl mb-4 opacity-50 block"></i>No packages found.</div>`;
                 return;
             }
 
             grid.innerHTML = packages.map(pkg => {
                 const cat = categorize(pkg.name, pkg.description);
                 return `
-                <div class="glass-card rounded-3xl p-6 flex flex-col h-full group relative overflow-hidden">
-                    <div class="absolute -right-6 -top-6 text-9xl text-slate-800/30 group-hover:text-indigo-500/10 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
+                <div class="glass-card rounded-[24px] p-6 flex flex-col h-full group relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 text-9xl text-slate-800/30 group-hover:text-indigo-500/10 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
                         <i class="fas ${cat.icon}"></i>
                     </div>
                     
-                    <div class="flex justify-between items-start mb-3 z-10">
-                        <h3 class="text-2xl font-bold text-slate-100 tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-cyan-400 transition-all">${pkg.name}</h3>
+                    <div class="flex justify-between items-start mb-4 z-10">
+                        <h3 class="text-2xl font-bold text-slate-100 tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-cyan-400 transition-all duration-300">${pkg.name}</h3>
                     </div>
                     
-                    <div class="flex items-center gap-2 mb-4 z-10 flex-wrap">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-widest border ${cat.cls} uppercase shadow-sm">
-                            <i class="fas ${cat.icon} mr-1.5 opacity-70"></i> ${cat.label}
+                    <div class="flex items-center gap-2.5 mb-5 z-10 flex-wrap">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border ${cat.cls} uppercase shadow-sm">
+                            <i class="fas ${cat.icon} mr-1.5 opacity-75"></i> ${cat.label}
                         </span>
-                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700/50 shadow-sm">
                             ${pkg.version}
                         </span>
                     </div>
                     
                     <p class="text-sm text-slate-400 mb-8 flex-grow z-10 leading-relaxed font-light">${pkg.description}</p>
                     
-                    <div class="mt-auto z-10 pt-4 border-t border-slate-700/50">
-                        <button onclick="copyToClipboard('sudo xbps-install -S ${pkg.name}')" class="w-full flex items-center justify-between bg-slate-900/50 hover:bg-indigo-600 text-slate-300 hover:text-white py-3 px-5 rounded-xl text-sm font-semibold transition-all border border-slate-700 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 active:scale-[0.98] group/btn shadow-inner">
-                            <span class="flex items-center gap-3"><i class="fas fa-terminal opacity-50 group-hover/btn:opacity-100 transition-opacity"></i> Install</span>
-                            <i class="far fa-copy opacity-0 group-hover/btn:opacity-100 transition-opacity"></i>
+                    <div class="mt-auto z-10 pt-5 border-t border-slate-700/50">
+                        <button onclick="copyToClipboard('sudo xbps-install -S ${pkg.name}')" class="w-full flex items-center justify-between bg-slate-900/40 hover:bg-indigo-500 text-slate-300 hover:text-white py-3 px-5 rounded-xl text-sm font-semibold transition-all duration-300 border border-slate-700/60 hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 active:scale-[0.98] group/btn shadow-inner hover:shadow-indigo-500/25">
+                            <span class="flex items-center gap-3"><i class="fas fa-terminal opacity-50 group-hover/btn:opacity-100 transition-opacity"></i> Install ${pkg.name}</span>
+                            <i class="far fa-copy opacity-0 group-hover/btn:opacity-100 transition-opacity transform group-hover/btn:scale-110"></i>
                         </button>
                     </div>
                 </div>
@@ -207,10 +224,11 @@
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                document.getElementById('toastMsg').innerText = `Copied: ${text.split(' ').pop()}`;
+                const pkgName = text.split(' ').pop();
+                document.getElementById('toastMsg').innerHTML = `Copied <b>${pkgName}</b> install command!`;
                 toast.classList.add('show');
                 clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+                toastTimeout = setTimeout(() => toast.classList.remove('show'), 3500);
             });
         }
     </script>
