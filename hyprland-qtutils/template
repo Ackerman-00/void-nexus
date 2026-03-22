@@ -3,9 +3,15 @@ pkgname=hyprland-qtutils
 version=0.1.5
 revision=1
 build_style=cmake
-configure_args="-DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr"
-hostmakedepends="cmake pkgconf"
-makedepends="hyprutils hyprland-qt-support"
+configure_args="-DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr -DQT_FIND_PACKAGE_FOR_PRIVATE_APIS=ON"
+hostmakedepends="
+  cmake
+  pkgconf
+"
+makedepends="
+  hyprutils
+  hyprland-qt-support
+"
 qtmakedepends="
   qt6-base-devel
   qt6-base-private-devel
