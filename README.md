@@ -63,9 +63,12 @@ sudo xbps-install <package-name>
 
 <div align="center">
 
-### → [ackerman-00.github.io/void-nexus](https://ackerman-00.github.io/void-nexus/) ←
+<a href="https://ackerman-00.github.io/void-nexus/">
+  <img src="https://img.shields.io/badge/🌐_View_All_Packages-ackerman--00.github.io%2Fvoid--nexus-478061?style=for-the-badge&logoColor=white" alt="Browse Packages" />
+</a>
 
-*Full package list with versions, descriptions, and changelogs.*
+<br /><br />
+<sup>Full package list with versions, descriptions, and changelogs.</sup>
 
 </div>
 
