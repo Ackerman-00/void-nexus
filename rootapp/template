@@ -1,7 +1,7 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=20260303
-revision=2
+version=2.2.5
+revision=1
 archs="x86_64"
 nostrip=yes
 depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core"
@@ -10,7 +10,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="custom"
 homepage="https://www.rootapp.com"
 distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}.AppImage"
-checksum=b81d23935e1db25e5dc5f857944fe71e072e3895db1c0c8195bd178374737206
+checksum=8896f6a96ffd8b88f7531db90a894f2e42b6f935da92ed04066b716368175f8d
 
 do_extract() {
         local _appimage="${XBPS_SRCDISTDIR}/${pkgname}-${version}/Root-${version}.AppImage"
