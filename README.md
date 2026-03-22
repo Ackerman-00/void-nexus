@@ -2,13 +2,12 @@
 
 <img src="https://voidlinux.org/assets/img/void_bg.png" width="72" />
 
-# void-template
+# void-nexus
 
 **A cryptographically signed, fully automated custom package repository for Void Linux.**
 
-[![Packages](https://img.shields.io/badge/packages-x86__64-blue?style=flat-square)](https://ackerman-00.github.io/void-template/x86_64)
-[![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-template/build.yml?style=flat-square&label=build)](https://github.com/Ackerman-00/void-template/actions)
-[![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-template/check-updates.yml?style=flat-square&label=auto-update)](https://github.com/Ackerman-00/void-template/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/build.yml?style=flat-square&label=build)](https://github.com/Ackerman-00/void-nexus/actions)
+[![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/check-updates.yml?style=flat-square&label=auto-update)](https://github.com/Ackerman-00/void-nexus/actions)
 
 </div>
 
@@ -25,8 +24,8 @@ Packages in this repo are built automatically, signed with a private key, and se
 ### 1. Add the repository
 
 ```bash
-echo 'repository=https://ackerman-00.github.io/void-template/x86_64' \
-  | sudo tee /etc/xbps.d/10-void-template.conf
+echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' \
+  | sudo tee /etc/xbps.d/10-nexus.conf
 ```
 
 ### 2. Sync and trust the signing key
@@ -56,15 +55,13 @@ sudo xbps-install <package-name>
 | `noctalia-qs` | Quickshell fork with extended audio/compositor support | Stable |
 | `niri-git` | Scrollable-tiling Wayland compositor | Git (HEAD) |
 | `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git (HEAD) |
-| `many....more` | Other packages | Stable/Git (HEAD)|
+| and more... | Browse the repo for the full list | Stable / Git |
 
 > Git packages track the latest upstream commit and update daily.
 
 ---
 
 ## Updating
-
-Updates are handled automatically. Run your normal system update and custom packages will be included:
 
 ```bash
 sudo xbps-install -Su
@@ -75,9 +72,9 @@ sudo xbps-install -Su
 ## Troubleshooting
 
 **Repository not found**
-Verify the config file contains exactly:
+Verify `/etc/xbps.d/10-nexus.conf` contains exactly:
 ```
-repository=https://ackerman-00.github.io/void-template/x86_64
+repository=https://ackerman-00.github.io/void-nexus/x86_64
 ```
 
 **Key import failed or was declined**
