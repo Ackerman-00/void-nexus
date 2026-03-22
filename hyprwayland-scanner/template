@@ -14,9 +14,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/hyprwayland-scanner"
 distfiles="${homepage}/archive/refs/tags/v${version}.tar.gz"
-checksum=27484e5d2d72cc1775a058024f6dd007d56807de000f7c70571d3fbbfdfaa033
-
+checksum=2125d279eea106e3e6c8dc9fa15181c75d67467b5352d24e2a07903b10abad62
 post_install() {
   vlicense LICENSE
 }
-
