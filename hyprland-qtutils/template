@@ -1,6 +1,6 @@
 # Template file for 'hyprland-qtutils'
 pkgname=hyprland-qtutils
-version=0.1.5
+version=0.1.2
 revision=1
 build_style=cmake
 configure_args+=" --no-warn-unused-cli"

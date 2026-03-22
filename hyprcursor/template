@@ -1,6 +1,6 @@
 # Template file for 'hyprcursor'
 pkgname=hyprcursor
-version=0.1.13
+version=0.1.12
 revision=1
 build_style=cmake
 configure_args+=" --no-warn-unused-cli"

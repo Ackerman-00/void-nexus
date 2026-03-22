@@ -360,6 +360,16 @@ jobs:
             "hyprgraphics"
             "aquamarine"
             "hyprland"
+            "hyprland-protocols"
+            "hyprland-qt-support"
+            "hyprland-qtutils"
+            "xdg-desktop-portal-hyprland"
+            "hyprlock"
+            "hypridle"
+            "hyprsunset"
+            "hyprpaper"
+            "hyprsysteminfo"
+            "hyprpolkitagent"
           )
 
           CHANGED=$(cat changed_packages.txt)
