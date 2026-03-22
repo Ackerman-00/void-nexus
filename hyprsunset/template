@@ -15,6 +15,7 @@ makedepends="
   hyprwayland-scanner
   hyprland-protocols
   hyprutils
+  hyprlang
   wayland-devel
   wayland-protocols
 "
