@@ -1,5 +1,3 @@
-diff --git a/HyprlandSocket.cpp.e b/HyprlandSocket.cpp
-index 4d86192..50b3558 100644
 --- a/hyprpm/src/core/HyprlandSocket.cpp
 +++ b/hyprpm/src/core/HyprlandSocket.cpp
 @@ -5,6 +5,7 @@
