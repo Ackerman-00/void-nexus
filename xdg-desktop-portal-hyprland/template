@@ -37,9 +37,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/xdg-desktop-portal-hyprland"
 distfiles="https://github.com/hyprwm/xdg-desktop-portal-hyprland/archive/refs/tags/v${version}.tar.gz"
-checksum=3f7d94fd408ed5e3a9b639d3dd8502e2169decc34f285e8552434da5fddf497e
+checksum=05333efe1dd4f0e1ea4713686438f102b2eb845ca3fc27467dc84c254df7f021
 
 post_install() {
   vlicense LICENSE
 }
-
