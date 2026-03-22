@@ -40,7 +40,7 @@ jobs:
           # Fix the Git "Dubious Ownership" security block for the root user
           git config --global --add safe.directory '*'
 
-      # MOVED UP: Clone into the empty directory FIRST
+      # 1. CLONE FIRST (Into an empty directory)
       - name: Clone void-packages
         run: |
           set -e
@@ -55,7 +55,7 @@ jobs:
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
 
-      # MOVED DOWN: Restore the cache into the existing repository SECOND
+      # 2. CACHE SECOND (Restore files into the cloned repository)
       - name: Cache repository
         uses: actions/cache@v4
         with:
@@ -85,7 +85,8 @@ jobs:
             exit 0
           fi
 
-          PAGES_URL="https://ackerman-00.github.io/void-template"
+          # UPDATED URL TO VOID-NEXUS
+          PAGES_URL="https://ackerman-00.github.io/void-nexus"
           mkdir -p public/x86_64
 
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
@@ -116,15 +117,52 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          # FIXED: Look in the local hostdir relative to the checkout!
           find hostdir/binpkgs -type f -name "*.xbps" -exec cp {} public/x86_64/ \;
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
+            # Sign the physical packages
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
+            
+            # THE GHOST BUSTER: Clean dead entries from the repodata index!
+            xbps-rindex -c $PWD
+            
+            # Add new packages to the index
             xbps-rindex -a *.xbps
-            xbps-rindex --privkey /tmp/private.pem --signedby "Void Template Build Bot <actions@github.com>" --sign .
+            
+            # Sign the repository metadata
+            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
+
+          # --- THE UI DATA BRIDGE ---
+          cd ..
+          # We are now in the 'public/' directory
+          
+          if [ -f ../index.html ]; then
+            echo "Copying UI frontend..."
+            cp ../index.html ./
+          else
+            echo "Warning: index.html not found in repository root!"
+          fi
+          
+          echo "Generating packages.json for the frontend UI..."
+          echo "[" > packages.json
+          first=1
+          
+          # Read all packages safely and generate JSON
+          xbps-query --repository=./x86_64 -l 2>/dev/null | awk '{print $2}' | while read -r pkg_full; do
+            [ -z "$pkg_full" ] && continue
+            [ "$first" -eq 0 ] && echo "," >> packages.json
+            first=0
+            
+            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
+            ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" | sed "s/^$name-//")
+            desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
+            
+            echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
+          done
+          echo "]" >> packages.json
+          # --- END UI DATA BRIDGE ---
 
           rm -f /tmp/private.pem
 
