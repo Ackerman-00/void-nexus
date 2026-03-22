@@ -15,7 +15,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/hyprwire"
 distfiles="https://github.com/hyprwm/hyprwire/archive/refs/tags/v${version}.tar.gz"
-checksum=REPLACE_WITH_SHA256
+checksum=a6370db771213fe10ebca5a2da748070a7034b09131847f973fda5d60b473c11
 post_install() {
   vlicense LICENSE
 }
