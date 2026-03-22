@@ -99,43 +99,39 @@ jobs:
           chmod 600 /tmp/private.pem
 
           echo "=== FILTERING PACKAGES ==="
-          # 1. SMART COPY: Use string manipulation to perfectly identify custom packages
           find hostdir/binpkgs -type f -name "*.xbps" | while read -r file; do
             fname=$(basename "$file")
-            # Extract package name by slicing off the version numbers (e.g., -1.0_1)
             pkgname=$(echo "$fname" | sed -r 's/-[0-9].*//')
             
             if [ -d "custom-templates-temp/$pkgname" ]; then
               echo "✅ Keeping custom app: $fname"
               cp "$file" public/x86_64/
-            else
-              echo "🗑️ Trashing dependency: $fname"
             fi
           done
 
           cd public/x86_64
           
-          # 2. THE PURGE: Clean out old ghosts
           if ls *.xbps 1>/dev/null 2>&1; then
             for file in *.xbps; do
               pkgname=$(echo "$file" | sed -r 's/-[0-9].*//')
               if [ ! -d "../../custom-templates-temp/$pkgname" ]; then
-                echo "🧹 Sweeping old ghost from repo: $file"
+                echo "🧹 Sweeping old dependency from repo: $file"
                 rm -f "$file"
               fi
             done
           fi
 
           echo "=== SIGNING REPOSITORY ==="
-          # 3. Securely sign and index the clean folder
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
             xbps-rindex -c $PWD
-            xbps-rindex -a *.xbps
+            
+            # THE FIX: -f forces xbps to overwrite the internal cache!
+            xbps-rindex -f -a *.xbps
+            
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
-          # --- THE UI DATA BRIDGE ---
           echo "=== GENERATING UI DATA ==="
           cd ..
           if [ -f ../custom-templates-temp/index.html ]; then
@@ -148,7 +144,6 @@ jobs:
             [ -z "$pkg_full" ] && continue
             name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
             
-            # VIP FILTER: Only allow packages that have a custom template folder
             if [ ! -d "../custom-templates-temp/$name" ]; then
               continue
             fi
@@ -160,6 +155,9 @@ jobs:
             echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
           done
           echo "]" >> packages.json
+
+          echo "=== JSON GENERATED ==="
+          cat packages.json
 
           rm -f /tmp/private.pem
 
