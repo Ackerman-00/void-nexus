@@ -9,6 +9,7 @@ hostmakedepends="
 "
 makedepends="
   hyprutils
+  libffi-devel
   pugixml-devel
 "
 short_desc="Fast and consistent wire protocol for IPC used by Hyprland"
