@@ -101,6 +101,7 @@ jobs:
           echo "=== FILTERING PACKAGES ==="
           mkdir -p public/clean_x86_64
           
+          # Only grab packages that match your explicit repo folders
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ "$pkg_name" = ".github" ] && continue
             [ "$pkg_name" = "README.md" ] && continue
@@ -109,6 +110,7 @@ jobs:
             find hostdir/binpkgs public/x86_64 -maxdepth 1 -type f -name "${pkg_name}-[0-9]*.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
           done
 
+          # Nuke the dirty folder, replace with the pristine clean one
           rm -rf public/x86_64
           mv public/clean_x86_64 public/x86_64
 
@@ -117,7 +119,7 @@ jobs:
           
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            xbps-rindex -f -a *.xbps
+            xbps-rindex -a *.xbps
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
@@ -130,13 +132,32 @@ jobs:
           echo "[" > packages.json
           first=1
           
-          # DIRECT FILE PARSING: This completely ignores Void's system repos!
+          # INVINCIBLE DIRECT-FILE PARSE LOOP
           for file in x86_64/*.xbps; do
             [ -e "$file" ] || continue
             
-            name=$(xbps-query -p pkgname "$file" | tr -d '\n\r')
-            ver=$(xbps-query -p version "$file" | sed "s/^$name-//" | tr -d '\n\r')
-            desc=$(xbps-query -p short_desc "$file" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g' | tr -d '\n\r')
+            # Slice the filename to get exact name and version
+            fname=$(basename "$file")
+            pkg_full=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
+            
+            # Query the local repo safely, fallback to manual parse if it fails
+            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full" 2>/dev/null || echo "")
+            name=$(echo "$name" | tr -d '\n\r')
+            if [ -z "$name" ]; then
+              name=$(echo "$pkg_full" | sed -r 's/-[0-9].*//')
+            fi
+            
+            ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" 2>/dev/null || echo "")
+            ver=$(echo "$ver" | sed "s/^$name-//" | tr -d '\n\r')
+            if [ -z "$ver" ]; then
+              ver=$(echo "$pkg_full" | sed -r "s/^$name-//")
+            fi
+            
+            desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" 2>/dev/null || echo "")
+            desc=$(echo "$desc" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g' | tr -d '\n\r')
+            if [ -z "$desc" ]; then
+              desc="Custom compiled Void package"
+            fi
             
             [ "$first" -eq 0 ] && echo "," >> packages.json
             first=0
