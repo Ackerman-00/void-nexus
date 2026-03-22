@@ -99,36 +99,28 @@ jobs:
           chmod 600 /tmp/private.pem
 
           echo "=== FILTERING PACKAGES ==="
-          find hostdir/binpkgs -type f -name "*.xbps" | while read -r file; do
-            fname=$(basename "$file")
-            pkgname=$(echo "$fname" | sed -r 's/-[0-9].*//')
+          mkdir -p public/clean_x86_64
+          
+          # Only grab packages that match your explicit repo folders
+          ls -1 custom-templates-temp/ | while read -r pkg_name; do
+            [ "$pkg_name" = ".github" ] && continue
+            [ "$pkg_name" = "README.md" ] && continue
+            [ "$pkg_name" = "index.html" ] && continue
             
-            if [ -d "custom-templates-temp/$pkgname" ]; then
-              echo "✅ Keeping custom app: $fname"
-              cp "$file" public/x86_64/
-            fi
+            find hostdir/binpkgs public/x86_64 -maxdepth 1 -type f -name "${pkg_name}-[0-9]*.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
           done
 
+          # Nuke the dirty folder, replace with the pristine clean one
+          rm -rf public/x86_64
+          mv public/clean_x86_64 public/x86_64
+
+          echo "=== SIGNING REPOSITORY ==="
           cd public/x86_64
           
           if ls *.xbps 1>/dev/null 2>&1; then
-            for file in *.xbps; do
-              pkgname=$(echo "$file" | sed -r 's/-[0-9].*//')
-              if [ ! -d "../../custom-templates-temp/$pkgname" ]; then
-                echo "🧹 Sweeping old dependency from repo: $file"
-                rm -f "$file"
-              fi
-            done
-          fi
-
-          echo "=== SIGNING REPOSITORY ==="
-          if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            xbps-rindex -c $PWD
-            
-            # THE FIX: -f forces xbps to overwrite the internal cache!
+            # FORCE the index to overwrite cache bugs
             xbps-rindex -f -a *.xbps
-            
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
@@ -140,18 +132,17 @@ jobs:
           
           echo "[" > packages.json
           first=1
+          
+          # Safely read the clean index and build the JSON
           xbps-query --repository=./x86_64 -l 2>/dev/null | awk '{print $2}' | while read -r pkg_full; do
             [ -z "$pkg_full" ] && continue
-            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
             
-            if [ ! -d "../custom-templates-temp/$name" ]; then
-              continue
-            fi
+            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full" | tr -d '\n\r')
+            ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" | sed "s/^$name-//" | tr -d '\n\r')
+            desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g' | tr -d '\n\r')
             
             [ "$first" -eq 0 ] && echo "," >> packages.json
             first=0
-            ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" | sed "s/^$name-//")
-            desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
             echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
           done
           echo "]" >> packages.json
