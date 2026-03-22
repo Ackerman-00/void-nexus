@@ -9,6 +9,7 @@ hostmakedepends="
 "
 makedepends="
   hyprutils
+  pugixml-devel
 "
 short_desc="Fast and consistent wire protocol for IPC used by Hyprland"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"

@@ -30,6 +30,7 @@ makedepends="
   hyprgraphics
   hyprlang
   hyprutils
+  hyprwire
   libdisplay-info-devel
   libdrm-devel
   libgbm-devel
