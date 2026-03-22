@@ -7,7 +7,7 @@ configure_args+=" --no-warn-unused-cli"
 configure_args+=" -DCMAKE_BUILD_TYPE:STRING=Release"
 configure_args+=" -DCMAKE_INSTALL_PREFIX:PATH=/usr"
 configure_args+=" -DNO_SYSTEMD:BOOL=true"
-othermakedepends="
+hostmakedepends="
   cmake
   cpio
   gcc
@@ -20,7 +20,6 @@ othermakedepends="
   pkgconf
   wayland-devel
 "
-hostmakedepends=$othermakedepends
 makedepends="
   aquamarine
   cairo-devel
@@ -65,7 +64,6 @@ if [ "$XBPS_TARGET_LIBC" = "musl" ]; then
   depends+=" libexecinfo"
 fi
 pre_configure() {
-  # Run all GCC 14 / C++23 compatibility fixes via Python
   python3 << 'PYEOF'
 import os, re
 
@@ -77,37 +75,28 @@ def fix_file(path):
         content = open(path).read()
         orig = content
 
-        # 1. Replace #embed (C23, GCC 15+) with byte array
         if '#embed' in content and 'defaultConfig.hpp' in path:
             conf = open('example/hyprland.conf', 'rb').read()
             arr = ', '.join(str(b) for b in conf)
             content = content.replace('#embed "../../example/hyprland.conf"', arr)
 
-        # 2. Replace append_range (C++23 ranges, GCC 15+)
         def fix_append_range(m):
             vec = m.group(1)
             rng = m.group(2).strip()
             return f'{{ auto _r = {rng}; {vec}.insert({vec}.end(), _r.begin(), _r.end()); }}'
-        content = re.sub(
-            r'([\w.->]+)\.append_range\(([^;]+)\);',
-            fix_append_range, content)
+        content = re.sub(r'([\w.->]+)\.append_range\(([^;]+)\);', fix_append_range, content)
 
-        # 3. Replace insert_range (C++23 ranges, GCC 15+)
         def fix_insert_range(m):
             vec = m.group(1)
             it  = m.group(2).strip()
             rng = m.group(3).strip()
             return f'{{ auto _r = {rng}; {vec}.insert({it}, _r.begin(), _r.end()); }}'
-        content = re.sub(
-            r'([\w.->]+)\.insert_range\(([^,]+),\s*([^;]+)\);',
-            fix_insert_range, content)
+        content = re.sub(r'([\w.->]+)\.insert_range\(([^,]+),\s*([^;]+)\);', fix_insert_range, content)
 
-        # 4. Fix CXCBConnection ternary vs nullptr_t (C++26 type deduction)
         content = content.replace(
             'return m_connection ? *m_connection : nullptr;',
             'return m_connection ? *m_connection : (xcb_connection_t*)nullptr;')
 
-        # 5. Fix string + string_view (C++26 operator+)
         content = re.sub(
             r'\+ "/" \+ (instanceSignature) \+ "/" \+ (filename)',
             lambda m: f'+ "/" + std::string({m.group(1)}) + "/" + std::string({m.group(2)})',
@@ -116,21 +105,18 @@ def fix_file(path):
         if content != orig:
             open(path, 'w').write(content)
             fixes += 1
-            print(f'Fixed: {path}')
-    except Exception as e:
+    except Exception:
         pass
 
 for root, dirs, files in os.walk('.'):
-    # skip build dir
     dirs[:] = [d for d in dirs if d != 'build']
     for f in files:
         if f.endswith(('.cpp', '.hpp', '.h', '.hxx')):
             fix_file(os.path.join(root, f))
 
-print(f'Total files patched: {fixes}')
+print(f'GCC14 compat fixes applied to {fixes} files')
 PYEOF
 
-  # Downgrade C++ standard from 26 to 23 — GCC 14 libstdc++ incompatibility
   find ${wrksrc} -name "CMakeLists.txt" -exec sed -i \
     -e 's/CMAKE_CXX_STANDARD 26/CMAKE_CXX_STANDARD 23/g' \
     -e 's/-std=gnu++26/-std=gnu++23/g' \
@@ -145,12 +131,4 @@ post_install() {
   find src -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.inc' \) -print0 | cpio --quiet -0dump ${DESTDIR}/usr/include/hyprland
   install -Dm0644 protocols/*.h* ${DESTDIR}/usr/include/hyprland/protocols
   vinstall build/hyprland.pc 644 usr/share/pkgconfig
-}
-hyprland-devel_package() {
-  depends="${sourcepkg}>=${version}_${revision} ${othermakedepends} ${makedepends}"
-  short_desc="Dynamic tiling Wayland compositor - development files"
-  pkg_install() {
-    vmove usr/include
-    vmove usr/share/pkgconfig
-  }
 }
