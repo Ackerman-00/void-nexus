@@ -33,7 +33,7 @@ echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' \
 sudo xbps-install -S
 ```
 
-> You'll be asked to import the RSA key for **`Void Template Build Bot <actions@github.com>`** — press `y` to continue.
+> You'll be asked to import the RSA key for **`Void Nexus Build Bot <actions@github.com>`** — press `y` to continue.
 
 **③ Install anything**
 
