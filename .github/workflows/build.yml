@@ -138,11 +138,12 @@ jobs:
           cd ..
           # We are now in the 'public/' directory
           
-          if [ -f ../index.html ]; then
+          # THE FIX: Pointing exactly to where the checkout action put your files!
+          if [ -f ../custom-templates-temp/index.html ]; then
             echo "Copying UI frontend..."
-            cp ../index.html ./
+            cp ../custom-templates-temp/index.html ./
           else
-            echo "Warning: index.html not found in repository root!"
+            echo "Warning: index.html not found in custom-templates-temp!"
           fi
           
           echo "Generating packages.json for the frontend UI..."
