@@ -101,7 +101,6 @@ jobs:
           echo "=== FILTERING PACKAGES ==="
           mkdir -p public/clean_x86_64
           
-          # Only grab packages that match your explicit repo folders
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ "$pkg_name" = ".github" ] && continue
             [ "$pkg_name" = "README.md" ] && continue
@@ -110,7 +109,6 @@ jobs:
             find hostdir/binpkgs public/x86_64 -maxdepth 1 -type f -name "${pkg_name}-[0-9]*.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
           done
 
-          # Nuke the dirty folder, replace with the pristine clean one
           rm -rf public/x86_64
           mv public/clean_x86_64 public/x86_64
 
@@ -119,7 +117,6 @@ jobs:
           
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            # FORCE the index to overwrite cache bugs
             xbps-rindex -f -a *.xbps
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
@@ -133,13 +130,13 @@ jobs:
           echo "[" > packages.json
           first=1
           
-          # Safely read the clean index and build the JSON
-          xbps-query --repository=./x86_64 -l 2>/dev/null | awk '{print $2}' | while read -r pkg_full; do
-            [ -z "$pkg_full" ] && continue
+          # DIRECT FILE PARSING: This completely ignores Void's system repos!
+          for file in x86_64/*.xbps; do
+            [ -e "$file" ] || continue
             
-            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full" | tr -d '\n\r')
-            ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" | sed "s/^$name-//" | tr -d '\n\r')
-            desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g' | tr -d '\n\r')
+            name=$(xbps-query -p pkgname "$file" | tr -d '\n\r')
+            ver=$(xbps-query -p version "$file" | sed "s/^$name-//" | tr -d '\n\r')
+            desc=$(xbps-query -p short_desc "$file" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g' | tr -d '\n\r')
             
             [ "$first" -eq 0 ] && echo "," >> packages.json
             first=0
