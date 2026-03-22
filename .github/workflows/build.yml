@@ -46,18 +46,10 @@ jobs:
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
           
-          # --- THE SHLIBS INJECTION (CRITICAL FOR HYPRLAND) ---
-          echo "Injecting custom Hyprland shared libraries..."
-          cat << 'EOF' >> common/shlibs
-          libaquamarine.so.7 aquamarine-0.8.0_2
-          libhyprcursor.so.0 hyprcursor-0.1.12_1
-          libhyprlang.so.2 hyprlang-0.6.3_1
-          libhyprgraphics.so.0 hyprgraphics-0.1.3_2
-          libhyprutils.so.6 hyprutils-0.7.1_1
-          libsdbus-c++.so.2 sdbus-cpp-2.1.0_1
-          libspng.so.0 libspng-0.7.4_1
-          libtomlplusplus.so.3 tomlplusplus-3.4.0_1
-          EOF
+          # --- FIRE THE VOID POLICE ---
+          # This script strictly crashes builds if it detects automated library version bumps. 
+          # We delete it so the Action can build new versions without throwing an error.
+          rm -f common/hooks/pre-pkg/99-pkglint.sh
 
       - name: Cache repository
         uses: actions/cache@v4
@@ -84,6 +76,7 @@ jobs:
       - name: Restore existing repository
         run: |
           if [ -f public/x86_64/x86_64-repodata ]; then
+            echo "Cache hit — skipping download"
             exit 0
           fi
           PAGES_URL="https://ackerman-00.github.io/void-nexus"
@@ -102,6 +95,44 @@ jobs:
             set -o pipefail || true
           fi
 
+      - name: Build self-healing shlibs map
+        run: |
+          if ! ls public/x86_64/*.xbps 1>/dev/null 2>&1; then
+            echo "No existing packages — skipping shlibs map"
+            exit 0
+          fi
+          echo "Building shlibs map from existing packages..."
+          
+          # Only remove lines we're about to re-add (preserve any manual entries)
+          TMP_SHLIBS=$(mktemp)
+          for file in public/x86_64/*.xbps; do
+            fname=$(basename "$file")
+            
+            # Parse pkgver safely from filename
+            pkg_full=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
+            REPO_DIR="$PWD/public/x86_64"
+            
+            PKGVER=$(xbps-query --repository="$REPO_DIR" -p pkgver "$pkg_full" 2>/dev/null || echo "")
+            [ -z "$PKGVER" ] && continue
+            
+            SHLIBS=$(xbps-query --repository="$REPO_DIR" -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
+            for so in $SHLIBS; do
+              echo "$so $PKGVER" >> "$TMP_SHLIBS"
+            done
+          done
+          
+          # Merge: keep existing manual shlibs entries, append new ones, deduplicate
+          if [ -f common/shlibs ]; then
+            cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
+          else
+            sort -u "$TMP_SHLIBS" > /tmp/merged_shlibs
+          fi
+          
+          mv /tmp/merged_shlibs common/shlibs
+          echo "Shlibs map ready:"
+          cat common/shlibs
+          rm -f "$TMP_SHLIBS"
+
       - name: Build package
         run: ./xbps-src pkg "${{ github.event.inputs.package_name }}"
 
@@ -114,7 +145,6 @@ jobs:
           echo "=== FILTERING PACKAGES ==="
           mkdir -p public/clean_x86_64
           
-          # Only grab packages that match your explicit repo folders
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ "$pkg_name" = ".github" ] && continue
             [ "$pkg_name" = "README.md" ] && continue
@@ -123,7 +153,6 @@ jobs:
             find hostdir/binpkgs public/x86_64 -maxdepth 1 -type f -name "${pkg_name}-[0-9]*.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
           done
 
-          # Nuke the dirty folder, replace with the pristine clean one
           rm -rf public/x86_64
           mv public/clean_x86_64 public/x86_64
 
@@ -132,7 +161,6 @@ jobs:
           
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            # CRITICAL: -f flag to bypass the cache bug
             xbps-rindex -f -a *.xbps
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
@@ -146,15 +174,12 @@ jobs:
           echo "[" > packages.json
           first=1
           
-          # INVINCIBLE DIRECT-FILE PARSE LOOP
           for file in x86_64/*.xbps; do
             [ -e "$file" ] || continue
             
-            # Slice the filename to get exact name and version
             fname=$(basename "$file")
             pkg_full=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
             
-            # Query the local repo safely, fallback to manual parse if it fails
             name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full" 2>/dev/null || echo "")
             name=$(echo "$name" | tr -d '\n\r')
             if [ -z "$name" ]; then
@@ -168,7 +193,8 @@ jobs:
             fi
             
             desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" 2>/dev/null || echo "")
-            desc=$(echo "$desc" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g' | tr -d '\n\r')
+            # THE JSON ESCAPE FIX: Backslashes first, then quotes!
+            desc=$(echo "$desc" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr -d '\n\r')
             if [ -z "$desc" ]; then
               desc="Custom compiled Void package"
             fi

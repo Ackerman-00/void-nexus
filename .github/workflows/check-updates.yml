@@ -285,12 +285,11 @@ jobs:
               candidate = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate)
               candidate = replace_checksums(candidate, new_checksums)
 
-              # SAFETY VALVE: Only append if the file content actually changed!
               if candidate != raw:
                   tpath.write_text(candidate, encoding='utf-8')
                   changed_packages.append(pkgname)
                   changed_files.append(str(tpath))
-                  
+
                   ver_display = new_ver if new_ver else curr_ver
                   sha_suffix = f' ({new_sha[:8]})' if new_sha else ''
                   ck_suffix = ' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''
@@ -343,8 +342,8 @@ jobs:
           WORKFLOW_NAME="Build and Deploy Custom XBPS"
 
           if git diff --quiet HEAD~1 HEAD 2>/dev/null; then
-             echo "No new commit was made. Skipping builds."
-             exit 0
+            echo "No new commit was made. Skipping builds."
+            exit 0
           fi
 
           if [ ! -s changed_packages.txt ]; then
@@ -352,22 +351,55 @@ jobs:
             exit 0
           fi
 
+          # Hyprland dependency chain — must build in this exact order
+          PRIORITY_ORDER=(
+            "hyprutils"
+            "hyprlang"
+            "hyprwayland-scanner"
+            "hyprcursor"
+            "hyprgraphics"
+            "aquamarine"
+            "hyprland"
+          )
+
+          CHANGED=$(cat changed_packages.txt)
+          ORDERED=()
+
+          # Add priority packages first, in order, only if they changed
+          for pkg in "${PRIORITY_ORDER[@]}"; do
+            if echo "$CHANGED" | grep -qx "$pkg"; then
+              ORDERED+=("$pkg")
+            fi
+          done
+
+          # Then add everything else that isn't in the priority list
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
+            already=false
+            for p in "${PRIORITY_ORDER[@]}"; do
+              [ "$p" = "$pkg" ] && already=true && break
+            done
+            if ! $already; then
+              ORDERED+=("$pkg")
+            fi
+          done < changed_packages.txt
+
+          # Build in correct order — exit-status halts chain if a dependency fails
+          for pkg in "${ORDERED[@]}"; do
             echo "🚀 Dispatching build for $pkg"
             before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-            
+
             gh workflow run "${WORKFLOW_NAME}" \
               --ref "${GITHUB_REF_NAME}" \
               -f package_name="${pkg}"
-            
+
             sleep 8
-            
+
             run_id=$(gh run list \
               --workflow="${WORKFLOW_NAME}" \
               --json databaseId,createdAt \
               --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | .[0].databaseId // empty")
-            
+
             if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then
               echo "  Watching run ${run_id}"
               gh run watch "${run_id}" --exit-status
@@ -375,4 +407,4 @@ jobs:
               echo "  ⚠️ Could not get run ID — waiting 90s"
               sleep 90
             fi
-          done < changed_packages.txt
+          done
