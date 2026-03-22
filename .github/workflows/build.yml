@@ -33,29 +33,19 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          
-          # Added 'file' so xbps-src can properly strip debug symbols
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file
-          
-          # Fix the Git "Dubious Ownership" security block for the root user
           git config --global --add safe.directory '*'
 
-      # 1. CLONE FIRST (Into an empty directory)
       - name: Clone void-packages
         run: |
           set -e
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
-          
-          # THE ULTIMATE HACK: Tell xbps-src the container IS the masterdir
           ln -s / masterdir
           echo "x86_64" > /.xbps_chroot_init
-          
-          # Force xbps-src to run natively
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
 
-      # 2. CACHE SECOND (Restore files into the cloned repository)
       - name: Cache repository
         uses: actions/cache@v4
         with:
@@ -78,30 +68,21 @@ jobs:
             cp -r "$pkg_dir" srcpkgs/
           done
 
-      - name: Restore existing repository (if not cached)
+      - name: Restore existing repository
         run: |
           if [ -f public/x86_64/x86_64-repodata ]; then
-            echo "Repository already present (cache hit). Skipping download."
             exit 0
           fi
-
-          # UPDATED URL TO VOID-NEXUS
           PAGES_URL="https://ackerman-00.github.io/void-nexus"
           mkdir -p public/x86_64
-
           if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
-            echo "Index found, syncing current binaries..."
             REPO_DIR="$PWD/public/x86_64"
-            
             set +o pipefail || true
             xbps-query --repository="$REPO_DIR" -l 2>/dev/null | awk '{print $2}' > /tmp/pkgs.txt || true
-            
             while IFS= read -r pkg; do
               [ -z "$pkg" ] && continue
               fname=$(xbps-query --repository="$REPO_DIR" -p filename "$pkg" 2>/dev/null) || continue
               [ -z "$fname" ] && continue
-              
-              echo "Downloading $fname..."
               curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
               curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
             done < /tmp/pkgs.txt
@@ -121,49 +102,35 @@ jobs:
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
-            # Sign the physical packages
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            
-            # THE GHOST BUSTER: Clean dead entries from the repodata index!
             xbps-rindex -c $PWD
-            
-            # Add new packages to the index
             xbps-rindex -a *.xbps
-            
-            # Sign the repository metadata
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
-          # --- THE UI DATA BRIDGE ---
           cd ..
-          # We are now in the 'public/' directory
-          
-          # THE FIX: Pointing exactly to where the checkout action put your files!
           if [ -f ../custom-templates-temp/index.html ]; then
-            echo "Copying UI frontend..."
             cp ../custom-templates-temp/index.html ./
-          else
-            echo "Warning: index.html not found in custom-templates-temp!"
           fi
           
-          echo "Generating packages.json for the frontend UI..."
           echo "[" > packages.json
           first=1
-          
-          # Read all packages safely and generate JSON
           xbps-query --repository=./x86_64 -l 2>/dev/null | awk '{print $2}' | while read -r pkg_full; do
             [ -z "$pkg_full" ] && continue
+            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
+            
+            # VIP FILTER: Only allow packages that have a custom template folder
+            if [ ! -d "../custom-templates-temp/$name" ]; then
+              continue
+            fi
+            
             [ "$first" -eq 0 ] && echo "," >> packages.json
             first=0
-            
-            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full")
             ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" | sed "s/^$name-//")
             desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
-            
             echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
           done
           echo "]" >> packages.json
-          # --- END UI DATA BRIDGE ---
 
           rm -f /tmp/private.pem
 
