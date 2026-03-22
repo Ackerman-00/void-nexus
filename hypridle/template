@@ -1,6 +1,6 @@
 # Template file for 'hypridle'
 pkgname=hypridle
-version=0.1.6
+version=0.1.7
 revision=1
 build_style=cmake
 configure_args+=" --no-warn-unused-cli"
