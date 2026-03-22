@@ -45,6 +45,19 @@ jobs:
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
+          
+          # --- THE SHLIBS INJECTION (CRITICAL FOR HYPRLAND) ---
+          echo "Injecting custom Hyprland shared libraries..."
+          cat << 'EOF' >> common/shlibs
+          libaquamarine.so.7 aquamarine-0.8.0_2
+          libhyprcursor.so.0 hyprcursor-0.1.12_1
+          libhyprlang.so.2 hyprlang-0.6.3_1
+          libhyprgraphics.so.0 hyprgraphics-0.1.3_2
+          libhyprutils.so.6 hyprutils-0.7.1_1
+          libsdbus-c++.so.2 sdbus-cpp-2.1.0_1
+          libspng.so.0 libspng-0.7.4_1
+          libtomlplusplus.so.3 tomlplusplus-3.4.0_1
+          EOF
 
       - name: Cache repository
         uses: actions/cache@v4
@@ -119,7 +132,8 @@ jobs:
           
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            xbps-rindex -a *.xbps
+            # CRITICAL: -f flag to bypass the cache bug
+            xbps-rindex -f -a *.xbps
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
