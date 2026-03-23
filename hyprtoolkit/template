@@ -10,12 +10,15 @@ hostmakedepends="
   wayland-devel
 "
 makedepends="
+  aquamarine
   cairo-devel
   hyprgraphics
   hyprlang
   hyprutils
   hyprwayland-scanner
+  iniparser-devel
   libdrm-devel
+  libgbm-devel
   libglvnd-devel
   libxkbcommon-devel
   pango-devel
