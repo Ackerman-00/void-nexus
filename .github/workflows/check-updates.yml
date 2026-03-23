@@ -358,6 +358,7 @@ jobs:
             "hyprwayland-scanner"
             "hyprcursor"
             "hyprgraphics"
+            "hyprtoolkit"
             "aquamarine"
             "hyprwire"
             "hyprland"

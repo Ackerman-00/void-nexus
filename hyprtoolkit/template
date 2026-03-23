@@ -1,0 +1,35 @@
+# Template file for 'hyprtoolkit'
+pkgname=hyprtoolkit
+version=0.1.0
+revision=1
+build_style=cmake
+hostmakedepends="
+  cmake
+  hyprwayland-scanner
+  pkgconf
+  wayland-devel
+"
+makedepends="
+  cairo-devel
+  hyprgraphics
+  hyprlang
+  hyprutils
+  hyprwayland-scanner
+  libdrm-devel
+  libglvnd-devel
+  libxkbcommon-devel
+  pango-devel
+  pixman-devel
+  wayland-devel
+  wayland-protocols
+"
+short_desc="Modern C++ Wayland-native GUI toolkit by Vaxry"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="BSD-3-Clause"
+homepage="https://github.com/hyprwm/hyprtoolkit"
+distfiles="https://github.com/hyprwm/hyprtoolkit/archive/refs/tags/v${version}.tar.gz"
+checksum=0000000000000000000000000000000000000000000000000000000000000000
+
+post_install() {
+  vlicense LICENSE
+}

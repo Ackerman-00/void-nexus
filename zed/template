@@ -17,6 +17,7 @@ hostmakedepends="
 makedepends="
   alsa-lib-devel
   fontconfig-devel
+  glib-devel
   libX11-devel
   libxcb-devel
   libxkbcommon-devel
