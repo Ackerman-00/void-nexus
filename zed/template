@@ -39,11 +39,7 @@ distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.t
 checksum=12c0385514ca0615eb9b8f4ec81b7a2e5ecc124f3b528130c663da7e07a08822
 
 pre_build() {
-	mkdir -p .cargo
-	cat <<EOF >> .cargo/config.toml
-[env]
-LIBGIT2_NO_VENDOR = "0"
-EOF
+	sed -i '/\[env\]/a LIBGIT2_NO_VENDOR = "0"' .cargo/config.toml
 }
 
 post_install() {
