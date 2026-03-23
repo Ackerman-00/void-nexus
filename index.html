@@ -470,17 +470,20 @@
       </div>
     </div>
     <p id="stepDesc" class="text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed step-enter" style="color:var(--text2);animation-delay:20ms"></p>
-    <div class="relative mb-3 sm:mb-4 min-w-0 overflow-hidden">
-      <div id="cmdFadeL" class="cmd-fade-l absolute left-0 top-0 bottom-0 w-6 z-10 transition-opacity pointer-events-none" style="opacity:0"></div>
-      <div id="cmdFadeR" class="cmd-fade-r absolute right-0 top-0 bottom-0 w-6 z-10 transition-opacity pointer-events-none" style="opacity:0"></div>
-      <div class="cmd-box glass-blur-sm rounded-xl px-3 sm:px-5 py-3 overflow-x-auto hide-scroll scroll-touch w-full" id="cmdScroller" aria-label="Installation command" style="max-width:100%">
-        <code id="cmdText" class="font-mono whitespace-nowrap block" style="color:#a5b4fc;font-size:clamp(10px,2.6vw,13px);cursor:default"></code>
+    <div style="position:relative;margin-bottom:12px;min-width:0">
+      <div id="cmdFadeL" style="position:absolute;left:0;top:0;bottom:0;width:24px;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.2s;background:linear-gradient(to right,var(--cmd-bg) 0%,transparent 100%)"></div>
+      <div id="cmdFadeR" style="position:absolute;right:0;top:0;bottom:0;width:24px;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.2s;background:linear-gradient(to left,var(--cmd-bg) 0%,transparent 100%)"></div>
+      <div class="cmd-box glass-blur-sm hide-scroll scroll-touch" id="cmdScroller"
+           style="border-radius:0.75rem;padding:12px 14px;overflow-x:auto;width:100%;max-width:100%;box-sizing:border-box;-webkit-overflow-scrolling:touch"
+           aria-label="Installation command">
+        <code id="cmdText" style="font-family:'JetBrains Mono',ui-monospace,monospace;white-space:nowrap;display:block;color:#a5b4fc;font-size:clamp(10px,2.6vw,13px);cursor:default;user-select:all;-webkit-user-select:all"></code>
       </div>
+      <p id="cmdScrollHint" style="text-align:center;font-size:11px;margin-top:5px;color:var(--text3);opacity:0;transition:opacity 0.3s;pointer-events:none;letter-spacing:0.02em">swipe to scroll ←→</p>
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0;box-sizing:border-box">
       <div style="display:flex;align-items:center;gap:4px;flex:0 0 auto">
         <button id="stepPrev" class="glass glass-blur-sm ripple-host rounded-xl flex items-center justify-center transition-all disabled:opacity-25" style="color:var(--text2);width:40px;height:40px;min-width:40px;flex-shrink:0" aria-label="Previous step" disabled>
-          <i class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <div style="display:flex;align-items:center;gap:4px" role="tablist" aria-label="Setup steps">
           <button class="step-dot active h-2 rounded-full" style="background:#22d3ee;width:24px" data-step="0" role="tab" aria-selected="true" aria-label="Step 1"></button>
@@ -488,11 +491,12 @@
           <button class="step-dot h-2 w-2 rounded-full" style="background:rgba(100,116,139,0.38)" data-step="2" role="tab" aria-selected="false" aria-label="Step 3"></button>
         </div>
         <button id="stepNext" class="glass glass-blur-sm ripple-host rounded-xl flex items-center justify-center transition-all" style="color:var(--text2);width:40px;height:40px;min-width:40px;flex-shrink:0" aria-label="Next step">
-          <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
       <button id="copyCmd" class="glass glass-blur-sm ripple-host flex items-center gap-1.5 rounded-xl font-medium transition-all hover:border-indigo-400/50" style="color:var(--text2);height:40px;padding:0 14px;flex:0 0 auto;white-space:nowrap;font-size:12px" aria-label="Copy command">
-        <i class="far fa-copy" style="font-size:11px" aria-hidden="true"></i><span>Copy</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        <span>Copy</span>
       </button>
     </div>
     <div class="mt-3 sm:mt-4 h-px rounded-full overflow-hidden" style="background:rgba(255,255,255,0.05)">
@@ -548,12 +552,6 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0" aria-hidden="true"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
         <span id="sortLabel" class="hidden sm:inline">A–Z</span>
       </button>
-      <div id="sortDrop" class="sort-drop absolute right-0 top-full mt-2 rounded-xl overflow-hidden z-30 hidden w-36" role="menu">
-        <button class="sort-opt active-sort w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="az" role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-down-a-z text-xs w-4" aria-hidden="true"></i>A–Z</button>
-        <button class="sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="za"     role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-up-z-a text-xs w-4" aria-hidden="true"></i>Z–A</button>
-        <button class="sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="newest" role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-down-wide-short text-xs w-4" aria-hidden="true"></i>Newest</button>
-        <button class="sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="oldest" role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-up-wide-short text-xs w-4" aria-hidden="true"></i>Oldest</button>
-      </div>
     </div>
   </div>
 
@@ -573,14 +571,12 @@
 </section>
 
 <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 pb-24" role="main">
-  <div id="resultRow" class="items-center justify-between mb-4 text-sm" style="display:none;color:var(--text3)">
+  <div id="resultRow" style="display:none;align-items:center;justify-content:space-between;margin-bottom:1rem;font-size:13px;color:var(--text3)">
     <span id="resultCount" aria-live="polite" aria-atomic="true"></span>
-    <div class="flex items-center gap-3">
-      <button id="copyAllBtn" class="flex items-center gap-1.5 hover:text-indigo-400 transition-colors text-xs font-medium" aria-label="Copy all package names">
-        <i class="fas fa-copy text-xs" aria-hidden="true"></i><span>Copy list</span>
-      </button>
-      <button id="clearFilters" class="hidden hover:text-indigo-400 transition-colors text-xs font-medium">Clear filters</button>
-    </div>
+    <button id="copyAllBtn" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text3);background:none;border:none;cursor:pointer;padding:0" aria-label="Copy all package names">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      <span>Copy list</span>
+    </button>
   </div>
   <div id="packagesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max" role="list" aria-label="Package list"></div>
 </main>
@@ -705,7 +701,6 @@
   const filterPills   = $('filterPills');
   const resultRow     = $('resultRow');
   const resultCount   = $('resultCount');
-  const clearFilters  = $('clearFilters');
   const copyAllBtn    = $('copyAllBtn');
   const toast         = $('toast');
   const toastIcon     = $('toastIcon');
@@ -743,7 +738,6 @@
   const modalBodyM    = $('modalBodyM');
   const histDrop      = $('searchHistDrop');
   const sortBtn       = $('sortBtn');
-  const sortDrop      = $('sortDrop');
   const sortLabel     = $('sortLabel');
   const backToTop     = $('backToTop');
   const themeToggle   = $('themeToggle');
@@ -823,8 +817,8 @@
   });
 
   document.addEventListener('click', e => {
-    if (!sortDrop.classList.contains('hidden') && !sortDrop.contains(e.target) && e.target !== sortBtn) {
-      sortDrop.classList.add('hidden'); sortBtn.setAttribute('aria-expanded','false');
+    if (sortDrop.style.display !== 'none' && !sortDrop.contains(e.target) && e.target !== sortBtn) {
+      sortDrop.style.display = 'none'; sortBtn.setAttribute('aria-expanded','false');
     }
     if (histDrop.style.display !== 'none' && !histDrop.contains(e.target) && e.target !== searchInput) {
       histDrop.style.display = 'none';
@@ -1036,16 +1030,59 @@
     }
   });
 
+  const sortDrop = (() => {
+    const d = document.createElement('div');
+    d.id = 'sortDrop';
+    d.setAttribute('role','menu');
+    d.style.cssText = 'position:fixed;z-index:9999;border-radius:12px;overflow:hidden;width:144px;display:none;animation:slideDown 0.16s ease both';
+    d.className = 'sort-drop';
+    const opts = [
+      { sort:'az',     label:'A–Z',    svgPath:'M3 6h18M7 12h10M11 18h2' },
+      { sort:'za',     label:'Z–A',    svgPath:'M3 18h18M7 12h10M11 6h2' },
+      { sort:'newest', label:'Newest', svgPath:'M3 6h18M7 12h10M11 18h2' },
+      { sort:'oldest', label:'Oldest', svgPath:'M3 18h18M7 12h10M11 6h2' },
+    ];
+    opts.forEach(o => {
+      const btn = document.createElement('button');
+      btn.className = 'sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left';
+      btn.dataset.sort = o.sort;
+      btn.setAttribute('role','menuitem');
+      btn.style.color = 'var(--text1)';
+      if (o.sort === 'az') btn.classList.add('active-sort');
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0" aria-hidden="true"><path d="${o.svgPath}"/></svg>${o.label}`;
+      d.appendChild(btn);
+    });
+    document.body.appendChild(d);
+    return d;
+  })();
+
+  function positionSortDrop() {
+    const r = sortBtn.getBoundingClientRect();
+    const dropW = 144;
+    let left = r.right - dropW;
+    if (left < 8) left = 8;
+    let top = r.bottom + 8;
+    if (top + 180 > window.innerHeight) top = r.top - 180 - 8;
+    sortDrop.style.top  = top + 'px';
+    sortDrop.style.left = left + 'px';
+  }
+
   sortBtn.addEventListener('click', () => {
-    const open = !sortDrop.classList.contains('hidden');
-    sortDrop.classList.toggle('hidden', open); sortBtn.setAttribute('aria-expanded', open?'false':'true');
+    const open = sortDrop.style.display !== 'none';
+    if (open) {
+      sortDrop.style.display = 'none'; sortBtn.setAttribute('aria-expanded','false');
+    } else {
+      positionSortDrop();
+      sortDrop.style.display = 'block'; sortBtn.setAttribute('aria-expanded','true');
+    }
   });
   sortDrop.querySelectorAll('.sort-opt').forEach(btn => {
     btn.addEventListener('click', () => {
-      const s=btn.dataset.sort; if (s===activeSort) { sortDrop.classList.add('hidden'); return; }
-      activeSort=s; sortDrop.querySelectorAll('.sort-opt').forEach(b=>b.classList.toggle('active-sort',b.dataset.sort===s));
-      if (sortLabel) sortLabel.textContent=SORT_LBL[s]||s;
-      sortDrop.classList.add('hidden'); sortBtn.setAttribute('aria-expanded','false');
+      const s = btn.dataset.sort; if (s === activeSort) { sortDrop.style.display='none'; return; }
+      activeSort = s;
+      sortDrop.querySelectorAll('.sort-opt').forEach(b => b.classList.toggle('active-sort', b.dataset.sort === s));
+      if (sortLabel) sortLabel.textContent = SORT_LBL[s] || s;
+      sortDrop.style.display = 'none'; sortBtn.setAttribute('aria-expanded','false');
       applyAndRender(true);
     });
   });
@@ -1105,12 +1142,6 @@
     searchInput.addEventListener('blur',   () => { searchIconWrap.style.color = 'var(--text3)'; });
   }
   clearBtn.addEventListener('click', () => { searchInput.value=''; handleSearch(); searchInput.focus(); });
-  clearFilters.addEventListener('click', () => {
-    searchInput.value=''; activeCat='all';
-    filterPills.querySelectorAll('[data-cat]').forEach(p=>p.classList.toggle('active',p.dataset.cat==='all'));
-    clearFilters.classList.add('hidden');
-    handleSearch();
-  });
   copyAllBtn.addEventListener('click', () => {
     const f=getFiltered(); if (!f.length) return;
     clip(f.map(p=>p.name).join('\n'), f.length+' packages', 'list');
@@ -1126,7 +1157,7 @@
 
   function applyAndRender(animate) {
     const f=getFiltered(), filtering=searchInput.value.trim().length>0||activeCat!=='all';
-    if (filtering) { resultRow.style.display='flex'; resultCount.textContent=f.length+' of '+allPkgs.length+' packages'; clearFilters.classList.remove('hidden'); }
+    if (filtering) { resultRow.style.display='flex'; resultCount.textContent=f.length+' of '+allPkgs.length+' packages'; }
     else { resultRow.style.display='none'; }
     render(f, animate);
   }
@@ -1180,12 +1211,17 @@
     tick();
   }
 
+  const cmdScrollHint = $('cmdScrollHint');
+
   function updateFades() {
-    const sl=cmdScroller.scrollLeft, mx=cmdScroller.scrollWidth-cmdScroller.clientWidth, lg=mx>4;
-    if (cmdFadeL) { cmdFadeL.style.opacity=lg&&sl>4?'1':'0'; }
-    if (cmdFadeR) { cmdFadeR.style.opacity=lg&&sl<mx-4?'1':'0'; }
-    if (cmdScrollL) cmdScrollL.style.opacity=lg&&sl>4?'1':'0';
-    if (cmdScrollR) cmdScrollR.style.opacity=lg&&sl<mx-4?'1':'0';
+    const sl = cmdScroller.scrollLeft;
+    const mx = cmdScroller.scrollWidth - cmdScroller.clientWidth;
+    const hasScroll = mx > 4;
+    if (cmdFadeL) cmdFadeL.style.opacity = hasScroll && sl > 4 ? '1' : '0';
+    if (cmdFadeR) cmdFadeR.style.opacity = hasScroll && sl < mx - 4 ? '1' : '0';
+    if (cmdScrollHint) cmdScrollHint.style.opacity = hasScroll ? '1' : '0';
+    if (cmdScrollL) cmdScrollL.style.opacity = hasScroll && sl > 4 ? '1' : '0';
+    if (cmdScrollR) cmdScrollR.style.opacity = hasScroll && sl < mx - 4 ? '1' : '0';
   }
 
   cmdScroller.addEventListener('scroll', updateFades, {passive:true});
