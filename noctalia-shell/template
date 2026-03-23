@@ -1,6 +1,6 @@
 pkgname=noctalia-shell
-version=4.7.0
-revision=2
+version=4.7.1
+revision=1
 hostmakedepends=""
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 depends="noctalia-qs matugen qt6-plugin-tls-openssl power-profiles-daemon font-inter brightnessctl ddcutil"
@@ -9,7 +9,7 @@ homepage="https://github.com/noctalia-dev/noctalia-shell"
 license="MIT"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/tags/v${version}.tar.gz"
-checksum=eb5fa96feb39fddc9bdda45c734f96fdd28b02fe1a1b0dccfc9295f2c78d7c49
+checksum=1c0944947abd01f76dd575e7d86200a4b4e0e1037d940a1f79c8342405fd60da
 
 build() {
     return 0
