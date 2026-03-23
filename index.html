@@ -2,11 +2,16 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+                 font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+                 connect-src 'self' https://ackerman-00.github.io;
+                 img-src 'self' data:;
+                 frame-ancestors 'none';">
 
-  <!-- ══════════════════════════════════════════════
-       SEO — Primary
-  ══════════════════════════════════════════════ -->
   <title>Void Nexus — Custom XBPS Package Repository for Void Linux</title>
   <meta name="description" content="Void Nexus is a community-maintained custom XBPS repository for Void Linux. Easily add bleeding-edge packages not in the official tree — Hyprland, custom apps, and more.">
   <meta name="keywords" content="void linux packages, xbps repository, custom xbps repo, void linux hyprland, void linux template, void packages, xbps-install, void nexus">
@@ -14,9 +19,6 @@
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://ackerman-00.github.io/void-nexus/">
 
-  <!-- ══════════════════════════════════════════════
-       SEO — Open Graph
-  ══════════════════════════════════════════════ -->
   <meta property="og:type"        content="website">
   <meta property="og:site_name"   content="Void Nexus">
   <meta property="og:title"       content="Void Nexus — Custom XBPS Repository for Void Linux">
@@ -25,17 +27,11 @@
   <meta property="og:image"       content="https://ackerman-00.github.io/void-nexus/og-image.png">
   <meta property="og:locale"      content="en_US">
 
-  <!-- ══════════════════════════════════════════════
-       SEO — Twitter Card
-  ══════════════════════════════════════════════ -->
   <meta name="twitter:card"        content="summary_large_image">
   <meta name="twitter:title"       content="Void Nexus — Custom XBPS Repository">
   <meta name="twitter:description" content="Bleeding-edge custom XBPS packages for Void Linux. One command to add.">
   <meta name="twitter:image"       content="https://ackerman-00.github.io/void-nexus/og-image.png">
 
-  <!-- ══════════════════════════════════════════════
-       SEO — Structured Data (JSON-LD)
-  ══════════════════════════════════════════════ -->
   <script type="application/ld+json">
   [
     {
@@ -63,24 +59,13 @@
   ]
   </script>
 
-  <!-- ══════════════════════════════════════════════
-       Favicon
-  ══════════════════════════════════════════════ -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
 
-  <!-- ══════════════════════════════════════════════
-       Preconnect (performance)
-  ══════════════════════════════════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <!-- ══════════════════════════════════════════════
-       Dependencies
-  ══════════════════════════════════════════════ -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- Syne: techy geometric headings — JetBrains Mono: code -->
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <script>
     tailwind.config = {
@@ -93,18 +78,22 @@
         },
         extend: {
           animation: {
-            blob:     'blob 18s ease-in-out infinite alternate',
-            shimmer:  'shimmer 2.2s ease-in-out infinite',
-            fadeUp:   'fadeUp 0.52s cubic-bezier(0.22,1,0.36,1) both',
-            pulseRing:'pulseRing 2s cubic-bezier(0,0,0.2,1) infinite',
-            typeCursor:'typeCursor 0.85s step-end infinite',
+            blob:      'blob 20s ease-in-out infinite alternate',
+            shimmer:   'shimmer 2s ease-in-out infinite',
+            fadeUp:    'fadeUp 0.48s cubic-bezier(0.22,1,0.36,1) both',
+            pulseRing: 'pulseRing 2.2s cubic-bezier(0,0,0.2,1) infinite',
+            typeCursor:'typeCursor 0.9s step-end infinite',
+            modalIn:   'modalIn 0.28s cubic-bezier(0.22,1,0.36,1) both',
+            slideDown: 'slideDown 0.2s cubic-bezier(0.22,1,0.36,1) both',
           },
           keyframes: {
-            blob:     { '0%,100%':{ transform:'translate(0,0) scale(1)' }, '33%':{ transform:'translate(30px,-44px) scale(1.07)' }, '66%':{ transform:'translate(-20px,20px) scale(0.94)' } },
-            shimmer:  { '0%':{ backgroundPosition:'-600px 0' }, '100%':{ backgroundPosition:'600px 0' } },
-            fadeUp:   { from:{ opacity:0, transform:'translateY(24px) scale(0.97)' }, to:{ opacity:1, transform:'translateY(0) scale(1)' } },
-            pulseRing:{ '0%':{ transform:'scale(0.8)', opacity:0.9 }, '70%':{ transform:'scale(1.8)', opacity:0 }, '100%':{ transform:'scale(1.8)', opacity:0 } },
+            blob:      { '0%,100%':{ transform:'translate(0,0) scale(1)' }, '33%':{ transform:'translate(28px,-40px) scale(1.06)' }, '66%':{ transform:'translate(-18px,18px) scale(0.95)' } },
+            shimmer:   { '0%':{ backgroundPosition:'-600px 0' }, '100%':{ backgroundPosition:'600px 0' } },
+            fadeUp:    { from:{ opacity:0, transform:'translateY(20px) scale(0.98)' }, to:{ opacity:1, transform:'translateY(0) scale(1)' } },
+            pulseRing: { '0%':{ transform:'scale(0.85)', opacity:0.9 }, '70%':{ transform:'scale(1.9)', opacity:0 }, '100%':{ transform:'scale(1.9)', opacity:0 } },
             typeCursor:{ '0%,100%':{ opacity:1 }, '50%':{ opacity:0 } },
+            modalIn:   { from:{ opacity:0, transform:'scale(0.96) translateY(8px)' }, to:{ opacity:1, transform:'scale(1) translateY(0)' } },
+            slideDown: { from:{ opacity:0, transform:'translateY(-6px)' }, to:{ opacity:1, transform:'translateY(0)' } },
           }
         }
       }
@@ -112,273 +101,348 @@
   </script>
 
   <style>
-    /* ── Root ─────────────────────────────────────────── */
     :root {
-      --glass-bg:       rgba(10, 16, 34, 0.45);
+      --glass-bg:       rgba(10, 16, 34, 0.48);
       --glass-border:   rgba(255,255,255,0.07);
       --glass-inset:    rgba(255,255,255,0.09);
-      --glass-blur:     28px;
-      --glass-saturate: 160%;
-      --glow-indigo:    rgba(99,102,241,0.18);
-      --glow-cyan:      rgba(6,182,212,0.14);
+      --blur:           24px;
+      --blur-sm:        14px;
       --accent:         #6366f1;
       --accent2:        #22d3ee;
+      --surface:        #04071a;
+      --text-primary:   #f1f5f9;
+      --text-muted:     #94a3b8;
+      --radius-card:    20px;
     }
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { background-color: #04071a; color: #f1f5f9; overflow-x: hidden; font-family: 'DM Sans', sans-serif; }
-    ::selection { background: rgba(99,102,241,0.35); color: #e0e7ff; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
-    /* ── Scrollbar ──────────────────────────────────────── */
-    ::-webkit-scrollbar          { width:5px; height:5px; }
-    ::-webkit-scrollbar-track    { background:transparent; }
-    ::-webkit-scrollbar-thumb    { background:#1e2d47; border-radius:10px; }
-    ::-webkit-scrollbar-thumb:hover{ background:#334155; }
-    .hide-scroll { scrollbar-width:none; -ms-overflow-style:none; }
-    .hide-scroll::-webkit-scrollbar { display:none; }
+    body {
+      background-color: var(--surface);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100svh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-    /* ── Liquid Glass surfaces ──────────────────────────── */
+    ::selection { background: rgba(99,102,241,0.32); color: #e0e7ff; }
+
+    ::-webkit-scrollbar          { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track    { background: transparent; }
+    ::-webkit-scrollbar-thumb    { background: #1e2d47; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    .hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+    .hide-scroll::-webkit-scrollbar { display: none; }
+
     .glass {
-      background: linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.015) 100%),
+      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.012) 100%),
                   var(--glass-bg);
-      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       border: 1px solid var(--glass-border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.35),
+      box-shadow: 0 8px 32px rgba(0,0,0,0.32),
                   inset 0 1px 0 var(--glass-inset),
-                  inset 0 -1px 0 rgba(0,0,0,0.18);
+                  inset 0 -1px 0 rgba(0,0,0,0.16);
     }
-    /* Stronger glass for cards */
+
+    @supports (backdrop-filter: blur(1px)) {
+      .glass {
+        backdrop-filter: blur(var(--blur)) saturate(150%);
+        -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+      }
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .glass { background: rgba(8, 13, 32, 0.92); }
+    }
+
     .glass-card {
-      background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(5,12,30,0.6) 100%),
-                  rgba(10,16,34,0.5);
-      backdrop-filter: blur(22px) saturate(150%);
-      -webkit-backdrop-filter: blur(22px) saturate(150%);
-      border: 1px solid rgba(255,255,255,0.06);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.28),
-                  inset 0 1px 0 rgba(255,255,255,0.08),
-                  inset 0 -1px 0 rgba(0,0,0,0.22);
-      transition: transform 0.32s cubic-bezier(0.22,1,0.36,1),
-                  border-color 0.3s ease, box-shadow 0.3s ease;
-      will-change: transform;
-    }
-    .glass-card:hover {
-      transform: translateY(-7px) scale(1.005);
-      border-color: rgba(99,102,241,0.45);
-      box-shadow: 0 28px 64px -12px rgba(99,102,241,0.2),
-                  0 8px 32px rgba(0,0,0,0.35),
-                  inset 0 1px 0 rgba(255,255,255,0.11),
+      background: linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(5,12,30,0.58) 100%),
+                  rgba(10,16,34,0.52);
+      border: 1px solid rgba(255,255,255,0.055);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.24),
+                  inset 0 1px 0 rgba(255,255,255,0.07),
                   inset 0 -1px 0 rgba(0,0,0,0.18);
-    }
-
-    /* ── Animated gradient title ────────────────────────── */
-    @keyframes titleFlow { 0%,100%{ background-position:0% 50% } 50%{ background-position:100% 50% } }
-    .title-gradient {
-      background: linear-gradient(135deg, #fff 0%, #c7d2fe 25%, #67e8f9 55%, #a78bfa 80%, #fff 100%);
-      background-size: 250% auto;
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: titleFlow 8s ease infinite;
-    }
-
-    /* ── Blobs ──────────────────────────────────────────── */
-    .blob { will-change: transform; }
-
-    /* ── Card icon ──────────────────────────────────────── */
-    .card-icon { transition: transform 0.65s cubic-bezier(0.22,1,0.36,1), color 0.65s ease; }
-    .glass-card:hover .card-icon { transform: rotate(18deg) scale(1.15); color: rgba(99,102,241,0.14) !important; }
-
-    /* ── Skeleton ───────────────────────────────────────── */
-    .skel {
-      background: linear-gradient(90deg,
-        rgba(30,41,59,0.7) 25%,
-        rgba(51,65,85,0.5) 50%,
-        rgba(30,41,59,0.7) 75%);
-      background-size: 600px 100%;
-      animation: shimmer 2.2s ease-in-out infinite;
-      border-radius: 7px;
-    }
-
-    /* ── Install button ─────────────────────────────────── */
-    .install-btn {
-      transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.1s;
-      background: rgba(10,16,34,0.5);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .install-btn:hover  { background: var(--accent); color:#fff; border-color: rgba(129,140,248,0.7); box-shadow:0 0 18px rgba(99,102,241,0.35); }
-    .install-btn:active { transform:scale(0.97); }
-    .install-btn .ci    { opacity:0; transition: opacity 0.2s; }
-    .install-btn:hover .ci { opacity:1; }
-    .install-btn .ti    { opacity:0.45; transition: opacity 0.2s; }
-    .install-btn:hover .ti { opacity:1; }
-
-    /* ── Step command box ───────────────────────────────── */
-    .cmd-box {
-      background: rgba(2,5,15,0.65);
-      border: 1px solid rgba(99,102,241,0.22);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(99,102,241,0.12);
-    }
-    .cmd-fade-l {
-      background: linear-gradient(to right, rgba(2,5,15,0.9) 0%, transparent 100%);
-      pointer-events: none;
-    }
-    .cmd-fade-r {
-      background: linear-gradient(to left, rgba(2,5,15,0.9) 0%, transparent 100%);
-      pointer-events: none;
-    }
-
-    /* ── Type cursor ────────────────────────────────────── */
-    .type-cursor {
-      display: inline-block; width: 2px; height: 1em;
-      background: var(--accent2); margin-left: 1px;
-      vertical-align: text-bottom;
-      animation: typeCursor 0.85s step-end infinite;
-    }
-
-    /* ── Step nav dots ──────────────────────────────────── */
-    .step-dot { transition: background 0.3s, width 0.35s cubic-bezier(0.22,1,0.36,1); }
-    .step-dot.active { background: var(--accent2) !important; width: 24px; }
-
-    /* ── Filter pills ───────────────────────────────────── */
-    .filter-pill {
-      background: rgba(15,23,42,0.45); border: 1px solid rgba(255,255,255,0.07);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      transition: all 0.2s ease;
+      transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
+                  border-color 0.25s ease,
+                  box-shadow 0.25s ease;
+      will-change: transform;
       cursor: pointer;
     }
-    .filter-pill:hover   { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.1); }
-    .filter-pill.active  { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.55);
-                           color: #a5b4fc; box-shadow: 0 0 12px rgba(99,102,241,0.18); }
 
-    /* ── Search focus glow ──────────────────────────────── */
-    #searchInput:focus { box-shadow: 0 0 0 2px rgba(99,102,241,0.45), 0 8px 32px rgba(99,102,241,0.1); }
-    .search-icon-wrap { transition: color 0.2s; }
-    #searchInput:focus ~ .search-icon-wrap, .search-wrap:focus-within .search-icon-wrap { color: #818cf8 !important; }
-
-    /* ── Clear search btn ───────────────────────────────── */
-    #clearSearch { transition: opacity 0.2s, transform 0.2s; }
-    #clearSearch.hidden { opacity:0; pointer-events:none; transform:scale(0.7); }
-
-    /* ── Toast ──────────────────────────────────────────── */
-    #toast { pointer-events:none; transition: all 0.42s cubic-bezier(0.18,0.89,0.32,1.28); }
-    #toast.show { transform:translateY(0) !important; opacity:1 !important; pointer-events:auto; }
-
-    /* ── Ripple ─────────────────────────────────────────── */
-    @keyframes ripple { to { transform:scale(3.5); opacity:0; } }
-    .ripple-host { position:relative; overflow:hidden; }
-    .ripple-host .ripple-el {
-      position:absolute; border-radius:50%;
-      background:rgba(255,255,255,0.12);
-      width:60px; height:60px; margin:-30px;
-      animation: ripple 0.55s linear forwards;
-      pointer-events:none;
+    @supports (backdrop-filter: blur(1px)) {
+      .glass-card {
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+      }
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .glass-card { background: rgba(8, 14, 34, 0.95); }
     }
 
-    /* ── Sync badge color vars ──────────────────────────── */
-    .sync-active   { color:#22d3ee; }
-    .sync-checking { color:#facc15; }
-    .sync-updated  { color:#34d399; }
-    .sync-error    { color:#f87171; }
+    @media (hover: hover) {
+      .glass-card:hover {
+        transform: translateY(-5px) scale(1.004);
+        border-color: rgba(99,102,241,0.4);
+        box-shadow: 0 20px 48px -8px rgba(99,102,241,0.18),
+                    0 4px 24px rgba(0,0,0,0.3),
+                    inset 0 1px 0 rgba(255,255,255,0.1),
+                    inset 0 -1px 0 rgba(0,0,0,0.16);
+      }
+      .glass-card:hover .card-icon { transform: rotate(16deg) scale(1.12); }
+    }
 
-    /* ── Step slide animation ───────────────────────────── */
-    @keyframes slideIn  { from{ opacity:0; transform:translateX(24px) } to{ opacity:1; transform:translateX(0) } }
-    @keyframes slideOut { from{ opacity:1; transform:translateX(0)    } to{ opacity:0; transform:translateX(-24px) } }
-    .step-enter { animation: slideIn  0.32s cubic-bezier(0.22,1,0.36,1) both; }
-    .step-exit  { animation: slideOut 0.22s cubic-bezier(0.22,1,0.36,1) both; }
+    @keyframes titleFlow { 0%,100%{ background-position:0% 50% } 50%{ background-position:100% 50% } }
+    .title-gradient {
+      background: linear-gradient(135deg, #fff 0%, #c7d2fe 25%, #67e8f9 52%, #a78bfa 80%, #fff 100%);
+      background-size: 260% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: titleFlow 9s ease infinite;
+    }
 
-    /* ── No-script warning ──────────────────────────────── */
-    noscript { display:block; text-align:center; padding:2rem; color:#f87171; background:#1a0505; }
+    .blob { will-change: transform; }
 
-    /* ── Nav glass link hover ───────────────────────────── */
-    .nav-link { transition: background 0.2s, border-color 0.2s, color 0.2s; }
-    .nav-link:hover { background: rgba(99,102,241,0.12) !important; border-color: rgba(99,102,241,0.35) !important; color: #c7d2fe !important; }
-    .discord-link:hover { background: rgba(88,101,242,0.2) !important; border-color: rgba(88,101,242,0.5) !important; }
+    .card-icon {
+      transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), color 0.5s ease;
+      pointer-events: none;
+    }
+
+    .skel {
+      background: linear-gradient(90deg,
+        rgba(30,41,59,0.65) 25%,
+        rgba(51,65,85,0.45) 50%,
+        rgba(30,41,59,0.65) 75%);
+      background-size: 600px 100%;
+      animation: shimmer 2s ease-in-out infinite;
+      border-radius: 6px;
+    }
+
+    .install-btn {
+      background: rgba(10,16,34,0.5);
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.12s, box-shadow 0.2s;
+      min-height: 44px;
+    }
+    @media (hover: hover) {
+      .install-btn:hover {
+        background: var(--accent);
+        color: #fff;
+        border-color: rgba(129,140,248,0.65);
+        box-shadow: 0 0 16px rgba(99,102,241,0.3);
+      }
+      .install-btn:hover .ci { opacity: 1; }
+      .install-btn:hover .ti { opacity: 1; }
+    }
+    .install-btn:active { transform: scale(0.97); }
+    .install-btn .ci    { opacity: 0; transition: opacity 0.18s; }
+    .install-btn .ti    { opacity: 0.4; transition: opacity 0.18s; }
+
+    .cmd-box {
+      background: rgba(2,5,15,0.68);
+      border: 1px solid rgba(99,102,241,0.2);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.36), inset 0 1px 0 rgba(99,102,241,0.1);
+    }
+    @supports (backdrop-filter: blur(1px)) {
+      .cmd-box { backdrop-filter: blur(var(--blur-sm)); -webkit-backdrop-filter: blur(var(--blur-sm)); }
+    }
+    .cmd-fade-l { background: linear-gradient(to right, rgba(2,5,15,0.92) 0%, transparent 100%); pointer-events: none; }
+    .cmd-fade-r { background: linear-gradient(to left,  rgba(2,5,15,0.92) 0%, transparent 100%); pointer-events: none; }
+
+    .type-cursor {
+      display: inline-block; width: 2px; height: 0.9em;
+      background: var(--accent2); margin-left: 1px;
+      vertical-align: text-bottom;
+      animation: typeCursor 0.9s step-end infinite;
+    }
+
+    .step-dot { transition: background 0.28s, width 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .step-dot.active { background: var(--accent2) !important; width: 24px; }
+
+    .filter-pill {
+      background: rgba(15,23,42,0.42);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.18s ease;
+      cursor: pointer;
+      white-space: nowrap;
+      min-height: 36px;
+    }
+    @supports (backdrop-filter: blur(1px)) {
+      .filter-pill { backdrop-filter: blur(var(--blur-sm)); -webkit-backdrop-filter: blur(var(--blur-sm)); }
+    }
+    @media (hover: hover) {
+      .filter-pill:hover { border-color: rgba(99,102,241,0.38); background: rgba(99,102,241,0.09); }
+    }
+    .filter-pill.active {
+      background: rgba(99,102,241,0.16);
+      border-color: rgba(99,102,241,0.5);
+      color: #a5b4fc;
+      box-shadow: 0 0 10px rgba(99,102,241,0.15);
+    }
+
+    #searchInput:focus { box-shadow: 0 0 0 2px rgba(99,102,241,0.4), 0 6px 24px rgba(99,102,241,0.08); outline: none; }
+    .search-wrap:focus-within .search-icon { color: #818cf8; }
+
+    #clearBtn { transition: opacity 0.18s, transform 0.18s; }
+    #clearBtn.sr-hide { opacity: 0; pointer-events: none; transform: scale(0.72); }
+
+    #kbdHint { transition: opacity 0.18s; }
+
+    #toast {
+      pointer-events: none;
+      transition: transform 0.38s cubic-bezier(0.18,0.89,0.32,1.25), opacity 0.3s ease;
+    }
+    #toast.show { transform: translateY(0) !important; opacity: 1 !important; pointer-events: auto; }
+
+    @keyframes ripple { to { transform: scale(3.6); opacity: 0; } }
+    .ripple-host { position: relative; overflow: hidden; }
+    .ripple-el {
+      position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      width: 56px; height: 56px; margin: -28px;
+      animation: ripple 0.5s linear forwards;
+      pointer-events: none;
+    }
+
+    .sync-active   { color: #22d3ee; }
+    .sync-checking { color: #facc15; }
+    .sync-updated  { color: #34d399; }
+    .sync-error    { color: #f87171; }
+
+    @keyframes slideIn  { from{ opacity:0; transform:translateX(20px) } to{ opacity:1; transform:translateX(0) } }
+    @keyframes slideOut { from{ opacity:1; transform:translateX(0)    } to{ opacity:0; transform:translateX(-20px) } }
+    .step-enter { animation: slideIn  0.3s cubic-bezier(0.22,1,0.36,1) both; }
+
+    .nav-link { transition: background 0.18s, border-color 0.18s, color 0.18s; }
+    @media (hover: hover) {
+      .nav-link:hover { background: rgba(99,102,241,0.1) !important; border-color: rgba(99,102,241,0.3) !important; color: #c7d2fe !important; }
+      .discord-link:hover { background: rgba(88,101,242,0.18) !important; border-color: rgba(88,101,242,0.45) !important; }
+    }
+
+    .modal-overlay {
+      background: rgba(4,7,26,0.72);
+      transition: opacity 0.25s ease;
+    }
+    @supports (backdrop-filter: blur(1px)) {
+      .modal-overlay { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    }
+
+    .modal-panel {
+      background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(5,12,30,0.75) 100%),
+                  rgba(8,14,34,0.88);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.55),
+                  inset 0 1px 0 rgba(255,255,255,0.09);
+      animation: modalIn 0.28s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @supports (backdrop-filter: blur(1px)) {
+      .modal-panel { backdrop-filter: blur(32px) saturate(160%); -webkit-backdrop-filter: blur(32px) saturate(160%); }
+    }
+
+    .search-history-drop {
+      background: rgba(8,14,34,0.96);
+      border: 1px solid rgba(99,102,241,0.2);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+      animation: slideDown 0.18s ease both;
+    }
+    @supports (backdrop-filter: blur(1px)) {
+      .search-history-drop { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .blob { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      .glass-card:active {
+        transform: scale(0.99);
+        border-color: rgba(99,102,241,0.35);
+      }
+      .filter-strip { -webkit-overflow-scrolling: touch; }
+    }
+
+    noscript { display: block; text-align: center; padding: 2rem; color: #f87171; background: #1a0505; }
   </style>
 </head>
 
 <body class="min-h-screen flex flex-col">
 <noscript>JavaScript is required to use Void Nexus.</noscript>
 
-<!-- ═══════════════════════════════════════════════════
-     NAVIGATION BAR
-═══════════════════════════════════════════════════ -->
 <nav class="glass fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 py-3 flex items-center justify-between"
      role="navigation" aria-label="Main navigation">
-  <a href="/" class="flex items-center gap-2.5 group" aria-label="Void Nexus home">
-    <span class="text-2xl select-none" role="img" aria-hidden="true">🪐</span>
-    <span class="font-display font-bold text-lg text-white tracking-tight">Void Nexus</span>
+  <a href="/" class="flex items-center gap-2.5 group min-w-0" aria-label="Void Nexus home">
+    <span class="text-2xl select-none flex-shrink-0" role="img" aria-hidden="true">🪐</span>
+    <span class="font-display font-bold text-lg text-white tracking-tight truncate">Void Nexus</span>
   </a>
-  <div class="flex items-center gap-2 sm:gap-3">
+  <div class="flex items-center gap-2">
     <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
-       class="nav-link discord-link glass flex items-center gap-2 px-4 py-2 rounded-full
-              text-slate-200 text-sm font-medium"
+       class="nav-link discord-link glass flex items-center gap-2 px-3.5 py-2 rounded-full
+              text-slate-200 text-sm font-medium min-h-[40px]"
        aria-label="Join Void Nexus Discord">
-      <i class="fab fa-discord" style="color:#7289da" aria-hidden="true"></i>
+      <i class="fab fa-discord flex-shrink-0" style="color:#7289da" aria-hidden="true"></i>
       <span class="hidden sm:inline">Discord</span>
     </a>
     <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer"
-       class="nav-link glass flex items-center gap-2 px-4 py-2 rounded-full text-slate-300 text-sm font-medium"
+       class="nav-link glass flex items-center gap-2 px-3.5 py-2 rounded-full text-slate-300 text-sm font-medium min-h-[40px]"
        aria-label="View source on GitHub">
-      <i class="fab fa-github" aria-hidden="true"></i>
+      <i class="fab fa-github flex-shrink-0" aria-hidden="true"></i>
       <span class="hidden sm:inline">Source</span>
     </a>
   </div>
 </nav>
 
-<!-- ═══════════════════════════════════════════════════
-     BACKGROUND BLOBS  (no mix-blend-screen — GPU safe)
-═══════════════════════════════════════════════════ -->
 <div class="fixed inset-0 pointer-events-none overflow-hidden" style="z-index:0" aria-hidden="true">
   <div class="blob absolute rounded-full animate-blob"
-       style="top:-5%;left:15%;width:480px;height:480px;background:rgba(79,70,229,0.16);filter:blur(120px)"></div>
+       style="top:-8%;left:12%;width:420px;height:420px;background:rgba(79,70,229,0.14);filter:blur(110px)"></div>
   <div class="blob absolute rounded-full animate-blob"
-       style="top:35%;right:10%;width:400px;height:400px;background:rgba(6,182,212,0.12);filter:blur(120px);animation-delay:-6s"></div>
+       style="top:38%;right:8%;width:360px;height:360px;background:rgba(6,182,212,0.1);filter:blur(110px);animation-delay:-7s"></div>
   <div class="blob absolute rounded-full animate-blob"
-       style="bottom:-10%;left:30%;width:440px;height:440px;background:rgba(126,34,206,0.13);filter:blur(120px);animation-delay:-12s"></div>
+       style="bottom:-12%;left:28%;width:400px;height:400px;background:rgba(126,34,206,0.11);filter:blur(110px);animation-delay:-14s"></div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════
-     HERO HEADER
-═══════════════════════════════════════════════════ -->
-<header class="relative z-10 pt-36 pb-12 text-center px-4" role="banner">
-
-  <!-- Sync badge -->
+<header class="relative z-10 pt-32 pb-10 text-center px-4" role="banner">
   <div id="syncBadge"
        class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass text-xs font-medium mb-7 sync-active select-none"
-       aria-live="polite" aria-label="Sync status">
+       aria-live="polite" aria-atomic="true" aria-label="Sync status">
     <span id="syncDot" class="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
       <span id="syncPing" class="animate-ping absolute inset-0 rounded-full opacity-70" style="background:#22d3ee"></span>
       <span id="syncCore" class="relative inline-flex rounded-full h-2 w-2" style="background:#22d3ee"></span>
     </span>
     <span id="syncLabel">Nexus Sync Active</span>
+    <button id="syncRefreshBtn"
+            class="ml-1 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none focus:text-slate-300 rounded"
+            aria-label="Force sync now" title="Sync now">
+      <i class="fas fa-rotate-right text-[10px]" aria-hidden="true"></i>
+    </button>
   </div>
 
-  <h1 class="font-display font-extrabold tracking-tight title-gradient mb-5"
-      style="font-size:clamp(3rem,8vw,5.5rem); line-height:1.05">
+  <h1 class="font-display font-extrabold tracking-tight title-gradient mb-4"
+      style="font-size:clamp(2.8rem,8vw,5.5rem);line-height:1.06">
     Void Nexus
   </h1>
 
-  <p class="text-slate-400 max-w-2xl mx-auto font-light mb-6 leading-relaxed"
-     style="font-size:clamp(1rem,2.2vw,1.2rem)">
+  <p class="text-slate-400 max-w-xl mx-auto font-light mb-7 leading-relaxed"
+     style="font-size:clamp(0.95rem,2.2vw,1.15rem)">
     Bleeding-edge custom XBPS packages for&nbsp;<strong class="text-slate-300 font-medium">Void Linux</strong>,
     automatically built, signed, and indexed via GitHub&nbsp;Actions.
   </p>
 
-  <!-- Stats row -->
-  <div class="flex items-center justify-center flex-wrap gap-3 mb-3">
+  <div class="flex items-center justify-center flex-wrap gap-2.5 mb-2">
     <div id="statPkgs" class="hidden glass px-4 py-2 rounded-xl text-sm flex items-center gap-2">
       <i class="fas fa-box-open text-indigo-400 text-xs" aria-hidden="true"></i>
-      <span id="statPkgsNum" class="font-bold text-white">0</span>
+      <span id="statPkgsNum" class="font-bold text-white font-mono">0</span>
       <span class="text-slate-400">packages</span>
     </div>
     <a href="https://github.com/Ackerman-00/void-nexus/actions" target="_blank" rel="noopener noreferrer"
        class="glass px-4 py-2 rounded-xl text-sm flex items-center gap-2 hover:border-green-500/40 transition-colors"
        aria-label="View GitHub Actions build status">
-      <span class="relative flex h-2 w-2" aria-hidden="true">
-        <span class="animate-pulse-ring absolute inset-0 rounded-full" style="background:#22c55e;opacity:0.5"></span>
+      <span class="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
+        <span class="animate-pulseRing absolute inset-0 rounded-full" style="background:#22c55e;opacity:0.5"></span>
         <span class="relative rounded-full h-2 w-2" style="background:#22c55e"></span>
       </span>
       <span class="text-slate-400">Build Status</span>
@@ -387,76 +451,55 @@
     <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
        class="glass px-4 py-2 rounded-xl text-sm flex items-center gap-2 hover:border-indigo-500/40 transition-colors"
        aria-label="Join Discord community">
-      <i class="fab fa-discord text-xs" style="color:#7289da" aria-hidden="true"></i>
+      <i class="fab fa-discord text-xs flex-shrink-0" style="color:#7289da" aria-hidden="true"></i>
       <span class="text-slate-400">Community</span>
     </a>
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════
-     SETUP WIZARD  — 3-step animated command section
-═══════════════════════════════════════════════════ -->
-<section id="setup" class="relative z-10 max-w-3xl mx-auto px-4 mb-16" aria-label="Installation guide">
-
-  <div class="glass rounded-3xl p-6 sm:p-8">
-
-    <!-- Step header -->
-    <div class="flex items-center justify-between mb-6">
-      <div id="stepTitle" class="font-display font-bold text-lg text-white tracking-tight step-enter">
-        Step 1 — Add Repository
-      </div>
-      <div class="flex items-center gap-2 text-xs text-slate-500 font-mono">
+<section id="setup" class="relative z-10 max-w-2xl mx-auto px-4 mb-14" aria-label="Installation guide">
+  <div class="glass rounded-2xl p-5 sm:p-7">
+    <div class="flex items-center justify-between mb-5">
+      <div id="stepTitle" class="font-display font-bold text-base sm:text-lg text-white tracking-tight step-enter"></div>
+      <div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono flex-shrink-0 ml-3">
         <span id="stepNum" class="text-slate-300 font-bold">01</span>
         <span>/</span>
         <span>03</span>
       </div>
     </div>
 
-    <!-- Step description -->
-    <p id="stepDesc" class="text-sm text-slate-400 mb-4 leading-relaxed step-enter" style="animation-delay:30ms">
-      Add the Void Nexus repository config file so <code class="font-mono text-indigo-300 bg-slate-800/60 px-1 py-0.5 rounded">xbps-install</code> knows where to find packages.
-    </p>
+    <p id="stepDesc" class="text-sm text-slate-400 mb-4 leading-relaxed step-enter" style="animation-delay:25ms"></p>
 
-    <!-- Command box with left/right scroll navigation -->
-    <div class="relative mb-5">
-      <!-- Fade indicators -->
-      <div id="cmdFadeL" class="cmd-fade-l absolute left-10 top-0 bottom-0 w-10 z-10 rounded-l-none transition-opacity" style="opacity:0"></div>
-      <div id="cmdFadeR" class="cmd-fade-r absolute right-10 top-0 bottom-0 w-10 z-10 transition-opacity" style="opacity:0"></div>
-
-      <!-- Scroll Left -->
-      <button id="cmdScrollL" class="glass absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-xl
-                                     flex items-center justify-center text-slate-400 hover:text-white transition-all opacity-0"
-              aria-label="Scroll command left">
+    <div class="relative mb-4">
+      <div id="cmdFadeL" class="cmd-fade-l absolute left-9 top-0 bottom-0 w-8 z-10 rounded-none transition-opacity" style="opacity:0"></div>
+      <div id="cmdFadeR" class="cmd-fade-r absolute right-9 top-0 bottom-0 w-8 z-10 transition-opacity" style="opacity:0"></div>
+      <button id="cmdScrollL"
+              class="glass absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-xl
+                     flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              style="opacity:0" aria-label="Scroll left">
         <i class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
       </button>
-
-      <!-- Command text area -->
-      <div class="cmd-box rounded-2xl px-10 py-4 overflow-x-auto hide-scroll"
+      <div class="cmd-box rounded-xl px-10 py-3.5 overflow-x-auto hide-scroll"
            id="cmdScroller"
            role="textbox" aria-readonly="true" aria-label="Installation command">
-        <code id="cmdText" class="font-mono text-sm text-indigo-200 whitespace-nowrap block" aria-live="polite">
-          <!-- Typed by JS -->
-        </code>
+        <code id="cmdText" class="font-mono text-sm text-indigo-200 whitespace-nowrap block"></code>
       </div>
-
-      <!-- Scroll Right -->
-      <button id="cmdScrollR" class="glass absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-xl
-                                     flex items-center justify-center text-slate-400 hover:text-white transition-all opacity-0"
-              aria-label="Scroll command right">
+      <button id="cmdScrollR"
+              class="glass absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-xl
+                     flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              style="opacity:0" aria-label="Scroll right">
         <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
       </button>
     </div>
 
-    <!-- Copy + navigation row -->
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
-        <!-- Prev -->
-        <button id="stepPrev" class="glass ripple-host w-9 h-9 rounded-xl flex items-center justify-center
-                                      text-slate-400 hover:text-white transition-all disabled:opacity-30"
-                aria-label="Previous step">
+        <button id="stepPrev"
+                class="glass ripple-host w-9 h-9 rounded-xl flex items-center justify-center
+                       text-slate-400 hover:text-white transition-all disabled:opacity-25"
+                aria-label="Previous step" disabled>
           <i class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
         </button>
-        <!-- Step dots -->
         <div class="flex items-center gap-1.5" role="tablist" aria-label="Setup steps">
           <button class="step-dot active h-2 rounded-full" style="background:#22d3ee;width:24px"
                   data-step="0" role="tab" aria-selected="true" aria-label="Step 1"></button>
@@ -465,188 +508,223 @@
           <button class="step-dot h-2 w-2 rounded-full" style="background:rgba(100,116,139,0.4)"
                   data-step="2" role="tab" aria-selected="false" aria-label="Step 3"></button>
         </div>
-        <!-- Next -->
-        <button id="stepNext" class="glass ripple-host w-9 h-9 rounded-xl flex items-center justify-center
-                                      text-slate-400 hover:text-white transition-all"
+        <button id="stepNext"
+                class="glass ripple-host w-9 h-9 rounded-xl flex items-center justify-center
+                       text-slate-400 hover:text-white transition-all"
                 aria-label="Next step">
           <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
         </button>
       </div>
-      <!-- Copy button -->
-      <button id="copyCmd" class="glass ripple-host flex items-center gap-2.5 px-5 py-2.5 rounded-xl
-                                   text-sm font-medium text-slate-200 hover:text-white
-                                   hover:border-indigo-400/50 transition-all active:scale-97"
+      <button id="copyCmd"
+              class="glass ripple-host flex items-center gap-2 px-4 py-2.5 rounded-xl
+                     text-sm font-medium text-slate-300 hover:text-white
+                     hover:border-indigo-400/50 transition-all min-h-[40px]"
               aria-label="Copy command">
-        <i class="far fa-copy" aria-hidden="true"></i>
+        <i class="far fa-copy text-xs" aria-hidden="true"></i>
         <span>Copy</span>
       </button>
     </div>
 
-    <!-- Auto-advance progress bar -->
-    <div class="mt-5 h-0.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.06)">
-      <div id="progressBar" class="h-full rounded-full" style="background:linear-gradient(90deg,#6366f1,#22d3ee);width:0%;transition:width 0.1s linear"></div>
+    <div class="mt-4 h-px rounded-full overflow-hidden" style="background:rgba(255,255,255,0.05)">
+      <div id="progressBar" class="h-full rounded-full"
+           style="background:linear-gradient(90deg,#6366f1,#22d3ee);width:0%;transition:width 0.08s linear"></div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════
-     SEARCH + CATEGORY FILTERS
-═══════════════════════════════════════════════════ -->
-<section class="relative z-10 max-w-7xl mx-auto px-4 mb-10" aria-label="Package search and filters">
-  <!-- Search bar -->
-  <div class="relative mb-5 search-wrap max-w-2xl mx-auto">
-    <div class="search-icon-wrap absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 text-slate-500">
-      <i class="fas fa-search" aria-hidden="true"></i>
+<section class="relative z-10 max-w-7xl mx-auto px-4 mb-8" aria-label="Package search and filters">
+  <div class="relative mb-5 max-w-2xl mx-auto">
+    <div class="search-icon absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 text-slate-500 transition-colors">
+      <i class="fas fa-search text-sm" aria-hidden="true"></i>
     </div>
     <input type="search" id="searchInput"
-           class="glass block w-full pl-14 pr-12 py-4 rounded-2xl text-slate-100 placeholder-slate-500
-                  font-sans text-base sm:text-lg transition-all focus:outline-none"
+           class="glass block w-full pl-13 pr-20 py-3.5 rounded-2xl text-slate-100
+                  placeholder-slate-500 font-sans text-sm sm:text-base
+                  transition-all focus:outline-none"
            placeholder="Search packages…"
-           autocomplete="off" spellcheck="false"
-           aria-label="Search packages" role="searchbox">
-    <!-- Clear X -->
-    <button id="clearSearch"
-            class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors z-10"
-            aria-label="Clear search">
-      <i class="fas fa-times-circle" aria-hidden="true"></i>
-    </button>
-    <!-- Kbd shortcut hint -->
-    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none z-10">
-      <kbd id="kbdHint" class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono
-                               text-slate-500 border border-slate-700/60 bg-slate-800/50">/</kbd>
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+           aria-label="Search packages" role="searchbox" aria-autocomplete="list"
+           aria-controls="searchHistoryDrop">
+    <div class="absolute inset-y-0 right-0 flex items-center gap-1 pr-3 z-10">
+      <button id="clearBtn"
+              class="sr-hide w-8 h-8 flex items-center justify-center text-slate-500
+                     hover:text-slate-300 transition-colors rounded-lg"
+              aria-label="Clear search">
+        <i class="fas fa-times-circle text-sm" aria-hidden="true"></i>
+      </button>
+      <kbd id="kbdHint"
+           class="hidden sm:inline-flex items-center px-2 py-1 rounded-lg text-xs font-mono
+                  text-slate-600 border border-slate-700/50 bg-slate-800/40 select-none"
+           aria-hidden="true">/</kbd>
+    </div>
+
+    <div id="searchHistoryDrop"
+         class="search-history-drop absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-30 hidden"
+         role="listbox" aria-label="Recent searches">
     </div>
   </div>
 
-  <!-- Category filter pills -->
-  <div class="flex flex-wrap justify-center gap-2" id="filterPills" role="group" aria-label="Filter by category">
-    <button class="filter-pill active px-4 py-1.5 rounded-full text-sm font-medium text-slate-300"
-            data-cat="all">All</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Gaming">
-      <i class="fas fa-gamepad mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Gaming</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Social">
-      <i class="fas fa-comments mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Social</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Web">
-      <i class="fas fa-globe mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Web</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Desktop">
-      <i class="fas fa-layer-group mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Desktop</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Media">
-      <i class="fas fa-play-circle mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Media</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Dev">
-      <i class="fas fa-code mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Dev</button>
-    <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Utility">
-      <i class="fas fa-box mr-1.5 text-xs opacity-75" aria-hidden="true"></i>Utility</button>
+  <div class="filter-strip overflow-x-auto hide-scroll pb-1" role="group" aria-label="Filter by category">
+    <div id="filterPills" class="flex gap-2 w-max mx-auto px-1">
+      <button class="filter-pill active px-4 py-1.5 rounded-full text-sm font-medium text-slate-300" data-cat="all">All</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Gaming">
+        <i class="fas fa-gamepad mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Gaming</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Social">
+        <i class="fas fa-comments mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Social</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Web">
+        <i class="fas fa-globe mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Web</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Desktop">
+        <i class="fas fa-layer-group mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Desktop</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Media">
+        <i class="fas fa-play-circle mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Media</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Dev">
+        <i class="fas fa-code mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Dev</button>
+      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Utility">
+        <i class="fas fa-box mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Utility</button>
+    </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════
-     PACKAGE GRID
-═══════════════════════════════════════════════════ -->
 <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 pb-24" role="main" id="packages">
-  <!-- Result count -->
   <div id="resultRow" class="hidden flex items-center justify-between mb-5 text-sm text-slate-500">
-    <span id="resultCount"></span>
-    <button id="clearFilters" class="hover:text-indigo-400 transition-colors hidden">
-      Clear filters
+    <span id="resultCount" aria-live="polite" aria-atomic="true"></span>
+    <button id="clearFilters" class="hidden hover:text-indigo-400 transition-colors text-xs font-medium">
+      Clear all filters
     </button>
   </div>
-
   <div id="packagesGrid"
-       class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-max"
+       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max"
        role="list"
        aria-label="Package list">
   </div>
 </main>
 
-<!-- ═══════════════════════════════════════════════════
-     FOOTER
-═══════════════════════════════════════════════════ -->
 <footer class="relative z-10 mt-auto py-8 text-center text-sm text-slate-500"
-        style="border-top:1px solid rgba(255,255,255,0.05);background:rgba(4,7,26,0.4);backdrop-filter:blur(12px)"
+        style="border-top:1px solid rgba(255,255,255,0.04);background:rgba(4,7,26,0.45)"
         role="contentinfo">
-  <p class="mb-2">
+  <p class="mb-2 text-xs">
     Maintained by
     <a href="https://github.com/Ackerman-00" target="_blank" rel="noopener noreferrer"
        class="text-slate-400 hover:text-indigo-400 transition-colors">Ackerman</a>
     &nbsp;&bull;&nbsp;
-    Auto-syncs every&nbsp;60s — no hard refresh needed
+    Auto-syncs every&nbsp;60s
   </p>
-  <div class="flex items-center justify-center gap-4 mt-3">
+  <div class="flex items-center justify-center gap-5 mt-3">
     <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
-       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5"
+       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5 text-xs"
        aria-label="Join Discord">
       <i class="fab fa-discord" aria-hidden="true"></i><span>Discord</span>
     </a>
     <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer"
-       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5"
+       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5 text-xs"
        aria-label="GitHub">
       <i class="fab fa-github" aria-hidden="true"></i><span>GitHub</span>
     </a>
     <a href="https://voidlinux.org" target="_blank" rel="noopener noreferrer"
-       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5"
+       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5 text-xs"
        aria-label="Void Linux official site">
       <i class="fas fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i><span>Void Linux</span>
     </a>
   </div>
 </footer>
 
-<!-- ═══════════════════════════════════════════════════
-     TOAST
-═══════════════════════════════════════════════════ -->
-<div id="toast" class="glass fixed bottom-5 right-5 px-5 py-3.5 rounded-2xl z-[100] flex items-center gap-3
-                        text-slate-200 text-sm font-medium shadow-2xl"
-     style="transform:translateY(5rem);opacity:0;border-color:rgba(99,102,241,0.35)"
-     role="alert" aria-live="assertive">
-  <i id="toastIcon" class="fas fa-check-circle" style="color:#34d399" aria-hidden="true"></i>
-  <span id="toastMsg">Copied</span>
+<div id="toast"
+     class="glass fixed bottom-5 right-5 px-4 py-3 rounded-2xl z-[200] flex items-center gap-2.5
+            text-slate-200 text-sm font-medium shadow-2xl max-w-[calc(100vw-2.5rem)]"
+     style="transform:translateY(5rem);opacity:0;border-color:rgba(99,102,241,0.3)"
+     role="alert" aria-live="assertive" aria-atomic="true">
+  <i id="toastIcon" class="fas fa-check-circle flex-shrink-0" style="color:#34d399" aria-hidden="true"></i>
+  <span id="toastMsg"></span>
 </div>
 
-<!-- ═══════════════════════════════════════════════════
-     JAVASCRIPT  — all logic
-═══════════════════════════════════════════════════ -->
+<div id="modalOverlay"
+     class="modal-overlay fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 hidden"
+     role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="modalPanel"
+       class="modal-panel rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg max-h-[92svh] overflow-y-auto
+              flex flex-col">
+    <div class="flex items-start justify-between p-5 sm:p-6 pb-4" style="border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div class="min-w-0 pr-3">
+        <h2 id="modalTitle" class="font-display font-bold text-xl text-slate-100 tracking-tight truncate"></h2>
+        <div id="modalMeta" class="flex items-center flex-wrap gap-2 mt-2"></div>
+      </div>
+      <button id="modalClose"
+              class="flex-shrink-0 glass w-9 h-9 rounded-xl flex items-center justify-center
+                     text-slate-400 hover:text-white transition-colors"
+              aria-label="Close details">
+        <i class="fas fa-times text-sm" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="p-5 sm:p-6 flex flex-col gap-5">
+      <p id="modalDesc" class="text-slate-300 leading-relaxed text-sm"></p>
+
+      <div>
+        <div class="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Install command</div>
+        <div class="cmd-box rounded-xl px-4 py-3 flex items-center gap-3">
+          <code id="modalCmd" class="font-mono text-sm text-indigo-200 flex-grow overflow-x-auto hide-scroll whitespace-nowrap"></code>
+          <button id="modalCopyBtn"
+                  class="flex-shrink-0 glass ripple-host flex items-center gap-1.5 px-3 py-2 rounded-lg
+                         text-xs font-medium text-slate-300 hover:text-white hover:border-indigo-400/50
+                         transition-all min-h-[36px]"
+                  aria-label="Copy install command">
+            <i class="far fa-copy text-xs" aria-hidden="true"></i>
+            <span>Copy</span>
+          </button>
+        </div>
+      </div>
+
+      <a id="modalGhLink"
+         href="#" target="_blank" rel="noopener noreferrer"
+         class="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+        <i class="fab fa-github text-sm" aria-hidden="true"></i>
+        <span>View on GitHub</span>
+        <i class="fas fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
 
-  /* ──────────────────────────────────────────────────
-     CONSTANTS
-  ────────────────────────────────────────────────── */
   const POLL_MS      = 60_000;
   const STEP_AUTO_MS = 7_000;
-  const STAGGER_CAP  = 10;        // cards beyond this snap in instantly
+  const STAGGER_CAP  = 8;
+  const MAX_RETRIES  = 3;
+  const HISTORY_KEY  = 'vn_search_history';
+  const HISTORY_MAX  = 6;
+  const BASE_URL     = 'https://ackerman-00.github.io/void-nexus';
 
-  // The 3 setup steps
   const STEPS = [
     {
-      title:   'Step 1 — Add Repository',
-      desc:    'Add the Void Nexus repository config file so <code class="font-mono text-indigo-300 bg-slate-800/60 px-1 py-0.5 rounded">xbps-install</code> knows where to find packages.',
-      cmd:     "echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' | sudo tee /etc/xbps.d/10-nexus.conf"
+      title: 'Step 1 — Add Repository',
+      desc:  'Add the Void Nexus repository config so <code class="font-mono text-indigo-300 bg-slate-800/60 px-1 py-0.5 rounded text-xs">xbps-install</code> knows where to find packages.',
+      cmd:   "echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' | sudo tee /etc/xbps.d/10-nexus.conf"
     },
     {
-      title:   'Step 2 — Sync Package Index',
-      desc:    'Sync the package index and accept the repository signing key when prompted.',
-      cmd:     'sudo xbps-install -S'
+      title: 'Step 2 — Sync Package Index',
+      desc:  'Sync the package index and accept the repository signing key when prompted.',
+      cmd:   'sudo xbps-install -S'
     },
     {
-      title:   'Step 3 — Install Packages',
-      desc:    'Install any package from Void Nexus. Browse the list below to find what you need.',
-      cmd:     'sudo xbps-install -S &lt;package-name&gt;'
+      title: 'Step 3 — Install Packages',
+      desc:  'Install any package from Void Nexus. Browse the list below to find what you need.',
+      cmd:   'sudo xbps-install -S <package-name>'
     }
   ];
 
-  // Pre-compiled category regexes — compiled once, never recreated
   const CATS = [
-    { re:/game|gaming|wine|proton|emulat/i,         icon:'fa-gamepad',    label:'Gaming',  cls:'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-    { re:/discord|chat|social|messag/i,             icon:'fa-comments',   label:'Social',  cls:'bg-violet-500/10 text-violet-400 border-violet-500/20' },
-    { re:/browser|web|internet/i,                   icon:'fa-globe',      label:'Web',     cls:'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-    { re:/\bwm\b|shell|desktop|hypr|wayland|x11/i,  icon:'fa-layer-group',label:'Desktop', cls:'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' },
-    { re:/media|video|audio|music|player/i,         icon:'fa-play-circle',label:'Media',   cls:'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    { re:/\bdev\b|code|compil|editor|\bide\b/i,     icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { re:/game|gaming|wine|proton|emulat/i,          icon:'fa-gamepad',    label:'Gaming',  cls:'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+    { re:/discord|chat|social|messag/i,              icon:'fa-comments',   label:'Social',  cls:'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+    { re:/browser|web|internet/i,                    icon:'fa-globe',      label:'Web',     cls:'bg-sky-500/10 text-sky-400 border-sky-500/20' },
+    { re:/\bwm\b|shell|desktop|hypr|wayland|x11/i,   icon:'fa-layer-group',label:'Desktop', cls:'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' },
+    { re:/media|video|audio|music|player/i,          icon:'fa-play-circle',label:'Media',   cls:'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    { re:/\bdev\b|code|compil|editor|\bide\b/i,      icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   ];
   const CAT_DEF = { icon:'fa-box', label:'Utility', cls:'bg-slate-500/10 text-slate-400 border-slate-500/20' };
 
-  /* ──────────────────────────────────────────────────
-     STATE
-  ────────────────────────────────────────────────── */
   let allPackages   = [];
   let currentHash   = '';
   let activeFilter  = 'all';
@@ -659,68 +737,73 @@
   let progTimer     = null;
   let stepHovered   = false;
   let typeTimer     = null;
+  let fetchCtrl     = null;
+  let retryCount    = 0;
 
-  /* ──────────────────────────────────────────────────
-     DOM REFS
-  ────────────────────────────────────────────────── */
-  const grid        = document.getElementById('packagesGrid');
-  const searchInput = document.getElementById('searchInput');
-  const clearSearch = document.getElementById('clearSearch');
-  const kbdHint     = document.getElementById('kbdHint');
-  const filterPills = document.getElementById('filterPills');
-  const resultRow   = document.getElementById('resultRow');
-  const resultCount = document.getElementById('resultCount');
-  const clearFilters= document.getElementById('clearFilters');
-  const toast       = document.getElementById('toast');
-  const toastIcon   = document.getElementById('toastIcon');
-  const toastMsg    = document.getElementById('toastMsg');
-  const syncBadge   = document.getElementById('syncBadge');
-  const syncLabel   = document.getElementById('syncLabel');
-  const syncPing    = document.getElementById('syncPing');
-  const syncCore    = document.getElementById('syncCore');
-  const statPkgs    = document.getElementById('statPkgs');
-  const statPkgsNum = document.getElementById('statPkgsNum');
-  const stepTitleEl = document.getElementById('stepTitle');
-  const stepDescEl  = document.getElementById('stepDesc');
-  const stepNumEl   = document.getElementById('stepNum');
-  const cmdText     = document.getElementById('cmdText');
-  const cmdScroller = document.getElementById('cmdScroller');
-  const cmdFadeL    = document.getElementById('cmdFadeL');
-  const cmdFadeR    = document.getElementById('cmdFadeR');
-  const cmdScrollL  = document.getElementById('cmdScrollL');
-  const cmdScrollR  = document.getElementById('cmdScrollR');
-  const copyCmd     = document.getElementById('copyCmd');
-  const stepPrev    = document.getElementById('stepPrev');
-  const stepNext    = document.getElementById('stepNext');
-  const progressBar = document.getElementById('progressBar');
-  const stepDots    = document.querySelectorAll('.step-dot');
+  const $ = id => document.getElementById(id);
+  const grid          = $('packagesGrid');
+  const searchInput   = $('searchInput');
+  const clearBtn      = $('clearBtn');
+  const kbdHint       = $('kbdHint');
+  const filterPills   = $('filterPills');
+  const resultRow     = $('resultRow');
+  const resultCount   = $('resultCount');
+  const clearFilters  = $('clearFilters');
+  const toast         = $('toast');
+  const toastIcon     = $('toastIcon');
+  const toastMsg      = $('toastMsg');
+  const syncBadge     = $('syncBadge');
+  const syncLabel     = $('syncLabel');
+  const syncPing      = $('syncPing');
+  const syncCore      = $('syncCore');
+  const statPkgs      = $('statPkgs');
+  const statPkgsNum   = $('statPkgsNum');
+  const stepTitleEl   = $('stepTitle');
+  const stepDescEl    = $('stepDesc');
+  const stepNumEl     = $('stepNum');
+  const cmdText       = $('cmdText');
+  const cmdScroller   = $('cmdScroller');
+  const cmdFadeL      = $('cmdFadeL');
+  const cmdFadeR      = $('cmdFadeR');
+  const cmdScrollL    = $('cmdScrollL');
+  const cmdScrollR    = $('cmdScrollR');
+  const copyCmd       = $('copyCmd');
+  const stepPrev      = $('stepPrev');
+  const stepNext      = $('stepNext');
+  const progressBar   = $('progressBar');
+  const stepDots      = document.querySelectorAll('.step-dot');
+  const syncRefreshBtn= $('syncRefreshBtn');
+  const modalOverlay  = $('modalOverlay');
+  const modalPanel    = $('modalPanel');
+  const modalClose    = $('modalClose');
+  const modalTitle    = $('modalTitle');
+  const modalMeta     = $('modalMeta');
+  const modalDesc     = $('modalDesc');
+  const modalCmd      = $('modalCmd');
+  const modalCopyBtn  = $('modalCopyBtn');
+  const modalGhLink   = $('modalGhLink');
+  const historyDrop   = $('searchHistoryDrop');
 
-  /* ──────────────────────────────────────────────────
-     URL SEARCH PARAM  — shareable search links
-  ────────────────────────────────────────────────── */
   const urlParam = new URLSearchParams(location.search).get('search');
-  if (urlParam) {
-    searchInput.value = urlParam.trim();
-  }
+  if (urlParam) searchInput.value = urlParam.trim();
 
-  /* ──────────────────────────────────────────────────
-     KEYBOARD SHORTCUTS
-  ────────────────────────────────────────────────── */
   document.addEventListener('keydown', e => {
-    if (e.key === '/' && document.activeElement !== searchInput) {
+    if (e.key === 'Escape') {
+      if (!modalOverlay.classList.contains('hidden')) { closeModal(); return; }
+      if (document.activeElement === searchInput) {
+        searchInput.blur();
+        if (searchInput.value) { searchInput.value = ''; handleSearchInput(); }
+      }
+      return;
+    }
+    if (e.key === '/' && document.activeElement !== searchInput &&
+        !modalOverlay.classList.contains('hidden') === false) {
       e.preventDefault();
       searchInput.focus();
       searchInput.select();
     }
-    if (e.key === 'Escape' && document.activeElement === searchInput) {
-      searchInput.blur();
-      if (searchInput.value) { searchInput.value = ''; handleSearchInput(); }
-    }
   });
 
-  /* ──────────────────────────────────────────────────
-     RIPPLE  — adds ripple effect to elements with .ripple-host
-  ────────────────────────────────────────────────── */
   document.addEventListener('click', e => {
     const host = e.target.closest('.ripple-host');
     if (!host) return;
@@ -733,47 +816,70 @@
     r.addEventListener('animationend', () => r.remove(), { once: true });
   });
 
-  /* ──────────────────────────────────────────────────
-     CATEGORIZE  (uses pre-compiled CATS regexes)
-  ────────────────────────────────────────────────── */
+  function cmpVer(a, b) {
+    const norm = s => String(s || '').replace(/_/g, '.').split('.').map(x => parseInt(x, 10) || 0);
+    const pa = norm(a), pb = norm(b);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const d = (pa[i] || 0) - (pb[i] || 0);
+      if (d !== 0) return d;
+    }
+    return 0;
+  }
+
+  function deduplicatePackages(raw) {
+    const map = new Map();
+    for (const pkg of raw) {
+      const key = (pkg.name || '').trim().toLowerCase();
+      if (!key) continue;
+      const existing = map.get(key);
+      if (!existing || cmpVer(pkg.version, existing.version) > 0) {
+        map.set(key, pkg);
+      }
+    }
+    return [...map.values()];
+  }
+
   function categorize(name, desc) {
     const t = (name || '') + ' ' + (desc || '');
     for (const c of CATS) if (c.re.test(t)) return c;
     return CAT_DEF;
   }
 
-  /* ──────────────────────────────────────────────────
-     SKELETON LOADING
-  ────────────────────────────────────────────────── */
   function showSkeletons(n) {
     const f = document.createDocumentFragment();
     for (let i = 0; i < n; i++) {
       const d = document.createElement('div');
-      d.className = 'glass-card rounded-[22px] p-6 flex flex-col gap-4';
+      d.className = 'glass-card rounded-[20px] p-5 flex flex-col gap-3.5';
       d.setAttribute('aria-hidden', 'true');
-      d.innerHTML = `
-        <div class="skel h-7 w-3/5"></div>
-        <div class="skel h-5 w-1/4"></div>
-        <div class="skel h-4 w-full"></div>
-        <div class="skel h-4 w-4/5"></div>
-        <div class="skel h-12 w-full mt-auto"></div>`;
+      d.innerHTML =
+        '<div class="skel h-6 w-2/5"></div>' +
+        '<div class="skel h-4 w-1/5"></div>' +
+        '<div class="skel h-3.5 w-full"></div>' +
+        '<div class="skel h-3.5 w-4/5"></div>' +
+        '<div class="skel h-10 w-full mt-auto"></div>';
       f.appendChild(d);
     }
     grid.innerHTML = '';
     grid.appendChild(f);
   }
 
-  /* ──────────────────────────────────────────────────
-     RENDER  — XSS-safe: all user data via textContent
-  ────────────────────────────────────────────────── */
   function render(packages, animate) {
     if (!packages.length) {
-      grid.innerHTML = `
-        <div class="col-span-full text-center py-20 text-slate-500" role="status">
-          <i class="fas fa-ghost text-5xl block mb-5 opacity-25 animate-bounce" aria-hidden="true"></i>
-          <p class="text-lg font-light">No packages found.</p>
-          <p class="text-sm mt-2 text-slate-600">Try a different term or clear the filter.</p>
-        </div>`;
+      grid.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'col-span-full text-center py-20 text-slate-500';
+      empty.setAttribute('role', 'status');
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-ghost text-5xl block mb-5 opacity-20 animate-bounce';
+      icon.setAttribute('aria-hidden', 'true');
+      const p1 = document.createElement('p');
+      p1.className = 'text-base font-light';
+      p1.textContent = 'No packages found.';
+      const p2 = document.createElement('p');
+      p2.className = 'text-sm mt-1.5 text-slate-600';
+      p2.textContent = 'Try a different term or clear the filter.';
+      empty.appendChild(icon); empty.appendChild(p1); empty.appendChild(p2);
+      grid.appendChild(empty);
       return;
     }
 
@@ -782,57 +888,67 @@
     packages.forEach((pkg, idx) => {
       const cat  = categorize(pkg.name, pkg.description);
       const card = document.createElement('article');
-      card.className = 'glass-card rounded-[22px] p-6 flex flex-col h-full group relative overflow-hidden';
+      card.className = 'glass-card rounded-[20px] p-5 flex flex-col h-full relative overflow-hidden group';
       card.setAttribute('role', 'listitem');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', (pkg.name || '') + ' package details');
 
       if (animate) {
-        card.style.animation     = `fadeUp 0.52s cubic-bezier(0.22,1,0.36,1) both`;
-        card.style.animationDelay = Math.min(idx, STAGGER_CAP) * 52 + 'ms';
+        card.style.animation      = 'fadeUp 0.48s cubic-bezier(0.22,1,0.36,1) both';
+        card.style.animationDelay = Math.min(idx, STAGGER_CAP) * 48 + 'ms';
       }
 
-      // ── Static HTML template — zero user data here ──────────
-      card.innerHTML = `
-        <div class="card-icon absolute -right-8 -top-8 text-9xl pointer-events-none"
-             style="color:rgba(20,35,60,0.7)" aria-hidden="true">
-          <i class="fas ${cat.icon}"></i>
-        </div>
-        <div class="mb-4 z-10">
-          <h2 class="pkg-name text-xl font-display font-bold text-slate-100 tracking-tight leading-tight
-                     group-hover:text-transparent group-hover:bg-clip-text
-                     group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-cyan-400
-                     transition-all duration-300"></h2>
-        </div>
-        <div class="flex items-center gap-2 mb-4 z-10 flex-wrap">
-          <span class="cat-badge inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold
-                       tracking-wider border ${cat.cls} uppercase shadow-sm">
-            <i class="fas ${cat.icon} mr-1.5 text-[10px] opacity-75" aria-hidden="true"></i>
-          </span>
-          <span class="pkg-ver inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono
-                       bg-slate-900/60 text-slate-300 border border-slate-700/40"></span>
-        </div>
-        <p class="pkg-desc text-sm text-slate-400 mb-6 flex-grow z-10 leading-relaxed font-light"></p>
-        <div class="mt-auto z-10 pt-4" style="border-top:1px solid rgba(255,255,255,0.05)">
-          <button class="install-btn ripple-host w-full flex items-center justify-between
-                         text-slate-300 py-3 px-4 rounded-xl text-sm font-semibold
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                  aria-label="Copy install command">
-            <span class="flex items-center gap-2.5">
-              <i class="fas fa-terminal ti" aria-hidden="true"></i>
-              <span>Install</span>
-            </span>
-            <i class="far fa-copy ci" aria-hidden="true"></i>
-          </button>
-        </div>`;
+      card.innerHTML =
+        '<div class="card-icon absolute -right-7 -top-7 text-8xl" style="color:rgba(20,35,60,0.65)" aria-hidden="true">' +
+          '<i class="fas ' + cat.icon + '"></i>' +
+        '</div>' +
+        '<div class="mb-3 z-10">' +
+          '<h2 class="pkg-name text-lg font-display font-bold text-slate-100 tracking-tight leading-tight ' +
+               'group-hover:text-transparent group-hover:bg-clip-text ' +
+               'group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-cyan-400 ' +
+               'transition-all duration-300"></h2>' +
+        '</div>' +
+        '<div class="flex items-center gap-2 mb-3.5 z-10 flex-wrap">' +
+          '<span class="cat-badge inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold ' +
+                       'tracking-wider border ' + cat.cls + ' uppercase">' +
+            '<i class="fas ' + cat.icon + ' mr-1.5 text-[9px] opacity-70" aria-hidden="true"></i>' +
+          '</span>' +
+          '<span class="pkg-ver inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono ' +
+                       'bg-slate-900/55 text-slate-400 border border-slate-700/35"></span>' +
+        '</div>' +
+        '<p class="pkg-desc text-sm text-slate-400 mb-5 flex-grow z-10 leading-relaxed font-light line-clamp-3"></p>' +
+        '<div class="mt-auto z-10 pt-4 flex gap-2" style="border-top:1px solid rgba(255,255,255,0.045)">' +
+          '<button class="install-btn ripple-host flex-grow flex items-center justify-between ' +
+                         'text-slate-300 py-2.5 px-4 rounded-xl text-sm font-semibold ' +
+                         'focus:outline-none focus:ring-2 focus:ring-indigo-500/50" ' +
+                  'aria-label="Copy install command">' +
+            '<span class="flex items-center gap-2">' +
+              '<i class="fas fa-terminal ti text-xs" aria-hidden="true"></i>' +
+              '<span>Install</span>' +
+            '</span>' +
+            '<i class="far fa-copy ci text-xs" aria-hidden="true"></i>' +
+          '</button>' +
+          '<button class="details-btn glass w-10 h-10 rounded-xl flex items-center justify-center ' +
+                         'text-slate-500 hover:text-slate-200 transition-colors flex-shrink-0" ' +
+                  'aria-label="View package details">' +
+            '<i class="fas fa-expand-alt text-xs" aria-hidden="true"></i>' +
+          '</button>' +
+        '</div>';
 
-      // ── Safely set user data via textContent only ──────────
       card.querySelector('.pkg-name').textContent  = pkg.name        || '';
       card.querySelector('.pkg-ver').textContent   = pkg.version     || '';
       card.querySelector('.pkg-desc').textContent  = pkg.description || 'Custom compiled Void Linux package.';
-      const catBadge = card.querySelector('.cat-badge');
-      catBadge.appendChild(document.createTextNode(cat.label));
+      const badge = card.querySelector('.cat-badge');
+      badge.appendChild(document.createTextNode(cat.label));
 
-      // Store name for event delegation — never inline onclick
-      card.querySelector('.install-btn').dataset.installPkg = pkg.name || '';
+      const installBtn  = card.querySelector('.install-btn');
+      const detailsBtn  = card.querySelector('.details-btn');
+      installBtn.dataset.installPkg = pkg.name || '';
+      detailsBtn.dataset.detailPkg  = pkg.name || '';
+
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(pkg); }
+      });
 
       frag.appendChild(card);
     });
@@ -841,58 +957,179 @@
     grid.appendChild(frag);
   }
 
-  /* ──────────────────────────────────────────────────
-     EVENT DELEGATION  — single listener for install btns
-  ────────────────────────────────────────────────── */
   grid.addEventListener('click', e => {
-    const btn = e.target.closest('[data-install-pkg]');
-    if (!btn || !btn.dataset.installPkg) return;
-    const name = btn.dataset.installPkg;
-    // Safe: name from pkg.name, only goes to clipboard
-    copyToClipboard('sudo xbps-install -S ' + name, name, 'install');
+    const install = e.target.closest('[data-install-pkg]');
+    if (install) {
+      e.stopPropagation();
+      const name = install.dataset.installPkg;
+      if (name) copyToClipboard('sudo xbps-install -S ' + name, name, 'install');
+      return;
+    }
+    const details = e.target.closest('[data-detail-pkg]');
+    if (details) {
+      e.stopPropagation();
+      const name = details.dataset.detailPkg;
+      const pkg  = allPackages.find(p => p.name === name);
+      if (pkg) openModal(pkg);
+      return;
+    }
+    const card = e.target.closest('.glass-card');
+    if (card) {
+      const nameEl = card.querySelector('.pkg-name');
+      if (!nameEl) return;
+      const name = nameEl.textContent.trim();
+      const pkg  = allPackages.find(p => p.name === name);
+      if (pkg) openModal(pkg);
+    }
   });
 
-  /* ──────────────────────────────────────────────────
-     FILTER PILLS
-  ────────────────────────────────────────────────── */
+  function openModal(pkg) {
+    const cat = categorize(pkg.name, pkg.description);
+    modalTitle.textContent = pkg.name || '';
+    modalDesc.textContent  = pkg.description || 'Custom compiled Void Linux package.';
+
+    modalMeta.innerHTML = '';
+    const catSpan = document.createElement('span');
+    catSpan.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider border ' + cat.cls + ' uppercase';
+    const catIcon = document.createElement('i');
+    catIcon.className = 'fas ' + cat.icon + ' mr-1.5 text-[9px] opacity-70';
+    catIcon.setAttribute('aria-hidden', 'true');
+    catSpan.appendChild(catIcon);
+    catSpan.appendChild(document.createTextNode(cat.label));
+    modalMeta.appendChild(catSpan);
+
+    if (pkg.version) {
+      const verSpan = document.createElement('span');
+      verSpan.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-900/55 text-slate-400 border border-slate-700/35';
+      verSpan.textContent = pkg.version;
+      modalMeta.appendChild(verSpan);
+    }
+
+    const installCmd = 'sudo xbps-install -S ' + (pkg.name || '');
+    modalCmd.textContent = installCmd;
+    modalCopyBtn.onclick = () => copyToClipboard(installCmd, pkg.name || '', 'install');
+
+    const ghHref = 'https://github.com/Ackerman-00/void-nexus/tree/main/' + encodeURIComponent(pkg.name || '');
+    modalGhLink.href = ghHref;
+
+    modalOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    modalClose.focus();
+  }
+
+  function closeModal() {
+    modalOverlay.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  modalClose.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+
   filterPills.addEventListener('click', e => {
     const pill = e.target.closest('[data-cat]');
     if (!pill) return;
     const cat = pill.dataset.cat;
     if (cat === activeFilter) return;
     activeFilter = cat;
-
     filterPills.querySelectorAll('[data-cat]').forEach(p => {
       p.classList.toggle('active', p.dataset.cat === cat);
       p.setAttribute('aria-pressed', p.dataset.cat === cat ? 'true' : 'false');
     });
-
     applyFiltersAndRender(true);
   });
 
-  /* ──────────────────────────────────────────────────
-     SEARCH  — debounced, updates URL param
-  ────────────────────────────────────────────────── */
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveHistory(term) {
+    if (!term || term.length < 2) return;
+    let h = loadHistory().filter(t => t !== term);
+    h.unshift(term);
+    h = h.slice(0, HISTORY_MAX);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); } catch {}
+  }
+
+  function showHistoryDrop() {
+    const h = loadHistory();
+    if (!h.length) { historyDrop.classList.add('hidden'); return; }
+    historyDrop.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between px-4 py-2';
+    const label = document.createElement('span');
+    label.className = 'text-xs text-slate-500 font-medium uppercase tracking-wider';
+    label.textContent = 'Recent searches';
+    const clearAll = document.createElement('button');
+    clearAll.className = 'text-xs text-slate-600 hover:text-slate-400 transition-colors';
+    clearAll.textContent = 'Clear';
+    clearAll.addEventListener('click', e => {
+      e.stopPropagation();
+      try { localStorage.removeItem(HISTORY_KEY); } catch {}
+      historyDrop.classList.add('hidden');
+    });
+    header.appendChild(label);
+    header.appendChild(clearAll);
+    historyDrop.appendChild(header);
+
+    h.forEach(term => {
+      const item = document.createElement('button');
+      item.className = 'w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-indigo-500/10 transition-colors text-left';
+      item.setAttribute('role', 'option');
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-clock-rotate-left text-xs text-slate-500 flex-shrink-0';
+      icon.setAttribute('aria-hidden', 'true');
+      const span = document.createElement('span');
+      span.textContent = term;
+      item.appendChild(icon); item.appendChild(span);
+      item.addEventListener('click', () => {
+        searchInput.value = term;
+        historyDrop.classList.add('hidden');
+        handleSearchInput();
+      });
+      historyDrop.appendChild(item);
+    });
+
+    historyDrop.classList.remove('hidden');
+  }
+
+  searchInput.addEventListener('focus', () => {
+    if (!searchInput.value.trim()) showHistoryDrop();
+  });
+
+  document.addEventListener('click', e => {
+    if (!historyDrop.classList.contains('hidden') &&
+        !historyDrop.contains(e.target) && e.target !== searchInput) {
+      historyDrop.classList.add('hidden');
+    }
+  });
+
   function handleSearchInput() {
-    const hasVal = searchInput.value.length > 0;
-    clearSearch.classList.toggle('hidden', !hasVal);
-    kbdHint.style.opacity = hasVal ? '0' : '1';
+    const val = searchInput.value;
+    const hasVal = val.length > 0;
+    clearBtn.classList.toggle('sr-hide', !hasVal);
+    if (kbdHint) kbdHint.style.opacity = hasVal ? '0' : '1';
+
+    if (!hasVal) {
+      showHistoryDrop();
+    } else {
+      historyDrop.classList.add('hidden');
+    }
 
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-      // Update URL param for shareability (no page reload)
       const url = new URL(location.href);
-      if (searchInput.value.trim()) url.searchParams.set('search', searchInput.value.trim());
+      if (val.trim()) url.searchParams.set('search', val.trim());
       else url.searchParams.delete('search');
       history.replaceState(null, '', url);
-
       applyFiltersAndRender(true);
-    }, 80);
+    }, 120);
   }
 
   searchInput.addEventListener('input', handleSearchInput);
 
-  clearSearch.addEventListener('click', () => {
+  clearBtn.addEventListener('click', () => {
     searchInput.value = '';
     handleSearchInput();
     searchInput.focus();
@@ -907,9 +1144,6 @@
     handleSearchInput();
   });
 
-  /* ──────────────────────────────────────────────────
-     FILTER + RENDER PIPELINE
-  ────────────────────────────────────────────────── */
   function getFiltered() {
     const terms = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
     return allPackages.filter(p => {
@@ -922,106 +1156,90 @@
 
   function applyFiltersAndRender(animate) {
     const filtered = getFiltered();
-    const searching = searchInput.value.trim().length > 0 || activeFilter !== 'all';
+    const isFiltering = searchInput.value.trim().length > 0 || activeFilter !== 'all';
 
-    resultRow.classList.toggle('hidden', !searching && allPackages.length === 0);
-    if (searching) {
+    if (isFiltering) {
       resultRow.classList.remove('hidden');
       resultCount.textContent = filtered.length + ' of ' + allPackages.length + ' packages';
-      clearFilters.classList.toggle('hidden', !searching);
+      clearFilters.classList.remove('hidden');
+    } else {
+      resultRow.classList.add('hidden');
     }
 
     render(filtered, animate);
   }
 
-  /* ──────────────────────────────────────────────────
-     PACKAGE COUNT STAT
-  ────────────────────────────────────────────────── */
   function updateStats(count) {
     statPkgsNum.textContent = count;
     statPkgs.classList.remove('hidden');
   }
 
-  /* ──────────────────────────────────────────────────
-     SYNC STATUS BADGE
-  ────────────────────────────────────────────────── */
   let syncResetT = null;
   const SYNC_COLORS = { active:'#22d3ee', checking:'#facc15', updated:'#34d399', error:'#f87171' };
 
   function setSyncState(state, info) {
     clearTimeout(syncResetT);
     const color = SYNC_COLORS[state] || '#22d3ee';
-    syncBadge.className = syncBadge.className.replace(/sync-\w+/g, '') + ' sync-' + state;
-    syncBadge.style.color = color;
+    syncBadge.className = syncBadge.className.replace(/sync-\w+/g,'').trim() + ' sync-' + state;
     syncPing.style.background = color;
     syncCore.style.background = color;
-    syncPing.style.display = state === 'checking' ? 'none' : '';
 
     if (state === 'checking') {
-      syncLabel.textContent = 'Checking\u2026';
+      syncPing.style.display = 'none';
       syncCore.style.background = 'transparent';
-      syncCore.innerHTML = `<i class="fas fa-circle-notch fa-spin" style="font-size:8px;color:${color}" aria-hidden="true"></i>`;
+      syncCore.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="font-size:8px;color:' + color + '" aria-hidden="true"></i>';
+      syncLabel.textContent = 'Checking\u2026';
     } else {
+      syncPing.style.display = '';
       syncCore.innerHTML = '';
-      syncCore.style.background = color;
       syncCore.className = 'relative inline-flex rounded-full h-2 w-2';
+      syncCore.style.background = color;
+
       if (state === 'updated') {
-        syncLabel.textContent = `Updated \u00b7 ${info} pkg${info !== 1 ? 's' : ''}`;
-        syncResetT = setTimeout(() => setSyncState('active', null), 6000);
+        syncLabel.textContent = 'Updated \u00b7 ' + info + ' pkg' + (info !== 1 ? 's' : '');
+        syncResetT = setTimeout(() => setSyncState('active', null), 5000);
       } else if (state === 'error') {
-        syncLabel.textContent = 'Sync error — retrying';
+        syncLabel.textContent = 'Sync error \u2014 retrying';
       } else {
         const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        syncLabel.textContent = info ? `Synced \u00b7 ${t}` : 'Nexus Sync Active';
+        syncLabel.textContent = info ? 'Synced \u00b7 ' + t : 'Nexus Sync Active';
       }
     }
   }
 
-  /* ──────────────────────────────────────────────────
-     TOAST  — XSS-safe, no innerHTML for user data
-  ────────────────────────────────────────────────── */
   function showToast(parts, iconClass, iconColor) {
-    toastIcon.className  = 'fas ' + iconClass;
+    toastIcon.className   = 'fas ' + iconClass + ' flex-shrink-0';
     toastIcon.style.color = iconColor || '#34d399';
     toastMsg.textContent  = '';
     for (const p of parts) {
       if (p.bold) {
-        const b = document.createElement('b'); b.textContent = p.t; toastMsg.appendChild(b);
+        const b = document.createElement('b');
+        b.textContent = p.t;
+        toastMsg.appendChild(b);
       } else {
         toastMsg.appendChild(document.createTextNode(p.t));
       }
     }
     toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
   }
 
-  /* ──────────────────────────────────────────────────
-     CLIPBOARD  — safe text only (never HTML)
-  ────────────────────────────────────────────────── */
   function copyToClipboard(text, label, type) {
+    if (!navigator.clipboard) {
+      showToast([{ t: 'Clipboard not available' }], 'fa-times-circle', '#f87171');
+      return;
+    }
     navigator.clipboard.writeText(text).then(() => {
       if (type === 'install') {
-        showToast([{t:'Install copied — '},{t:label,bold:true}], 'fa-terminal', '#818cf8');
-      } else if (type === 'cmd') {
-        showToast([{t:'Command copied!'  }], 'fa-check-circle', '#34d399');
+        showToast([{ t: 'Install copied \u2014 ' }, { t: label, bold: true }], 'fa-terminal', '#818cf8');
       } else {
-        showToast([{t:'Copied '          },{t:label,bold:true}], 'fa-check-circle', '#34d399');
+        showToast([{ t: 'Command copied!' }], 'fa-check-circle', '#34d399');
       }
     }).catch(() => {
-      showToast([{t:'Copy failed — please copy manually'}], 'fa-times-circle', '#f87171');
+      showToast([{ t: 'Copy failed \u2014 copy manually' }], 'fa-times-circle', '#f87171');
     });
   }
-
-  /* ──────────────────────────────────────────────────
-     STEP WIZARD — typing animation
-  ────────────────────────────────────────────────── */
-  // Raw commands (never go into HTML)
-  const STEP_CMDS_RAW = [
-    "echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' | sudo tee /etc/xbps.d/10-nexus.conf",
-    "sudo xbps-install -S",
-    "sudo xbps-install -S <package-name>"
-  ];
 
   function typeCommand(text, speed) {
     clearTimeout(typeTimer);
@@ -1038,7 +1256,6 @@
       if (i < text.length) {
         cursor.before(document.createTextNode(text[i++]));
         typeTimer = setTimeout(tick, speed);
-        // Auto-scroll as we type
         if (cmdScroller.scrollWidth > cmdScroller.clientWidth) {
           cmdScroller.scrollLeft = cmdScroller.scrollWidth;
           updateScrollFades();
@@ -1047,28 +1264,29 @@
         typeTimer = setTimeout(() => {
           if (cursor.parentNode) cursor.remove();
           updateScrollFades();
-        }, 900);
+        }, 800);
       }
     }
     tick();
   }
 
   function updateScrollFades() {
-    const sl = cmdScroller.scrollLeft;
+    const sl   = cmdScroller.scrollLeft;
     const maxSl = cmdScroller.scrollWidth - cmdScroller.clientWidth;
     const isLong = maxSl > 4;
-    cmdFadeL.style.opacity = isLong && sl > 4 ? '1' : '0';
-    cmdFadeR.style.opacity = isLong && sl < maxSl - 4 ? '1' : '0';
-    cmdScrollL.style.opacity = isLong && sl > 4 ? '1' : '0';
-    cmdScrollR.style.opacity = isLong && sl < maxSl - 4 ? '1' : '0';
+    const showL  = isLong && sl > 4;
+    const showR  = isLong && sl < maxSl - 4;
+    cmdFadeL.style.opacity  = showL ? '1' : '0';
+    cmdFadeR.style.opacity  = showR ? '1' : '0';
+    cmdScrollL.style.opacity = showL ? '1' : '0';
+    cmdScrollR.style.opacity = showR ? '1' : '0';
   }
 
   cmdScroller.addEventListener('scroll', updateScrollFades, { passive: true });
-  cmdScrollL.addEventListener('click', () => { cmdScroller.scrollLeft -= 180; });
-  cmdScrollR.addEventListener('click', () => { cmdScroller.scrollLeft += 180; });
+  cmdScrollL.addEventListener('click', () => { cmdScroller.scrollLeft -= 160; });
+  cmdScrollR.addEventListener('click', () => { cmdScroller.scrollLeft += 160; });
 
-  function goToStep(idx, dir) {
-    // Clear auto-advance
+  function goToStep(idx) {
     clearTimeout(stepAutoTimer);
     clearInterval(progTimer);
     stepProgress = 0;
@@ -1077,38 +1295,30 @@
     stepIdx = idx;
     const step = STEPS[idx];
 
-    // Animate title/desc out then in
-    stepTitleEl.classList.remove('step-enter');
-    stepDescEl .classList.remove('step-enter');
+    stepTitleEl.className = stepTitleEl.className.replace(/step-\w+/g, '').trim();
+    stepDescEl .className = stepDescEl .className.replace(/step-\w+/g, '').trim();
     void stepTitleEl.offsetWidth;
-    stepTitleEl.className = stepTitleEl.className.replace(/step-\w+/g, '');
-    stepDescEl .className = stepDescEl .className.replace(/step-\w+/g, '');
     stepTitleEl.classList.add('step-enter');
     stepDescEl .classList.add('step-enter');
 
-    stepTitleEl.textContent = step.title;    // textContent (no user data, hardcoded)
-    stepDescEl .innerHTML   = step.desc;     // trusted static string — no user data
+    stepTitleEl.textContent = step.title;
+    stepDescEl.innerHTML    = step.desc;
 
-    stepNumEl.textContent = String(idx + 1).padStart(2, '0');
-    stepPrev.disabled = idx === 0;
-    stepNext.disabled = idx === STEPS.length - 1;
+    stepNumEl.textContent  = String(idx + 1).padStart(2, '0');
+    stepPrev.disabled      = idx === 0;
+    stepNext.disabled      = idx === STEPS.length - 1;
 
-    // Update dots
     stepDots.forEach((d, i) => {
       d.classList.toggle('active', i === idx);
-      d.style.background    = i === idx ? '#22d3ee' : 'rgba(100,116,139,0.4)';
-      d.style.width         = i === idx ? '24px' : '8px';
+      d.style.background = i === idx ? '#22d3ee' : 'rgba(100,116,139,0.4)';
+      d.style.width      = i === idx ? '24px' : '8px';
       d.setAttribute('aria-selected', i === idx ? 'true' : 'false');
     });
 
-    // Typing speed based on command length
-    const raw = STEP_CMDS_RAW[idx];
-    typeCommand(raw, raw.length > 40 ? 14 : 22);
+    const raw = STEPS[idx].cmd;
+    typeCommand(raw, raw.length > 40 ? 13 : 20);
+    copyCmd.onclick = () => copyToClipboard(raw, '', 'cmd');
 
-    // Copy button uses raw command
-    copyCmd.onclick = () => copyToClipboard(STEP_CMDS_RAW[stepIdx], '', 'cmd');
-
-    // Restart auto-advance unless on last step or hovered
     if (!stepHovered && idx < STEPS.length - 1) startAutoAdvance();
   }
 
@@ -1116,19 +1326,18 @@
     clearTimeout(stepAutoTimer);
     clearInterval(progTimer);
     stepProgress = 0;
-    const tick = 80; // ms per tick
+    const tick = 80;
     progTimer = setInterval(() => {
       if (stepHovered) return;
       stepProgress += tick;
       progressBar.style.width = Math.min(100, (stepProgress / STEP_AUTO_MS) * 100) + '%';
       if (stepProgress >= STEP_AUTO_MS) {
         clearInterval(progTimer);
-        if (stepIdx < STEPS.length - 1) goToStep(stepIdx + 1, 1);
+        if (stepIdx < STEPS.length - 1) goToStep(stepIdx + 1);
       }
     }, tick);
   }
 
-  // Pause on hover
   const setupSection = document.getElementById('setup');
   setupSection.addEventListener('mouseenter', () => { stepHovered = true; clearInterval(progTimer); });
   setupSection.addEventListener('mouseleave', () => {
@@ -1136,67 +1345,104 @@
     if (stepIdx < STEPS.length - 1) startAutoAdvance();
   });
 
-  stepPrev.addEventListener('click', () => { if (stepIdx > 0) goToStep(stepIdx - 1, -1); });
-  stepNext.addEventListener('click', () => { if (stepIdx < STEPS.length - 1) goToStep(stepIdx + 1, 1); });
-  stepDots.forEach((d, i) => d.addEventListener('click', () => goToStep(i, i > stepIdx ? 1 : -1)));
+  stepPrev.addEventListener('click', () => { if (stepIdx > 0) goToStep(stepIdx - 1); });
+  stepNext.addEventListener('click', () => { if (stepIdx < STEPS.length - 1) goToStep(stepIdx + 1); });
+  stepDots.forEach((d, i) => d.addEventListener('click', () => goToStep(i)));
 
-  /* ──────────────────────────────────────────────────
-     FETCH + HASH-DIFF SYNC
-  ────────────────────────────────────────────────── */
+  async function fetchWithRetry(url, opts, retries) {
+    let delay = 1500;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url, opts);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res;
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        if (attempt === retries) throw err;
+        await new Promise(r => setTimeout(r, delay));
+        delay = Math.min(delay * 2, 10000);
+      }
+    }
+  }
+
   async function fetchPackages(isInitial) {
-    if (!isInitial) setSyncState('checking');
-    try {
-      const res = await fetch('./packages.json?t=' + Date.now(), {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma':        'no-cache'
-        }
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const raw = await res.json();
-      if (!Array.isArray(raw)) throw new Error('Invalid JSON');
+    if (fetchCtrl) fetchCtrl.abort();
+    fetchCtrl = new AbortController();
 
-      const sorted  = [...raw].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      const newHash = sorted.map(p => (p.name || '') + '@' + (p.version || '')).join('|');
-      const changed = newHash !== currentHash;
+    if (!isInitial) setSyncState('checking');
+
+    try {
+      const res  = await fetchWithRetry(
+        './packages.json?t=' + Date.now(),
+        {
+          signal: fetchCtrl.signal,
+          cache:  'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma':        'no-cache'
+          }
+        },
+        MAX_RETRIES
+      );
+
+      const raw = await res.json();
+      if (!Array.isArray(raw)) throw new Error('Invalid payload');
+
+      retryCount = 0;
+
+      const deduped  = deduplicatePackages(raw);
+      const sorted   = deduped.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      const newHash  = sorted.map(p => (p.name || '') + '@' + (p.version || '')).join('|');
+      const changed  = newHash !== currentHash;
 
       if (changed) {
         currentHash = newHash;
         allPackages = Object.freeze(sorted);
         updateStats(sorted.length);
-        applyFiltersAndRender(!isInitial); // stagger only on updates
+        applyFiltersAndRender(!isInitial);
       }
 
       setSyncState(changed && !isInitial ? 'updated' : 'active', sorted.length);
 
       if (changed && !isInitial) {
         showToast(
-          [{t:'Repo updated — '},{t:sorted.length + ' packages',bold:true},{t:' available'}],
+          [{ t: 'Repo updated \u2014 ' }, { t: sorted.length + ' packages', bold: true }, { t: ' available' }],
           'fa-sync-alt', '#818cf8'
         );
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.warn('[VoidNexus] Sync error:', err.message);
       setSyncState('error');
       if (isInitial) {
-        grid.innerHTML = `
-          <div class="col-span-full text-center py-24 glass rounded-3xl" style="border-style:dashed" role="status">
-            <i class="fas fa-satellite-dish text-5xl block mb-5 opacity-30" style="color:#f87171" aria-hidden="true"></i>
-            <h3 class="text-2xl font-display font-bold text-slate-200 mb-2">Sync Error</h3>
-            <p class="text-slate-400 mb-4">Could not load package data.</p>
-            <a href="https://github.com/Ackerman-00/void-nexus/actions" target="_blank" rel="noopener noreferrer"
-               class="text-indigo-400 hover:underline text-sm">Check GitHub Actions status</a>
-          </div>`;
+        grid.innerHTML = '';
+        const wrap = document.createElement('div');
+        wrap.className = 'col-span-full text-center py-24 glass rounded-3xl';
+        wrap.style.borderStyle = 'dashed';
+        wrap.setAttribute('role', 'status');
+        const ico = document.createElement('i');
+        ico.className = 'fas fa-satellite-dish text-5xl block mb-5 opacity-25';
+        ico.style.color = '#f87171';
+        ico.setAttribute('aria-hidden', 'true');
+        const h3 = document.createElement('h3');
+        h3.className = 'text-xl font-display font-bold text-slate-200 mb-2';
+        h3.textContent = 'Sync Error';
+        const p = document.createElement('p');
+        p.className = 'text-slate-400 mb-4 text-sm';
+        p.textContent = 'Could not load package data. Check your connection.';
+        const link = document.createElement('a');
+        link.href = 'https://github.com/Ackerman-00/void-nexus/actions';
+        link.target = '_blank'; link.rel = 'noopener noreferrer';
+        link.className = 'text-indigo-400 hover:underline text-sm';
+        link.textContent = 'Check GitHub Actions status';
+        wrap.appendChild(ico); wrap.appendChild(h3); wrap.appendChild(p); wrap.appendChild(link);
+        grid.appendChild(wrap);
       }
     }
   }
 
-  /* ──────────────────────────────────────────────────
-     POLLING  — Page Visibility API aware
-  ────────────────────────────────────────────────── */
-  function startPolling() { stopPolling(); pollTimer = setInterval(fetchPackages, POLL_MS); }
-  function stopPolling()  { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+  function startPolling() { stopPolling(); pollTimer = setInterval(() => fetchPackages(false), POLL_MS); }
+  function stopPolling()  { clearInterval(pollTimer); pollTimer = null; }
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -1207,15 +1453,26 @@
     }
   });
 
-  /* ──────────────────────────────────────────────────
-     BOOT
-  ────────────────────────────────────────────────── */
+  syncRefreshBtn.addEventListener('click', () => {
+    stopPolling();
+    fetchPackages(false).then(startPolling);
+  });
+
   showSkeletons(6);
-  goToStep(0, 1);                            // initialize step wizard
+  goToStep(0);
   fetchPackages(true).then(() => {
     startPolling();
-    // If URL search param present, trigger render
-    if (urlParam) applyFiltersAndRender(false);
+    if (urlParam) {
+      saveHistory(urlParam.trim());
+      applyFiltersAndRender(false);
+    }
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && searchInput.value.trim()) {
+      saveHistory(searchInput.value.trim());
+      historyDrop.classList.add('hidden');
+    }
   });
 
 })();
