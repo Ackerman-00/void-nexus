@@ -1,9 +1,13 @@
 # Template file for 'zed'
 pkgname=zed
 version=0.228.0
-revision=2
+revision=3
 archs="x86_64* aarch64*"
 build_style=cargo
+
+# Override the cargo command to unset the hardcoded LIBGIT2_NO_VENDOR
+make_cmd="env -u LIBGIT2_NO_VENDOR cargo"
+
 make_install_args="--path crates/zed"
 make_check_args="-- --test-threads 1"
 
