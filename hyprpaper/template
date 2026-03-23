@@ -36,6 +36,11 @@ homepage="https://github.com/hyprwm/hyprpaper"
 distfiles="https://github.com/hyprwm/hyprpaper/archive/refs/tags/v${version}.tar.gz"
 checksum=bfede471179adca93ed6d10e0132838c16dae364d828bd44f67819afc1a15594
 
+pre_configure() {
+  find ${wrksrc} -name "*.cpp" -exec sed -i \
+    's/\([a-zA-Z_.]*\)\.append_range(\(.*\));/{ auto _r = \2; \1.insert(\1.end(), _r.begin(), _r.end()); }/g' {} +
+}
+
 post_install() {
   vlicense LICENSE
 }
