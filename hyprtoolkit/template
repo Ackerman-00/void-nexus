@@ -1,6 +1,6 @@
 # Template file for 'hyprtoolkit'
 pkgname=hyprtoolkit
-version=0.1.0
+version=0.5.3
 revision=1
 build_style=cmake
 hostmakedepends="
@@ -28,7 +28,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/hyprtoolkit"
 distfiles="https://github.com/hyprwm/hyprtoolkit/archive/refs/tags/v${version}.tar.gz"
-checksum=01f6855c24b5f7acc845213ffa5c9dfa6e24db129eb489e9f5d40e3bde5528f8
+checksum=7e6671fd4bf6f4b1eda0115aa187aa183db40d59049cca1d7546fb46fdb4cdc0
 
 post_install() {
   vlicense LICENSE
