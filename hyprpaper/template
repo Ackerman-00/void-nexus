@@ -15,17 +15,18 @@ hostmakedepends="
 makedepends="
   cairo-devel
   file-devel
-  libjpeg-turbo-devel
-  libwebp-devel
   hyprgraphics
-  hyprtoolkit
   hyprland-protocols
   hyprlang
+  hyprtoolkit
+  hyprutils
   hyprwayland-scanner
+  hyprwire
+  libjpeg-turbo-devel
+  libwebp-devel
   pango-devel
   wayland-devel
   wayland-protocols
-  wlroots-devel
 "
 short_desc="Fast wallpaper utility for wlroots compositors with IPC controls"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
@@ -37,4 +38,3 @@ checksum=bfede471179adca93ed6d10e0132838c16dae364d828bd44f67819afc1a15594
 post_install() {
   vlicense LICENSE
 }
-

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,64 +7,34 @@
         content="default-src 'self';
                  script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
-                 font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+                 font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
                  connect-src 'self' https://ackerman-00.github.io;
-                 img-src 'self' data:;
+                 img-src 'self' data: https:;
+                 worker-src 'self' blob:;
                  frame-ancestors 'none';">
-
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>Void Nexus — Custom XBPS Package Repository for Void Linux</title>
-  <meta name="description" content="Void Nexus is a community-maintained custom XBPS repository for Void Linux. Easily add bleeding-edge packages not in the official tree — Hyprland, custom apps, and more.">
-  <meta name="keywords" content="void linux packages, xbps repository, custom xbps repo, void linux hyprland, void linux template, void packages, xbps-install, void nexus">
+  <meta name="description" content="Void Nexus: community-maintained custom XBPS repository for Void Linux. Bleeding-edge packages, automatically built and signed via GitHub Actions.">
+  <meta name="keywords" content="void linux packages, xbps repository, custom xbps repo, void linux hyprland, xbps-install, void nexus">
   <meta name="author" content="Ackerman">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#04071a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
   <link rel="canonical" href="https://ackerman-00.github.io/void-nexus/">
-
-  <meta property="og:type"        content="website">
-  <meta property="og:site_name"   content="Void Nexus">
-  <meta property="og:title"       content="Void Nexus — Custom XBPS Repository for Void Linux">
-  <meta property="og:description" content="Drop-in custom XBPS packages for Void Linux. Automatically built and signed via GitHub Actions. Add in one command.">
-  <meta property="og:url"         content="https://ackerman-00.github.io/void-nexus/">
-  <meta property="og:image"       content="https://ackerman-00.github.io/void-nexus/og-image.png">
-  <meta property="og:locale"      content="en_US">
-
-  <meta name="twitter:card"        content="summary_large_image">
-  <meta name="twitter:title"       content="Void Nexus — Custom XBPS Repository">
-  <meta name="twitter:description" content="Bleeding-edge custom XBPS packages for Void Linux. One command to add.">
-  <meta name="twitter:image"       content="https://ackerman-00.github.io/void-nexus/og-image.png">
-
-  <script type="application/ld+json">
-  [
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Void Nexus",
-      "url": "https://ackerman-00.github.io/void-nexus/",
-      "description": "Custom XBPS package repository for Void Linux",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://ackerman-00.github.io/void-nexus/?search={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Void Nexus Repository",
-      "operatingSystem": "Void Linux",
-      "applicationCategory": "SystemApplication",
-      "description": "Community XBPS repository with custom-built packages for Void Linux, automatically signed and indexed via GitHub Actions.",
-      "url": "https://ackerman-00.github.io/void-nexus/",
-      "author": { "@type": "Person", "name": "Ackerman", "url": "https://github.com/Ackerman-00" }
-    }
-  ]
-  </script>
-
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Void%20Nexus%22%2C%22short_name%22%3A%22VoidNexus%22%2C%22description%22%3A%22Custom%20XBPS%20repository%20for%20Void%20Linux%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%2304071a%22%2C%22theme_color%22%3A%22%2304071a%22%7D">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Void Nexus">
+  <meta property="og:title" content="Void Nexus — Custom XBPS Repository for Void Linux">
+  <meta property="og:description" content="Drop-in custom XBPS packages for Void Linux. Automatically built and signed via GitHub Actions.">
+  <meta property="og:url" content="https://ackerman-00.github.io/void-nexus/">
+  <meta property="og:image" content="https://ackerman-00.github.io/void-nexus/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <script>
@@ -78,22 +48,24 @@
         },
         extend: {
           animation: {
-            blob:      'blob 20s ease-in-out infinite alternate',
-            shimmer:   'shimmer 2s ease-in-out infinite',
-            fadeUp:    'fadeUp 0.48s cubic-bezier(0.22,1,0.36,1) both',
-            pulseRing: 'pulseRing 2.2s cubic-bezier(0,0,0.2,1) infinite',
+            blob:      'blob 22s ease-in-out infinite alternate',
+            shimmer:   'shimmer 1.9s ease-in-out infinite',
+            fadeUp:    'fadeUp 0.44s cubic-bezier(0.22,1,0.36,1) both',
+            pulseRing: 'pulseRing 2.4s cubic-bezier(0,0,0.2,1) infinite',
             typeCursor:'typeCursor 0.9s step-end infinite',
-            modalIn:   'modalIn 0.28s cubic-bezier(0.22,1,0.36,1) both',
-            slideDown: 'slideDown 0.2s cubic-bezier(0.22,1,0.36,1) both',
+            modalIn:   'modalIn 0.26s cubic-bezier(0.22,1,0.36,1) both',
+            sheetIn:   'sheetIn 0.3s cubic-bezier(0.22,1,0.36,1) both',
+            slideDown: 'slideDown 0.16s ease both',
           },
           keyframes: {
-            blob:      { '0%,100%':{ transform:'translate(0,0) scale(1)' }, '33%':{ transform:'translate(28px,-40px) scale(1.06)' }, '66%':{ transform:'translate(-18px,18px) scale(0.95)' } },
+            blob:      { '0%,100%':{ transform:'translate(0,0) scale(1)' }, '33%':{ transform:'translate(26px,-36px) scale(1.05)' }, '66%':{ transform:'translate(-16px,16px) scale(0.96)' } },
             shimmer:   { '0%':{ backgroundPosition:'-600px 0' }, '100%':{ backgroundPosition:'600px 0' } },
-            fadeUp:    { from:{ opacity:0, transform:'translateY(20px) scale(0.98)' }, to:{ opacity:1, transform:'translateY(0) scale(1)' } },
-            pulseRing: { '0%':{ transform:'scale(0.85)', opacity:0.9 }, '70%':{ transform:'scale(1.9)', opacity:0 }, '100%':{ transform:'scale(1.9)', opacity:0 } },
-            typeCursor:{ '0%,100%':{ opacity:1 }, '50%':{ opacity:0 } },
-            modalIn:   { from:{ opacity:0, transform:'scale(0.96) translateY(8px)' }, to:{ opacity:1, transform:'scale(1) translateY(0)' } },
-            slideDown: { from:{ opacity:0, transform:'translateY(-6px)' }, to:{ opacity:1, transform:'translateY(0)' } },
+            fadeUp:    { from:{ opacity:'0', transform:'translateY(18px) scale(0.98)' }, to:{ opacity:'1', transform:'translateY(0) scale(1)' } },
+            pulseRing: { '0%':{ transform:'scale(0.85)', opacity:'0.9' }, '70%':{ transform:'scale(1.9)', opacity:'0' }, '100%':{ transform:'scale(1.9)', opacity:'0' } },
+            typeCursor:{ '0%,100%':{ opacity:'1' }, '50%':{ opacity:'0' } },
+            modalIn:   { from:{ opacity:'0', transform:'scale(0.96) translateY(6px)' }, to:{ opacity:'1', transform:'scale(1) translateY(0)' } },
+            sheetIn:   { from:{ opacity:'0', transform:'translateY(100%)' }, to:{ opacity:'1', transform:'translateY(0)' } },
+            slideDown: { from:{ opacity:'0', transform:'translateY(-8px)' }, to:{ opacity:'1', transform:'translateY(0)' } },
           }
         }
       }
@@ -102,588 +74,579 @@
 
   <style>
     :root {
-      --glass-bg:       rgba(10, 16, 34, 0.48);
-      --glass-border:   rgba(255,255,255,0.07);
-      --glass-inset:    rgba(255,255,255,0.09);
-      --blur:           24px;
-      --blur-sm:        14px;
-      --accent:         #6366f1;
-      --accent2:        #22d3ee;
-      --surface:        #04071a;
-      --text-primary:   #f1f5f9;
-      --text-muted:     #94a3b8;
-      --radius-card:    20px;
+      --bg:          #04071a;
+      --surface:     rgba(10,16,34,0.52);
+      --border:      rgba(255,255,255,0.07);
+      --inset:       rgba(255,255,255,0.09);
+      --blur-lg:     22px;
+      --blur-sm:     12px;
+      --accent:      #6366f1;
+      --accent2:     #22d3ee;
+      --accent-rgb:  99,102,241;
+      --text1:       #f1f5f9;
+      --text2:       #94a3b8;
+      --text3:       #64748b;
+      --card-bg:     rgba(10,16,34,0.55);
+      --card-border: rgba(255,255,255,0.055);
+      --cmd-bg:      rgba(2,5,15,0.7);
+      --cmd-border:  rgba(99,102,241,0.22);
+      --mark-bg:     rgba(99,102,241,0.3);
+      --mark-color:  #e0e7ff;
+    }
+    html.light {
+      --bg:          #f0f4ff;
+      --surface:     rgba(255,255,255,0.72);
+      --border:      rgba(0,0,0,0.09);
+      --inset:       rgba(255,255,255,0.9);
+      --text1:       #0f172a;
+      --text2:       #475569;
+      --text3:       #94a3b8;
+      --card-bg:     rgba(255,255,255,0.75);
+      --card-border: rgba(0,0,0,0.07);
+      --cmd-bg:      rgba(15,23,42,0.05);
+      --cmd-border:  rgba(99,102,241,0.25);
+      --mark-bg:     rgba(99,102,241,0.18);
+      --mark-color:  #3730a3;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
     body {
-      background-color: var(--surface);
-      color: var(--text-primary);
+      background-color: var(--bg);
+      color: var(--text1);
       overflow-x: hidden;
+      max-width: 100vw;
       font-family: 'DM Sans', sans-serif;
       min-height: 100svh;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
-
-    ::selection { background: rgba(99,102,241,0.32); color: #e0e7ff; }
-
-    ::-webkit-scrollbar          { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track    { background: transparent; }
-    ::-webkit-scrollbar-thumb    { background: #1e2d47; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    ::selection { background: var(--mark-bg); color: var(--mark-color); }
+    ::-webkit-scrollbar        { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track  { background: transparent; }
+    ::-webkit-scrollbar-thumb  { background: rgba(99,102,241,0.3); border-radius: 10px; }
     .hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
     .hide-scroll::-webkit-scrollbar { display: none; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 
     .glass {
-      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.012) 100%),
-                  var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.32),
-                  inset 0 1px 0 var(--glass-inset),
-                  inset 0 -1px 0 rgba(0,0,0,0.16);
+      background: linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.01) 100%), var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.26), inset 0 1px 0 var(--inset), inset 0 -1px 0 rgba(0,0,0,0.13);
     }
-
-    @supports (backdrop-filter: blur(1px)) {
-      .glass {
-        backdrop-filter: blur(var(--blur)) saturate(150%);
-        -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
-      }
+    .glass-blur {
+      backdrop-filter: blur(var(--blur-lg)) saturate(150%);
+      -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(150%);
+    }
+    .glass-blur-sm {
+      backdrop-filter: blur(var(--blur-sm));
+      -webkit-backdrop-filter: blur(var(--blur-sm));
     }
     @supports not (backdrop-filter: blur(1px)) {
-      .glass { background: rgba(8, 13, 32, 0.92); }
+      .glass { background: rgba(8,13,32,0.96) !important; }
+      html.light .glass { background: rgba(240,244,255,0.98) !important; }
     }
+    .no-blur .glass-blur, .no-blur .glass-blur-sm {
+      backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    }
+    .no-blur .glass { background: rgba(8,13,32,0.97) !important; }
+    html.light.no-blur .glass { background: rgba(240,244,255,0.99) !important; }
+    html.light.no-blur .glass-card { background: rgba(255,255,255,0.97) !important; }
 
     .glass-card {
-      background: linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(5,12,30,0.58) 100%),
-                  rgba(10,16,34,0.52);
-      border: 1px solid rgba(255,255,255,0.055);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.24),
-                  inset 0 1px 0 rgba(255,255,255,0.07),
-                  inset 0 -1px 0 rgba(0,0,0,0.18);
-      transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
-                  border-color 0.25s ease,
-                  box-shadow 0.25s ease;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.19), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.13);
+      transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), border-color 0.22s ease, box-shadow 0.22s ease;
       will-change: transform;
-      cursor: pointer;
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
     }
-
-    @supports (backdrop-filter: blur(1px)) {
-      .glass-card {
-        backdrop-filter: blur(20px) saturate(140%);
-        -webkit-backdrop-filter: blur(20px) saturate(140%);
-      }
-    }
-    @supports not (backdrop-filter: blur(1px)) {
-      .glass-card { background: rgba(8, 14, 34, 0.95); }
-    }
-
+    html.light .glass-card { box-shadow: 0 3px 18px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9); }
     @media (hover: hover) {
       .glass-card:hover {
-        transform: translateY(-5px) scale(1.004);
-        border-color: rgba(99,102,241,0.4);
-        box-shadow: 0 20px 48px -8px rgba(99,102,241,0.18),
-                    0 4px 24px rgba(0,0,0,0.3),
-                    inset 0 1px 0 rgba(255,255,255,0.1),
-                    inset 0 -1px 0 rgba(0,0,0,0.16);
+        transform: translateY(-4px) scale(1.003);
+        border-color: rgba(var(--accent-rgb), 0.4);
+        box-shadow: 0 16px 40px -6px rgba(var(--accent-rgb),0.15), 0 4px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.09);
       }
-      .glass-card:hover .card-icon { transform: rotate(16deg) scale(1.12); }
+      .glass-card:hover .card-icon { transform: rotate(14deg) scale(1.1); }
     }
+    @media (hover: none) { .glass-card:active { transform: scale(0.99); border-color: rgba(var(--accent-rgb),0.35); } }
 
     @keyframes titleFlow { 0%,100%{ background-position:0% 50% } 50%{ background-position:100% 50% } }
     .title-gradient {
-      background: linear-gradient(135deg, #fff 0%, #c7d2fe 25%, #67e8f9 52%, #a78bfa 80%, #fff 100%);
-      background-size: 260% auto;
+      background: linear-gradient(135deg, #fff 0%, #c7d2fe 22%, #67e8f9 50%, #a78bfa 78%, #fff 100%);
+      background-size: 280% auto;
       -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent;
-      animation: titleFlow 9s ease infinite;
+      animation: titleFlow 10s ease infinite;
+    }
+    html.light .title-gradient {
+      background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 25%, #0891b2 50%, #7c3aed 78%, #1e1b4b 100%);
+      background-size: 280% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    .blob { will-change: transform; }
-
-    .card-icon {
-      transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), color 0.5s ease;
-      pointer-events: none;
-    }
+    .card-icon { transition: transform 0.45s cubic-bezier(0.22,1,0.36,1), color 0.45s ease; pointer-events: none; user-select: none; }
 
     .skel {
-      background: linear-gradient(90deg,
-        rgba(30,41,59,0.65) 25%,
-        rgba(51,65,85,0.45) 50%,
-        rgba(30,41,59,0.65) 75%);
+      background: linear-gradient(90deg, rgba(30,41,59,0.6) 25%, rgba(51,65,85,0.4) 50%, rgba(30,41,59,0.6) 75%);
       background-size: 600px 100%;
-      animation: shimmer 2s ease-in-out infinite;
-      border-radius: 6px;
+      animation: shimmer 1.9s ease-in-out infinite;
+      border-radius: 5px;
+    }
+    html.light .skel {
+      background: linear-gradient(90deg, rgba(200,210,235,0.8) 25%, rgba(220,228,248,0.6) 50%, rgba(200,210,235,0.8) 75%);
+      background-size: 600px 100%;
     }
 
     .install-btn {
-      background: rgba(10,16,34,0.5);
-      border: 1px solid rgba(255,255,255,0.07);
-      transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.12s, box-shadow 0.2s;
+      background: rgba(10,16,34,0.42);
+      border: 1px solid var(--border);
+      transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.1s, box-shadow 0.18s;
       min-height: 44px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
+    html.light .install-btn { background: rgba(99,102,241,0.06); border-color: rgba(99,102,241,0.18); }
     @media (hover: hover) {
-      .install-btn:hover {
-        background: var(--accent);
-        color: #fff;
-        border-color: rgba(129,140,248,0.65);
-        box-shadow: 0 0 16px rgba(99,102,241,0.3);
-      }
-      .install-btn:hover .ci { opacity: 1; }
-      .install-btn:hover .ti { opacity: 1; }
+      .install-btn:hover { background: var(--accent); color: #fff !important; border-color: rgba(129,140,248,0.6); box-shadow: 0 0 14px rgba(var(--accent-rgb),0.3); }
+      .install-btn:hover .ci { opacity: 1 !important; }
+      .install-btn:hover .ti { opacity: 1 !important; }
     }
     .install-btn:active { transform: scale(0.97); }
-    .install-btn .ci    { opacity: 0; transition: opacity 0.18s; }
-    .install-btn .ti    { opacity: 0.4; transition: opacity 0.18s; }
+    .install-btn .ci { opacity: 0; transition: opacity 0.16s; }
+    .install-btn .ti { opacity: 0.4; transition: opacity 0.16s; }
 
     .cmd-box {
-      background: rgba(2,5,15,0.68);
-      border: 1px solid rgba(99,102,241,0.2);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.36), inset 0 1px 0 rgba(99,102,241,0.1);
+      background: var(--cmd-bg);
+      border: 1px solid var(--cmd-border);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.28), inset 0 1px 0 rgba(var(--accent-rgb),0.08);
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    @supports (backdrop-filter: blur(1px)) {
-      .cmd-box { backdrop-filter: blur(var(--blur-sm)); -webkit-backdrop-filter: blur(var(--blur-sm)); }
-    }
-    .cmd-fade-l { background: linear-gradient(to right, rgba(2,5,15,0.92) 0%, transparent 100%); pointer-events: none; }
-    .cmd-fade-r { background: linear-gradient(to left,  rgba(2,5,15,0.92) 0%, transparent 100%); pointer-events: none; }
+    .cmd-fade-l { background: linear-gradient(to right, var(--cmd-bg) 0%, transparent 100%); pointer-events: none; }
+    .cmd-fade-r { background: linear-gradient(to left,  var(--cmd-bg) 0%, transparent 100%); pointer-events: none; }
 
     .type-cursor {
-      display: inline-block; width: 2px; height: 0.9em;
-      background: var(--accent2); margin-left: 1px;
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--accent2);
+      margin: 0 0 -0.1em 1px;
       vertical-align: text-bottom;
       animation: typeCursor 0.9s step-end infinite;
+      pointer-events: none;
+      font-size: 0;
+      line-height: 0;
+      overflow: hidden;
+      flex-shrink: 0;
     }
 
-    .step-dot { transition: background 0.28s, width 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .step-dot { transition: background 0.25s, width 0.28s cubic-bezier(0.22,1,0.36,1); cursor: pointer; min-width: 8px; min-height: 24px; padding: 0 4px; display: flex; align-items: center; justify-content: center; }
     .step-dot.active { background: var(--accent2) !important; width: 24px; }
 
     .filter-pill {
-      background: rgba(15,23,42,0.42);
-      border: 1px solid rgba(255,255,255,0.06);
-      transition: all 0.18s ease;
+      background: rgba(15,23,42,0.4);
+      border: 1px solid var(--border);
+      transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
       cursor: pointer;
       white-space: nowrap;
-      min-height: 36px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    @supports (backdrop-filter: blur(1px)) {
-      .filter-pill { backdrop-filter: blur(var(--blur-sm)); -webkit-backdrop-filter: blur(var(--blur-sm)); }
-    }
-    @media (hover: hover) {
-      .filter-pill:hover { border-color: rgba(99,102,241,0.38); background: rgba(99,102,241,0.09); }
-    }
-    .filter-pill.active {
-      background: rgba(99,102,241,0.16);
-      border-color: rgba(99,102,241,0.5);
-      color: #a5b4fc;
-      box-shadow: 0 0 10px rgba(99,102,241,0.15);
-    }
+    html.light .filter-pill { background: rgba(99,102,241,0.05); border-color: rgba(99,102,241,0.15); color: #475569; }
+    @media (hover: hover) { .filter-pill:hover { border-color: rgba(var(--accent-rgb),0.38); background: rgba(var(--accent-rgb),0.09); } }
+    .filter-pill.active { background: rgba(var(--accent-rgb),0.16); border-color: rgba(var(--accent-rgb),0.5); color: #a5b4fc; box-shadow: 0 0 10px rgba(var(--accent-rgb),0.13); }
+    html.light .filter-pill.active { color: #4338ca; }
 
-    #searchInput:focus { box-shadow: 0 0 0 2px rgba(99,102,241,0.4), 0 6px 24px rgba(99,102,241,0.08); outline: none; }
-    .search-wrap:focus-within .search-icon { color: #818cf8; }
+    #searchInput:focus { box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.38), 0 6px 20px rgba(var(--accent-rgb),0.07); outline: none; }
+    #clearBtn { transition: opacity 0.16s, transform 0.16s; }
+    #clearBtn.sr-hide { opacity: 0; pointer-events: none; transform: scale(0.75); }
+    #kbdHint { transition: opacity 0.16s; }
 
-    #clearBtn { transition: opacity 0.18s, transform 0.18s; }
-    #clearBtn.sr-hide { opacity: 0; pointer-events: none; transform: scale(0.72); }
+    mark.hl { background: var(--mark-bg); color: var(--mark-color); border-radius: 2px; padding: 0 1px; }
 
-    #kbdHint { transition: opacity 0.18s; }
-
-    #toast {
-      pointer-events: none;
-      transition: transform 0.38s cubic-bezier(0.18,0.89,0.32,1.25), opacity 0.3s ease;
-    }
+    #toast { pointer-events: none; transition: transform 0.35s cubic-bezier(0.18,0.89,0.32,1.22), opacity 0.28s ease; }
     #toast.show { transform: translateY(0) !important; opacity: 1 !important; pointer-events: auto; }
 
     @keyframes ripple { to { transform: scale(3.6); opacity: 0; } }
     .ripple-host { position: relative; overflow: hidden; }
-    .ripple-el {
-      position: absolute; border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      width: 56px; height: 56px; margin: -28px;
-      animation: ripple 0.5s linear forwards;
-      pointer-events: none;
-    }
+    .ripple-el { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.1); width: 54px; height: 54px; margin: -27px; animation: ripple 0.48s linear forwards; pointer-events: none; }
 
     .sync-active   { color: #22d3ee; }
     .sync-checking { color: #facc15; }
     .sync-updated  { color: #34d399; }
     .sync-error    { color: #f87171; }
 
-    @keyframes slideIn  { from{ opacity:0; transform:translateX(20px) } to{ opacity:1; transform:translateX(0) } }
-    @keyframes slideOut { from{ opacity:1; transform:translateX(0)    } to{ opacity:0; transform:translateX(-20px) } }
-    .step-enter { animation: slideIn  0.3s cubic-bezier(0.22,1,0.36,1) both; }
+    @keyframes slideIn  { from{ opacity:0; transform:translateX(18px) } to{ opacity:1; transform:translateX(0) } }
+    .step-enter { animation: slideIn 0.28s cubic-bezier(0.22,1,0.36,1) both; }
 
-    .nav-link { transition: background 0.18s, border-color 0.18s, color 0.18s; }
+    .nav-link { transition: background 0.16s, border-color 0.16s, color 0.16s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     @media (hover: hover) {
-      .nav-link:hover { background: rgba(99,102,241,0.1) !important; border-color: rgba(99,102,241,0.3) !important; color: #c7d2fe !important; }
+      .nav-link:hover { background: rgba(var(--accent-rgb),0.1) !important; border-color: rgba(var(--accent-rgb),0.3) !important; color: #c7d2fe !important; }
       .discord-link:hover { background: rgba(88,101,242,0.18) !important; border-color: rgba(88,101,242,0.45) !important; }
     }
 
-    .modal-overlay {
-      background: rgba(4,7,26,0.72);
-      transition: opacity 0.25s ease;
-    }
-    @supports (backdrop-filter: blur(1px)) {
-      .modal-overlay { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-    }
+    .modal-overlay { background: rgba(4,7,26,0.68); opacity: 0; transition: opacity 0.22s ease; }
+    html.light .modal-overlay { background: rgba(10,20,60,0.45); }
+    .modal-overlay.open { opacity: 1; }
+    .modal-overlay.closing { opacity: 0; }
 
     .modal-panel {
-      background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(5,12,30,0.75) 100%),
-                  rgba(8,14,34,0.88);
+      background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(5,12,30,0.82) 100%), rgba(8,14,34,0.9);
       border: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 0 32px 80px rgba(0,0,0,0.55),
-                  inset 0 1px 0 rgba(255,255,255,0.09);
-      animation: modalIn 0.28s cubic-bezier(0.22,1,0.36,1) both;
+      box-shadow: 0 28px 72px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09);
+      animation: modalIn 0.26s cubic-bezier(0.22,1,0.36,1) both;
+      backdrop-filter: blur(28px) saturate(160%);
+      -webkit-backdrop-filter: blur(28px) saturate(160%);
     }
-    @supports (backdrop-filter: blur(1px)) {
-      .modal-panel { backdrop-filter: blur(32px) saturate(160%); -webkit-backdrop-filter: blur(32px) saturate(160%); }
+    html.light .modal-panel { background: rgba(245,248,255,0.97); border-color: rgba(99,102,241,0.15); box-shadow: 0 28px 72px rgba(0,0,0,0.14); }
+    .sheet-panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(5,12,30,0.9) 100%), rgba(8,14,34,0.96);
+      border-top: 1px solid rgba(255,255,255,0.09);
+      box-shadow: 0 -16px 60px rgba(0,0,0,0.48);
+      animation: sheetIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
+      backdrop-filter: blur(28px) saturate(160%);
+      -webkit-backdrop-filter: blur(28px) saturate(160%);
     }
+    html.light .sheet-panel { background: rgba(245,248,255,0.99); border-top-color: rgba(99,102,241,0.15); box-shadow: 0 -8px 40px rgba(0,0,0,0.09); }
 
-    .search-history-drop {
-      background: rgba(8,14,34,0.96);
-      border: 1px solid rgba(99,102,241,0.2);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-      animation: slideDown 0.18s ease both;
+    .search-hist-drop {
+      background: rgba(8,14,34,0.97); border: 1px solid rgba(var(--accent-rgb),0.2);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.36); animation: slideDown 0.16s ease both;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     }
-    @supports (backdrop-filter: blur(1px)) {
-      .search-history-drop { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    html.light .search-hist-drop { background: rgba(245,248,255,0.98); }
+    .sort-drop {
+      background: rgba(8,14,34,0.97); border: 1px solid rgba(var(--accent-rgb),0.2);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.33); animation: slideDown 0.16s ease both;
     }
+    html.light .sort-drop { background: rgba(245,248,255,0.98); }
+
+    #backToTop { opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity 0.22s ease, transform 0.22s ease; }
+    #backToTop.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+    .stat-sep { width: 1px; background: var(--border); align-self: stretch; margin: 0.5rem 0; }
+
+    .discord-card { border-color: rgba(88,101,242,0.28); }
+    @media (hover: hover) { .discord-card:hover { border-color: rgba(88,101,242,0.55); } }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
-      .blob { display: none; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      .blob-wrap { display: none; }
+      .title-gradient { animation: none; }
     }
 
-    @media (max-width: 640px) {
-      .glass-card:active {
-        transform: scale(0.99);
-        border-color: rgba(99,102,241,0.35);
-      }
-      .filter-strip { -webkit-overflow-scrolling: touch; }
-    }
-
+    .scroll-touch { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .filter-strip { -webkit-overflow-scrolling: touch; overflow-x: auto; overscroll-behavior-x: contain; }
+    .filter-strip::-webkit-scrollbar { display: none; }
+    button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
+    .theme-icon { transition: transform 0.3s ease, opacity 0.3s ease; position: absolute; }
     noscript { display: block; text-align: center; padding: 2rem; color: #f87171; background: #1a0505; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .sort-opt.active-sort { color: #818cf8 !important; }
   </style>
 </head>
 
 <body class="min-h-screen flex flex-col">
 <noscript>JavaScript is required to use Void Nexus.</noscript>
 
-<nav class="glass fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 py-3 flex items-center justify-between"
+<nav class="glass glass-blur fixed top-0 left-0 right-0 z-50 px-4 sm:px-6"
+     style="padding-top:max(0.75rem,env(safe-area-inset-top,0.75rem));padding-bottom:0.75rem"
      role="navigation" aria-label="Main navigation">
-  <a href="/" class="flex items-center gap-2.5 group min-w-0" aria-label="Void Nexus home">
-    <span class="text-2xl select-none flex-shrink-0" role="img" aria-hidden="true">🪐</span>
-    <span class="font-display font-bold text-lg text-white tracking-tight truncate">Void Nexus</span>
-  </a>
-  <div class="flex items-center gap-2">
-    <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
-       class="nav-link discord-link glass flex items-center gap-2 px-3.5 py-2 rounded-full
-              text-slate-200 text-sm font-medium min-h-[40px]"
-       aria-label="Join Void Nexus Discord">
-      <i class="fab fa-discord flex-shrink-0" style="color:#7289da" aria-hidden="true"></i>
-      <span class="hidden sm:inline">Discord</span>
+  <div class="flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5 min-w-0" aria-label="Void Nexus home">
+      <span class="text-xl select-none flex-shrink-0" aria-hidden="true">🪐</span>
+      <span class="font-display font-bold text-base leading-none truncate" style="color:var(--text1)">Void Nexus</span>
     </a>
-    <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer"
-       class="nav-link glass flex items-center gap-2 px-3.5 py-2 rounded-full text-slate-300 text-sm font-medium min-h-[40px]"
-       aria-label="View source on GitHub">
-      <i class="fab fa-github flex-shrink-0" aria-hidden="true"></i>
-      <span class="hidden sm:inline">Source</span>
-    </a>
+    <div class="flex items-center gap-1.5">
+      <button id="themeToggle"
+              class="nav-link glass glass-blur-sm rounded-xl relative flex-shrink-0"
+              style="overflow:hidden;width:44px;height:44px;min-width:44px"
+              aria-label="Toggle light/dark mode">
+        <span class="absolute inset-0 flex items-center justify-center">
+          <i id="themeIconMoon" class="fas fa-moon text-sm theme-icon" style="color:var(--text2);opacity:1;transform:rotate(0deg)" aria-hidden="true"></i>
+        </span>
+        <span class="absolute inset-0 flex items-center justify-center">
+          <i id="themeIconSun" class="fas fa-sun text-sm theme-icon" style="color:var(--text2);opacity:0;transform:rotate(90deg)" aria-hidden="true"></i>
+        </span>
+      </button>
+      <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
+         class="nav-link discord-link glass glass-blur-sm flex items-center gap-2 px-3 rounded-full text-sm font-medium"
+         style="color:var(--text2);min-height:44px" aria-label="Join Discord">
+        <i class="fab fa-discord flex-shrink-0" style="color:#7289da" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Discord</span>
+      </a>
+      <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer"
+         class="nav-link glass glass-blur-sm flex items-center gap-2 px-3 rounded-full text-sm font-medium"
+         style="color:var(--text2);min-height:44px" aria-label="View on GitHub">
+        <i class="fab fa-github flex-shrink-0" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Source</span>
+      </a>
+    </div>
   </div>
 </nav>
 
-<div class="fixed inset-0 pointer-events-none overflow-hidden" style="z-index:0" aria-hidden="true">
-  <div class="blob absolute rounded-full animate-blob"
-       style="top:-8%;left:12%;width:420px;height:420px;background:rgba(79,70,229,0.14);filter:blur(110px)"></div>
-  <div class="blob absolute rounded-full animate-blob"
-       style="top:38%;right:8%;width:360px;height:360px;background:rgba(6,182,212,0.1);filter:blur(110px);animation-delay:-7s"></div>
-  <div class="blob absolute rounded-full animate-blob"
-       style="bottom:-12%;left:28%;width:400px;height:400px;background:rgba(126,34,206,0.11);filter:blur(110px);animation-delay:-14s"></div>
+<div class="blob-wrap fixed inset-0 pointer-events-none overflow-hidden" style="z-index:0" aria-hidden="true">
+  <div class="blob absolute rounded-full animate-blob" style="top:-8%;left:10%;width:380px;height:380px;background:rgba(79,70,229,0.13);filter:blur(100px)"></div>
+  <div class="blob absolute rounded-full animate-blob" style="top:40%;right:5%;width:320px;height:320px;background:rgba(6,182,212,0.1);filter:blur(100px);animation-delay:-8s"></div>
+  <div class="blob absolute rounded-full animate-blob" style="bottom:-12%;left:28%;width:360px;height:360px;background:rgba(126,34,206,0.1);filter:blur(100px);animation-delay:-16s"></div>
 </div>
 
-<header class="relative z-10 pt-32 pb-10 text-center px-4" role="banner">
+<header class="relative z-10 text-center px-4" style="padding-top:6.5rem;padding-bottom:2.5rem" role="banner">
   <div id="syncBadge"
-       class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass text-xs font-medium mb-7 sync-active select-none"
-       aria-live="polite" aria-atomic="true" aria-label="Sync status">
-    <span id="syncDot" class="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
-      <span id="syncPing" class="animate-ping absolute inset-0 rounded-full opacity-70" style="background:#22d3ee"></span>
+       class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass glass-blur text-xs font-medium mb-6 sync-active select-none"
+       aria-live="polite" aria-atomic="true">
+    <span class="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
+      <span id="syncPing" class="animate-pulseRing absolute inset-0 rounded-full opacity-70" style="background:#22d3ee"></span>
       <span id="syncCore" class="relative inline-flex rounded-full h-2 w-2" style="background:#22d3ee"></span>
     </span>
     <span id="syncLabel">Nexus Sync Active</span>
-    <button id="syncRefreshBtn"
-            class="ml-1 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none focus:text-slate-300 rounded"
-            aria-label="Force sync now" title="Sync now">
+    <button id="syncRefreshBtn" class="ml-0.5 rounded opacity-50 hover:opacity-100 transition-opacity" style="color:var(--text3)" aria-label="Force sync now">
       <i class="fas fa-rotate-right text-[10px]" aria-hidden="true"></i>
     </button>
   </div>
 
   <h1 class="font-display font-extrabold tracking-tight title-gradient mb-4"
-      style="font-size:clamp(2.8rem,8vw,5.5rem);line-height:1.06">
+      style="font-size:clamp(2.6rem,8vw,5.2rem);line-height:1.06">
     Void Nexus
   </h1>
 
-  <p class="text-slate-400 max-w-xl mx-auto font-light mb-7 leading-relaxed"
-     style="font-size:clamp(0.95rem,2.2vw,1.15rem)">
-    Bleeding-edge custom XBPS packages for&nbsp;<strong class="text-slate-300 font-medium">Void Linux</strong>,
-    automatically built, signed, and indexed via GitHub&nbsp;Actions.
+  <p class="max-w-lg mx-auto font-light mb-7 leading-relaxed"
+     style="font-size:clamp(0.9rem,2.2vw,1.1rem);color:var(--text2)">
+    Bleeding-edge custom XBPS packages for&nbsp;<strong style="color:var(--text1);font-weight:500">Void Linux</strong>,
+    automatically built, signed &amp; indexed via GitHub&nbsp;Actions.
   </p>
 
-  <div class="flex items-center justify-center flex-wrap gap-2.5 mb-2">
-    <div id="statPkgs" class="hidden glass px-4 py-2 rounded-xl text-sm flex items-center gap-2">
-      <i class="fas fa-box-open text-indigo-400 text-xs" aria-hidden="true"></i>
-      <span id="statPkgsNum" class="font-bold text-white font-mono">0</span>
-      <span class="text-slate-400">packages</span>
+  <div class="inline-flex flex-wrap justify-center items-center glass glass-blur rounded-2xl overflow-hidden mb-6 text-xs sm:text-sm" style="max-width:calc(100vw - 2rem)">
+    <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5" style="border-right:1px solid var(--border)">
+      <i class="fas fa-box-open" style="color:#818cf8;font-size:10px" aria-hidden="true"></i>
+      <span id="statPkgsNum" class="font-bold font-mono" style="color:var(--text1)">—</span>
+      <span style="color:var(--text2)">pkgs</span>
     </div>
-    <a href="https://github.com/Ackerman-00/void-nexus/actions" target="_blank" rel="noopener noreferrer"
-       class="glass px-4 py-2 rounded-xl text-sm flex items-center gap-2 hover:border-green-500/40 transition-colors"
-       aria-label="View GitHub Actions build status">
+    <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5" style="border-right:1px solid var(--border)">
       <span class="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
         <span class="animate-pulseRing absolute inset-0 rounded-full" style="background:#22c55e;opacity:0.5"></span>
         <span class="relative rounded-full h-2 w-2" style="background:#22c55e"></span>
       </span>
-      <span class="text-slate-400">Build Status</span>
-      <i class="fas fa-arrow-up-right-from-square text-xs text-slate-500" aria-hidden="true"></i>
+      <span style="color:var(--text2)">Live</span>
+    </div>
+    <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5">
+      <i class="fas fa-clock" style="color:var(--text3);font-size:10px" aria-hidden="true"></i>
+      <span id="lastSyncTime" class="font-mono" style="color:var(--text2)">—</span>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-center flex-wrap gap-2">
+    <a href="https://github.com/Ackerman-00/void-nexus/actions" target="_blank" rel="noopener noreferrer"
+       class="glass glass-blur px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 hover:border-green-500/40 transition-colors"
+       style="color:var(--text2)" aria-label="Build status">
+      <i class="fas fa-hammer text-xs" aria-hidden="true"></i><span>Build Status</span>
+      <i class="fas fa-arrow-up-right-from-square text-[10px]" style="color:var(--text3)" aria-hidden="true"></i>
     </a>
-    <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
-       class="glass px-4 py-2 rounded-xl text-sm flex items-center gap-2 hover:border-indigo-500/40 transition-colors"
-       aria-label="Join Discord community">
-      <i class="fab fa-discord text-xs flex-shrink-0" style="color:#7289da" aria-hidden="true"></i>
-      <span class="text-slate-400">Community</span>
+    <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer"
+       class="glass glass-blur px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 hover:border-yellow-500/40 transition-colors"
+       style="color:var(--text2)" aria-label="Star on GitHub">
+      <i class="fab fa-github text-xs" aria-hidden="true"></i><span>Star</span>
+      <i class="fas fa-star text-[10px]" style="color:#facc15" aria-hidden="true"></i>
     </a>
   </div>
 </header>
 
-<section id="setup" class="relative z-10 max-w-2xl mx-auto px-4 mb-14" aria-label="Installation guide">
-  <div class="glass rounded-2xl p-5 sm:p-7">
-    <div class="flex items-center justify-between mb-5">
-      <div id="stepTitle" class="font-display font-bold text-base sm:text-lg text-white tracking-tight step-enter"></div>
-      <div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono flex-shrink-0 ml-3">
-        <span id="stepNum" class="text-slate-300 font-bold">01</span>
-        <span>/</span>
-        <span>03</span>
+<section id="setup" class="relative z-10 w-full max-w-2xl mx-auto px-3 sm:px-4 mb-12" aria-label="Installation guide">
+  <div class="glass glass-blur rounded-2xl p-4 sm:p-7 w-full min-w-0" style="overflow:hidden">
+    <div class="flex items-center justify-between mb-3 sm:mb-4 min-w-0">
+      <div id="stepTitle" class="font-display font-bold text-sm sm:text-lg tracking-tight step-enter truncate pr-2" style="color:var(--text1)"></div>
+      <div class="flex items-center gap-1.5 text-xs font-mono flex-shrink-0" style="color:var(--text3)">
+        <span id="stepNum" class="font-bold" style="color:var(--text2)">01</span><span>/</span><span>03</span>
       </div>
     </div>
-
-    <p id="stepDesc" class="text-sm text-slate-400 mb-4 leading-relaxed step-enter" style="animation-delay:25ms"></p>
-
-    <div class="relative mb-4">
-      <div id="cmdFadeL" class="cmd-fade-l absolute left-9 top-0 bottom-0 w-8 z-10 rounded-none transition-opacity" style="opacity:0"></div>
-      <div id="cmdFadeR" class="cmd-fade-r absolute right-9 top-0 bottom-0 w-8 z-10 transition-opacity" style="opacity:0"></div>
-      <button id="cmdScrollL"
-              class="glass absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-xl
-                     flex items-center justify-center text-slate-400 hover:text-white transition-all"
-              style="opacity:0" aria-label="Scroll left">
-        <i class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
-      </button>
-      <div class="cmd-box rounded-xl px-10 py-3.5 overflow-x-auto hide-scroll"
-           id="cmdScroller"
-           role="textbox" aria-readonly="true" aria-label="Installation command">
-        <code id="cmdText" class="font-mono text-sm text-indigo-200 whitespace-nowrap block"></code>
+    <p id="stepDesc" class="text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed step-enter" style="color:var(--text2);animation-delay:20ms"></p>
+    <div class="relative mb-3 sm:mb-4 min-w-0 overflow-hidden">
+      <div id="cmdFadeL" class="cmd-fade-l absolute left-0 top-0 bottom-0 w-6 z-10 transition-opacity pointer-events-none" style="opacity:0"></div>
+      <div id="cmdFadeR" class="cmd-fade-r absolute right-0 top-0 bottom-0 w-6 z-10 transition-opacity pointer-events-none" style="opacity:0"></div>
+      <div class="cmd-box glass-blur-sm rounded-xl px-3 sm:px-5 py-3 overflow-x-auto hide-scroll scroll-touch w-full" id="cmdScroller" aria-label="Installation command" style="max-width:100%">
+        <code id="cmdText" class="font-mono whitespace-nowrap block" style="color:#a5b4fc;font-size:clamp(10px,2.6vw,13px);cursor:default"></code>
       </div>
-      <button id="cmdScrollR"
-              class="glass absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-xl
-                     flex items-center justify-center text-slate-400 hover:text-white transition-all"
-              style="opacity:0" aria-label="Scroll right">
-        <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
-      </button>
     </div>
-
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <button id="stepPrev"
-                class="glass ripple-host w-9 h-9 rounded-xl flex items-center justify-center
-                       text-slate-400 hover:text-white transition-all disabled:opacity-25"
-                aria-label="Previous step" disabled>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0;box-sizing:border-box">
+      <div style="display:flex;align-items:center;gap:4px;flex:0 0 auto">
+        <button id="stepPrev" class="glass glass-blur-sm ripple-host rounded-xl flex items-center justify-center transition-all disabled:opacity-25" style="color:var(--text2);width:40px;height:40px;min-width:40px;flex-shrink:0" aria-label="Previous step" disabled>
           <i class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
         </button>
-        <div class="flex items-center gap-1.5" role="tablist" aria-label="Setup steps">
-          <button class="step-dot active h-2 rounded-full" style="background:#22d3ee;width:24px"
-                  data-step="0" role="tab" aria-selected="true" aria-label="Step 1"></button>
-          <button class="step-dot h-2 w-2 rounded-full" style="background:rgba(100,116,139,0.4)"
-                  data-step="1" role="tab" aria-selected="false" aria-label="Step 2"></button>
-          <button class="step-dot h-2 w-2 rounded-full" style="background:rgba(100,116,139,0.4)"
-                  data-step="2" role="tab" aria-selected="false" aria-label="Step 3"></button>
+        <div style="display:flex;align-items:center;gap:4px" role="tablist" aria-label="Setup steps">
+          <button class="step-dot active h-2 rounded-full" style="background:#22d3ee;width:24px" data-step="0" role="tab" aria-selected="true" aria-label="Step 1"></button>
+          <button class="step-dot h-2 w-2 rounded-full" style="background:rgba(100,116,139,0.38)" data-step="1" role="tab" aria-selected="false" aria-label="Step 2"></button>
+          <button class="step-dot h-2 w-2 rounded-full" style="background:rgba(100,116,139,0.38)" data-step="2" role="tab" aria-selected="false" aria-label="Step 3"></button>
         </div>
-        <button id="stepNext"
-                class="glass ripple-host w-9 h-9 rounded-xl flex items-center justify-center
-                       text-slate-400 hover:text-white transition-all"
-                aria-label="Next step">
+        <button id="stepNext" class="glass glass-blur-sm ripple-host rounded-xl flex items-center justify-center transition-all" style="color:var(--text2);width:40px;height:40px;min-width:40px;flex-shrink:0" aria-label="Next step">
           <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
         </button>
       </div>
-      <button id="copyCmd"
-              class="glass ripple-host flex items-center gap-2 px-4 py-2.5 rounded-xl
-                     text-sm font-medium text-slate-300 hover:text-white
-                     hover:border-indigo-400/50 transition-all min-h-[40px]"
-              aria-label="Copy command">
-        <i class="far fa-copy text-xs" aria-hidden="true"></i>
-        <span>Copy</span>
+      <button id="copyCmd" class="glass glass-blur-sm ripple-host flex items-center gap-1.5 rounded-xl font-medium transition-all hover:border-indigo-400/50" style="color:var(--text2);height:40px;padding:0 14px;flex:0 0 auto;white-space:nowrap;font-size:12px" aria-label="Copy command">
+        <i class="far fa-copy" style="font-size:11px" aria-hidden="true"></i><span>Copy</span>
       </button>
     </div>
-
-    <div class="mt-4 h-px rounded-full overflow-hidden" style="background:rgba(255,255,255,0.05)">
-      <div id="progressBar" class="h-full rounded-full"
-           style="background:linear-gradient(90deg,#6366f1,#22d3ee);width:0%;transition:width 0.08s linear"></div>
+    <div class="mt-3 sm:mt-4 h-px rounded-full overflow-hidden" style="background:rgba(255,255,255,0.05)">
+      <div id="progressBar" class="h-full rounded-full" style="background:linear-gradient(90deg,#6366f1,#22d3ee);width:0%;transition:width 0.08s linear"></div>
     </div>
   </div>
 </section>
 
-<section class="relative z-10 max-w-7xl mx-auto px-4 mb-8" aria-label="Package search and filters">
-  <div class="relative mb-5 max-w-2xl mx-auto">
-    <div class="search-icon absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 text-slate-500 transition-colors">
-      <i class="fas fa-search text-sm" aria-hidden="true"></i>
+<section class="relative z-10 max-w-7xl mx-auto px-4 mb-2" aria-label="Discord community">
+  <div class="glass glass-blur discord-card rounded-2xl p-4" style="background:rgba(88,101,242,0.07)">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div class="rounded-xl flex items-center justify-center flex-shrink-0" style="width:40px;height:40px;background:rgba(88,101,242,0.2)">
+        <i class="fab fa-discord" style="font-size:18px;color:#7289da" aria-hidden="true"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold" style="color:var(--text1);margin:0 0 2px">Friendly community</p>
+        <p class="text-xs" style="color:var(--text2);margin:0;line-height:1.5">A welcoming place to meet new people</p>
+      </div>
     </div>
-    <input type="search" id="searchInput"
-           class="glass block w-full pl-13 pr-20 py-3.5 rounded-2xl text-slate-100
-                  placeholder-slate-500 font-sans text-sm sm:text-base
-                  transition-all focus:outline-none"
-           placeholder="Search packages…"
-           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-           aria-label="Search packages" role="searchbox" aria-autocomplete="list"
-           aria-controls="searchHistoryDrop">
-    <div class="absolute inset-y-0 right-0 flex items-center gap-1 pr-3 z-10">
-      <button id="clearBtn"
-              class="sr-hide w-8 h-8 flex items-center justify-center text-slate-500
-                     hover:text-slate-300 transition-colors rounded-lg"
-              aria-label="Clear search">
-        <i class="fas fa-times-circle text-sm" aria-hidden="true"></i>
-      </button>
-      <kbd id="kbdHint"
-           class="hidden sm:inline-flex items-center px-2 py-1 rounded-lg text-xs font-mono
-                  text-slate-600 border border-slate-700/50 bg-slate-800/40 select-none"
-           aria-hidden="true">/</kbd>
-    </div>
+    <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
+       class="ripple-host flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all"
+       style="background:rgba(88,101,242,0.25);border:1px solid rgba(88,101,242,0.4);color:#c7d2fe;padding:10px 16px;width:100%;min-height:44px"
+       aria-label="Join Discord server">
+      <i class="fab fa-discord" aria-hidden="true"></i><span>Join Discord</span>
+    </a>
+  </div>
+</section>
 
-    <div id="searchHistoryDrop"
-         class="search-history-drop absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-30 hidden"
-         role="listbox" aria-label="Recent searches">
+<section style="position:relative;z-index:10;width:100%;max-width:80rem;margin:2rem auto 1.25rem;padding:0 1rem;box-sizing:border-box" aria-label="Package search and filters">
+  <div style="display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin-bottom:1rem">
+    <div class="search-wrap" style="position:relative;flex:1 1 0%;min-width:0;box-sizing:border-box">
+      <span id="searchIconWrap" class="search-icon" style="position:absolute;top:0;bottom:0;left:0;width:44px;display:flex;align-items:center;justify-content:center;z-index:2;color:var(--text3);cursor:text;pointer-events:auto">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;flex-shrink:0" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      <input type="search" id="searchInput"
+             class="glass glass-blur font-sans transition-all"
+             style="display:block;width:100%;box-sizing:border-box;color:var(--text1);font-size:16px;padding:13px 48px 13px 44px;border-radius:1rem;min-width:0"
+             placeholder="Search packages…"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+             aria-label="Search packages" role="searchbox" aria-autocomplete="list" aria-controls="searchHistDrop">
+      <div style="position:absolute;top:0;bottom:0;right:0;display:flex;align-items:center;gap:2px;padding-right:6px;z-index:2">
+        <button id="clearBtn" class="sr-hide flex items-center justify-center rounded-lg transition-colors" style="color:var(--text3);width:36px;height:36px;flex-shrink:0" aria-label="Clear search">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+        </button>
+        <kbd id="kbdHint" class="hidden sm:inline-flex items-center px-2 py-1 rounded-lg text-xs font-mono select-none" style="color:var(--text3);border:1px solid rgba(100,116,139,0.45);background:rgba(15,23,42,0.3)" aria-hidden="true">/</kbd>
+      </div>
+      <div id="searchHistDrop" class="search-hist-drop" style="position:absolute;top:100%;left:0;right:0;margin-top:8px;border-radius:0.75rem;overflow:hidden;z-index:30;max-height:280px;overflow-y:auto;display:none" role="listbox" aria-label="Recent searches"></div>
+    </div>
+    <div style="position:relative;flex-shrink:0">
+      <button id="sortBtn" class="glass glass-blur-sm transition-all"
+              style="display:flex;align-items:center;gap:6px;padding:0 12px;height:46px;min-width:44px;border-radius:1rem;font-size:14px;font-weight:500;white-space:nowrap;color:var(--text2);box-sizing:border-box"
+              aria-label="Sort options" aria-haspopup="true" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0" aria-hidden="true"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+        <span id="sortLabel" class="hidden sm:inline">A–Z</span>
+      </button>
+      <div id="sortDrop" class="sort-drop absolute right-0 top-full mt-2 rounded-xl overflow-hidden z-30 hidden w-36" role="menu">
+        <button class="sort-opt active-sort w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="az" role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-down-a-z text-xs w-4" aria-hidden="true"></i>A–Z</button>
+        <button class="sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="za"     role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-up-z-a text-xs w-4" aria-hidden="true"></i>Z–A</button>
+        <button class="sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="newest" role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-down-wide-short text-xs w-4" aria-hidden="true"></i>Newest</button>
+        <button class="sort-opt w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-indigo-500/10 transition-colors text-left" data-sort="oldest" role="menuitem" style="color:var(--text1)"><i class="fas fa-arrow-up-wide-short text-xs w-4" aria-hidden="true"></i>Oldest</button>
+      </div>
     </div>
   </div>
 
-  <div class="filter-strip overflow-x-auto hide-scroll pb-1" role="group" aria-label="Filter by category">
-    <div id="filterPills" class="flex gap-2 w-max mx-auto px-1">
-      <button class="filter-pill active px-4 py-1.5 rounded-full text-sm font-medium text-slate-300" data-cat="all">All</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Gaming">
-        <i class="fas fa-gamepad mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Gaming</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Social">
-        <i class="fas fa-comments mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Social</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Web">
-        <i class="fas fa-globe mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Web</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Desktop">
-        <i class="fas fa-layer-group mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Desktop</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Media">
-        <i class="fas fa-play-circle mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Media</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Dev">
-        <i class="fas fa-code mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Dev</button>
-      <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-medium text-slate-400" data-cat="Utility">
-        <i class="fas fa-box mr-1.5 text-xs opacity-70" aria-hidden="true"></i>Utility</button>
+  <div role="group" aria-label="Filter by category"
+       style="width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:4px;margin-bottom:0">
+    <div id="filterPills" style="display:flex;gap:6px;width:max-content;padding:2px 1rem 4px">
+      <button class="filter-pill active" style="color:var(--text1);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600" data-cat="all" aria-pressed="true">All</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Gaming" aria-pressed="false">Gaming</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Social" aria-pressed="false">Social</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Web" aria-pressed="false">Web</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Desktop" aria-pressed="false">Desktop</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Media" aria-pressed="false">Media</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Dev" aria-pressed="false">Dev</button>
+      <button class="filter-pill" style="color:var(--text2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500" data-cat="Utility" aria-pressed="false">Utility</button>
     </div>
   </div>
 </section>
 
-<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 pb-24" role="main" id="packages">
-  <div id="resultRow" class="hidden flex items-center justify-between mb-5 text-sm text-slate-500">
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 pb-24" role="main">
+  <div id="resultRow" class="items-center justify-between mb-4 text-sm" style="display:none;color:var(--text3)">
     <span id="resultCount" aria-live="polite" aria-atomic="true"></span>
-    <button id="clearFilters" class="hidden hover:text-indigo-400 transition-colors text-xs font-medium">
-      Clear all filters
-    </button>
+    <div class="flex items-center gap-3">
+      <button id="copyAllBtn" class="flex items-center gap-1.5 hover:text-indigo-400 transition-colors text-xs font-medium" aria-label="Copy all package names">
+        <i class="fas fa-copy text-xs" aria-hidden="true"></i><span>Copy list</span>
+      </button>
+      <button id="clearFilters" class="hidden hover:text-indigo-400 transition-colors text-xs font-medium">Clear filters</button>
+    </div>
   </div>
-  <div id="packagesGrid"
-       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max"
-       role="list"
-       aria-label="Package list">
-  </div>
+  <div id="packagesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max" role="list" aria-label="Package list"></div>
 </main>
 
-<footer class="relative z-10 mt-auto py-8 text-center text-sm text-slate-500"
-        style="border-top:1px solid rgba(255,255,255,0.04);background:rgba(4,7,26,0.45)"
-        role="contentinfo">
-  <p class="mb-2 text-xs">
-    Maintained by
-    <a href="https://github.com/Ackerman-00" target="_blank" rel="noopener noreferrer"
-       class="text-slate-400 hover:text-indigo-400 transition-colors">Ackerman</a>
-    &nbsp;&bull;&nbsp;
-    Auto-syncs every&nbsp;60s
+<footer class="relative z-10 mt-auto py-7 text-center text-xs" style="border-top:1px solid var(--border);background:rgba(4,7,26,0.4);color:var(--text3)" role="contentinfo">
+  <p class="mb-2">
+    Maintained by <a href="https://github.com/Ackerman-00" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors" style="color:var(--text2)">Ackerman</a>
+    &nbsp;&bull;&nbsp;Auto-syncs every 60s
   </p>
   <div class="flex items-center justify-center gap-5 mt-3">
-    <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer"
-       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5 text-xs"
-       aria-label="Join Discord">
-      <i class="fab fa-discord" aria-hidden="true"></i><span>Discord</span>
-    </a>
-    <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer"
-       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5 text-xs"
-       aria-label="GitHub">
-      <i class="fab fa-github" aria-hidden="true"></i><span>GitHub</span>
-    </a>
-    <a href="https://voidlinux.org" target="_blank" rel="noopener noreferrer"
-       class="text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5 text-xs"
-       aria-label="Void Linux official site">
-      <i class="fas fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i><span>Void Linux</span>
-    </a>
+    <a href="https://discord.gg/YW5RK4RzTT" target="_blank" rel="noopener noreferrer" class="hover:text-slate-400 transition-colors flex items-center gap-1.5" aria-label="Discord"><i class="fab fa-discord" aria-hidden="true"></i><span>Discord</span></a>
+    <a href="https://github.com/Ackerman-00/void-nexus" target="_blank" rel="noopener noreferrer" class="hover:text-slate-400 transition-colors flex items-center gap-1.5" aria-label="GitHub"><i class="fab fa-github" aria-hidden="true"></i><span>GitHub</span></a>
+    <a href="https://voidlinux.org" target="_blank" rel="noopener noreferrer" class="hover:text-slate-400 transition-colors flex items-center gap-1.5" aria-label="Void Linux"><i class="fas fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i><span>Void Linux</span></a>
   </div>
 </footer>
 
 <div id="toast"
-     class="glass fixed bottom-5 right-5 px-4 py-3 rounded-2xl z-[200] flex items-center gap-2.5
-            text-slate-200 text-sm font-medium shadow-2xl max-w-[calc(100vw-2.5rem)]"
-     style="transform:translateY(5rem);opacity:0;border-color:rgba(99,102,241,0.3)"
+     class="glass glass-blur fixed bottom-5 right-4 left-4 sm:left-auto sm:max-w-xs px-4 py-3 rounded-2xl z-[200] flex items-center gap-2.5 text-sm font-medium shadow-2xl"
+     style="transform:translateY(5rem);opacity:0;border-color:rgba(var(--accent-rgb),0.3);color:var(--text1)"
      role="alert" aria-live="assertive" aria-atomic="true">
   <i id="toastIcon" class="fas fa-check-circle flex-shrink-0" style="color:#34d399" aria-hidden="true"></i>
   <span id="toastMsg"></span>
 </div>
 
 <div id="modalOverlay"
-     class="modal-overlay fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 hidden"
-     role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div id="modalPanel"
-       class="modal-panel rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg max-h-[92svh] overflow-y-auto
-              flex flex-col">
-    <div class="flex items-start justify-between p-5 sm:p-6 pb-4" style="border-bottom:1px solid rgba(255,255,255,0.06)">
-      <div class="min-w-0 pr-3">
-        <h2 id="modalTitle" class="font-display font-bold text-xl text-slate-100 tracking-tight truncate"></h2>
-        <div id="modalMeta" class="flex items-center flex-wrap gap-2 mt-2"></div>
-      </div>
-      <button id="modalClose"
-              class="flex-shrink-0 glass w-9 h-9 rounded-xl flex items-center justify-center
-                     text-slate-400 hover:text-white transition-colors"
-              aria-label="Close details">
-        <i class="fas fa-times text-sm" aria-hidden="true"></i>
-      </button>
-    </div>
+     class="modal-overlay fixed inset-0 z-[150]"
+     style="display:none"
+     role="dialog" aria-modal="true" aria-labelledby="modalTitleD">
 
-    <div class="p-5 sm:p-6 flex flex-col gap-5">
-      <p id="modalDesc" class="text-slate-300 leading-relaxed text-sm"></p>
-
-      <div>
-        <div class="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Install command</div>
-        <div class="cmd-box rounded-xl px-4 py-3 flex items-center gap-3">
-          <code id="modalCmd" class="font-mono text-sm text-indigo-200 flex-grow overflow-x-auto hide-scroll whitespace-nowrap"></code>
-          <button id="modalCopyBtn"
-                  class="flex-shrink-0 glass ripple-host flex items-center gap-1.5 px-3 py-2 rounded-lg
-                         text-xs font-medium text-slate-300 hover:text-white hover:border-indigo-400/50
-                         transition-all min-h-[36px]"
-                  aria-label="Copy install command">
-            <i class="far fa-copy text-xs" aria-hidden="true"></i>
-            <span>Copy</span>
-          </button>
+  <div class="hidden sm:flex w-full h-full items-center justify-center p-4">
+    <div id="modalDesktop" class="modal-panel w-full max-w-lg max-h-[90svh] rounded-3xl flex flex-col overflow-hidden">
+      <div class="flex items-start justify-between p-6 pb-4 flex-shrink-0" style="border-bottom:1px solid var(--border)">
+        <div class="min-w-0 pr-3">
+          <h2 id="modalTitleD" class="font-display font-bold text-xl tracking-tight truncate" style="color:var(--text1)"></h2>
+          <div id="modalMetaD" class="flex items-center flex-wrap gap-2 mt-2"></div>
         </div>
+        <button id="modalCloseD" class="flex-shrink-0 glass glass-blur-sm rounded-xl flex items-center justify-center transition-colors" style="color:var(--text2);width:44px;height:44px;min-width:44px" aria-label="Close">
+          <i class="fas fa-times text-sm" aria-hidden="true"></i>
+        </button>
       </div>
+      <div id="modalBodyD" class="p-6 flex flex-col gap-4 overflow-y-auto scroll-touch flex-grow"></div>
+    </div>
+  </div>
 
-      <a id="modalGhLink"
-         href="#" target="_blank" rel="noopener noreferrer"
-         class="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors text-sm">
-        <i class="fab fa-github text-sm" aria-hidden="true"></i>
-        <span>View on GitHub</span>
-        <i class="fas fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
-      </a>
+  <div id="mobileSheetWrap" class="flex sm:hidden flex-col h-full justify-end">
+    <div id="modalMobile" class="sheet-panel w-full rounded-t-3xl max-h-[92svh] flex flex-col" style="touch-action:pan-y">
+      <div class="flex-shrink-0 pt-3 pb-1 flex justify-center" aria-hidden="true">
+        <div class="w-10 h-1 rounded-full" style="background:rgba(255,255,255,0.2)"></div>
+      </div>
+      <div class="flex items-start justify-between px-5 py-3 flex-shrink-0" style="border-bottom:1px solid var(--border)">
+        <div class="min-w-0 pr-3">
+          <h2 id="modalTitleM" class="font-display font-bold text-lg tracking-tight truncate" style="color:var(--text1)"></h2>
+          <div id="modalMetaM" class="flex items-center flex-wrap gap-2 mt-1.5"></div>
+        </div>
+        <button id="modalCloseM" class="flex-shrink-0 glass glass-blur-sm rounded-xl flex items-center justify-center transition-colors" style="color:var(--text2);width:44px;height:44px;min-width:44px" aria-label="Close">
+          <i class="fas fa-times text-sm" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div id="modalBodyM" class="p-5 flex flex-col gap-4 overflow-y-auto scroll-touch flex-grow"></div>
     </div>
   </div>
 </div>
+
+<button id="backToTop" class="fixed bottom-5 left-4 z-[100] glass glass-blur-sm w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style="color:var(--text2)" aria-label="Back to top">
+  <i class="fas fa-arrow-up text-sm" aria-hidden="true"></i>
+</button>
 
 <script>
 (function () {
@@ -691,54 +654,48 @@
 
   const POLL_MS      = 60_000;
   const STEP_AUTO_MS = 7_000;
-  const STAGGER_CAP  = 8;
+  const STAGGER_CAP  = 7;
   const MAX_RETRIES  = 3;
-  const HISTORY_KEY  = 'vn_search_history';
-  const HISTORY_MAX  = 6;
-  const BASE_URL     = 'https://ackerman-00.github.io/void-nexus';
+  const HIST_KEY     = 'vn_h';
+  const THEME_KEY    = 'vn_t';
+  const HIST_MAX     = 6;
+  const REPO_URL     = 'https://ackerman-00.github.io/void-nexus/x86_64';
 
   const STEPS = [
-    {
-      title: 'Step 1 — Add Repository',
-      desc:  'Add the Void Nexus repository config so <code class="font-mono text-indigo-300 bg-slate-800/60 px-1 py-0.5 rounded text-xs">xbps-install</code> knows where to find packages.',
-      cmd:   "echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' | sudo tee /etc/xbps.d/10-nexus.conf"
-    },
-    {
-      title: 'Step 2 — Sync Package Index',
-      desc:  'Sync the package index and accept the repository signing key when prompted.',
-      cmd:   'sudo xbps-install -S'
-    },
-    {
-      title: 'Step 3 — Install Packages',
-      desc:  'Install any package from Void Nexus. Browse the list below to find what you need.',
-      cmd:   'sudo xbps-install -S <package-name>'
-    }
+    { title:'Step 1 \u2014 Add Repository',   desc:'Add the Void Nexus repository config so <code style="font-family:monospace;font-size:0.8em;background:rgba(99,102,241,0.12);padding:1px 4px;border-radius:4px">xbps-install</code> knows where to find packages.', cmd:"echo 'repository="+REPO_URL+"' | sudo tee /etc/xbps.d/10-nexus.conf" },
+    { title:'Step 2 \u2014 Sync Package Index', desc:'Sync the package index and accept the repository signing key when prompted.', cmd:'sudo xbps-install -S' },
+    { title:'Step 3 \u2014 Install Packages',   desc:'Install any package from Void Nexus. Browse the list below to find what you need.', cmd:'sudo xbps-install -S <package-name>' }
   ];
 
   const CATS = [
-    { re:/game|gaming|wine|proton|emulat/i,          icon:'fa-gamepad',    label:'Gaming',  cls:'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-    { re:/discord|chat|social|messag/i,              icon:'fa-comments',   label:'Social',  cls:'bg-violet-500/10 text-violet-400 border-violet-500/20' },
-    { re:/browser|web|internet/i,                    icon:'fa-globe',      label:'Web',     cls:'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-    { re:/\bwm\b|shell|desktop|hypr|wayland|x11/i,   icon:'fa-layer-group',label:'Desktop', cls:'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' },
-    { re:/media|video|audio|music|player/i,          icon:'fa-play-circle',label:'Media',   cls:'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    { re:/\bdev\b|code|compil|editor|\bide\b/i,      icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { re:/game|gaming|wine|proton|emulat/i,                         icon:'fa-gamepad',    label:'Gaming',  cls:'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+    { re:/discord|chat|social|messag/i,                             icon:'fa-comments',   label:'Social',  cls:'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+    { re:/browser|web|internet|chromium|firefox/i,                  icon:'fa-globe',      label:'Web',     cls:'bg-sky-500/10 text-sky-400 border-sky-500/20' },
+    { re:/\bwm\b|shell|desktop|hypr|wayland|x11|sway|compositor/i, icon:'fa-layer-group',label:'Desktop', cls:'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' },
+    { re:/media|video|audio|music|player|mpv|vlc/i,                 icon:'fa-play-circle',label:'Media',   cls:'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    { re:/\bdev\b|code|compil|editor|\bide\b|neovim|vim/i,         icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   ];
   const CAT_DEF = { icon:'fa-box', label:'Utility', cls:'bg-slate-500/10 text-slate-400 border-slate-500/20' };
+  const SORT_LBL = { az:'A\u2013Z', za:'Z\u2013A', newest:'Newest', oldest:'Oldest' };
 
-  let allPackages   = [];
-  let currentHash   = '';
-  let activeFilter  = 'all';
+  let allPkgs       = [];
+  let curHash       = '';
+  let activeCat     = 'all';
+  let activeSort    = 'az';
   let pollTimer     = null;
   let toastTimer    = null;
   let searchTimer   = null;
   let stepIdx       = 0;
-  let stepAutoTimer = null;
-  let stepProgress  = 0;
   let progTimer     = null;
+  let stepProgress  = 0;
   let stepHovered   = false;
   let typeTimer     = null;
   let fetchCtrl     = null;
-  let retryCount    = 0;
+  let scrollRafId   = null;
+  let resizeRafId   = null;
+  let focusIdx      = -1;
+  let curModalPkg   = null;
+  let swipeY        = 0;
 
   const $ = id => document.getElementById(id);
   const grid          = $('packagesGrid');
@@ -749,6 +706,7 @@
   const resultRow     = $('resultRow');
   const resultCount   = $('resultCount');
   const clearFilters  = $('clearFilters');
+  const copyAllBtn    = $('copyAllBtn');
   const toast         = $('toast');
   const toastIcon     = $('toastIcon');
   const toastMsg      = $('toastMsg');
@@ -756,8 +714,8 @@
   const syncLabel     = $('syncLabel');
   const syncPing      = $('syncPing');
   const syncCore      = $('syncCore');
-  const statPkgs      = $('statPkgs');
   const statPkgsNum   = $('statPkgsNum');
+  const lastSyncTime  = $('lastSyncTime');
   const stepTitleEl   = $('stepTitle');
   const stepDescEl    = $('stepDesc');
   const stepNumEl     = $('stepNum');
@@ -768,47 +726,95 @@
   const cmdScrollL    = $('cmdScrollL');
   const cmdScrollR    = $('cmdScrollR');
   const copyCmd       = $('copyCmd');
-  const stepPrev      = $('stepPrev');
   const stepNext      = $('stepNext');
   const progressBar   = $('progressBar');
   const stepDots      = document.querySelectorAll('.step-dot');
   const syncRefreshBtn= $('syncRefreshBtn');
   const modalOverlay  = $('modalOverlay');
-  const modalPanel    = $('modalPanel');
-  const modalClose    = $('modalClose');
-  const modalTitle    = $('modalTitle');
-  const modalMeta     = $('modalMeta');
-  const modalDesc     = $('modalDesc');
-  const modalCmd      = $('modalCmd');
-  const modalCopyBtn  = $('modalCopyBtn');
-  const modalGhLink   = $('modalGhLink');
-  const historyDrop   = $('searchHistoryDrop');
+  const modalDesktop  = $('modalDesktop');
+  const modalMobile   = $('modalMobile');
+  const modalCloseD   = $('modalCloseD');
+  const modalCloseM   = $('modalCloseM');
+  const modalTitleD   = $('modalTitleD');
+  const modalMetaD    = $('modalMetaD');
+  const modalTitleM   = $('modalTitleM');
+  const modalMetaM    = $('modalMetaM');
+  const modalBodyD    = $('modalBodyD');
+  const modalBodyM    = $('modalBodyM');
+  const histDrop      = $('searchHistDrop');
+  const sortBtn       = $('sortBtn');
+  const sortDrop      = $('sortDrop');
+  const sortLabel     = $('sortLabel');
+  const backToTop     = $('backToTop');
+  const themeToggle   = $('themeToggle');
+  const themeIconMoon = $('themeIconMoon');
+  const themeIconSun  = $('themeIconSun');
 
-  const urlParam = new URLSearchParams(location.search).get('search');
-  if (urlParam) searchInput.value = urlParam.trim();
+  const isLowEnd = (() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    const m = navigator.deviceMemory, c = navigator.hardwareConcurrency;
+    return (m && m <= 2) || (c && c <= 2);
+  })();
+  if (isLowEnd) document.documentElement.classList.add('no-blur');
+
+  function applyTheme(mode, save) {
+    const dark = mode === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.classList.toggle('light', !dark);
+    themeIconMoon.style.opacity   = dark  ? '1' : '0';
+    themeIconSun.style.opacity    = !dark ? '1' : '0';
+    themeIconMoon.style.transform = dark  ? 'rotate(0deg)' : 'rotate(90deg)';
+    themeIconSun.style.transform  = !dark ? 'rotate(0deg)' : 'rotate(-90deg)';
+    if (save) try { localStorage.setItem(THEME_KEY, mode); } catch {}
+  }
+  const storedTheme = (() => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } })();
+  applyTheme(storedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'), false);
+  themeToggle.addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark', true));
+
+  const urlP   = new URLSearchParams(location.search);
+  const urlSrch = urlP.get('search') || '';
+  const urlPkg  = urlP.get('pkg') || '';
+  if (urlSrch) searchInput.value = urlSrch;
+
+  const isModalOpen = () => modalOverlay.style.display !== 'none';
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if (!modalOverlay.classList.contains('hidden')) { closeModal(); return; }
-      if (document.activeElement === searchInput) {
-        searchInput.blur();
-        if (searchInput.value) { searchInput.value = ''; handleSearchInput(); }
-      }
+      if (isModalOpen()) { closeModal(); return; }
+      if (histDrop.style.display !== 'none') { histDrop.style.display = 'none'; return; }
+      if (!sortDrop.classList.contains('hidden')) { sortDrop.classList.add('hidden'); return; }
+      if (document.activeElement === searchInput && searchInput.value) { searchInput.value = ''; handleSearch(); }
       return;
     }
-    if (e.key === '/' && document.activeElement !== searchInput &&
-        !modalOverlay.classList.contains('hidden') === false) {
-      e.preventDefault();
-      searchInput.focus();
-      searchInput.select();
+    if (e.key === '/' && document.activeElement !== searchInput && !isModalOpen()) {
+      e.preventDefault(); searchInput.focus(); searchInput.select(); return;
     }
+    if (!isModalOpen() && document.activeElement !== searchInput) gridKeyNav(e);
   });
+
+  function gridKeyNav(e) {
+    const cards = [...grid.querySelectorAll('.glass-card')];
+    if (!cards.length) return;
+    const cols = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 640 ? 2 : 1;
+    const key = e.key;
+    if (key === 'ArrowRight' || key === 'ArrowDown') {
+      e.preventDefault();
+      focusIdx = Math.min(focusIdx + (key === 'ArrowDown' ? cols : 1), cards.length - 1);
+      cards[focusIdx]?.focus();
+    } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+      e.preventDefault();
+      focusIdx = Math.max(focusIdx - (key === 'ArrowUp' ? cols : 1), 0);
+      cards[focusIdx]?.focus();
+    } else if (key === 'Enter' && focusIdx >= 0) {
+      const n = cards[focusIdx]?.querySelector('.pkg-name');
+      if (n) { const p = allPkgs.find(x => x.name === n.textContent.trim()); if (p) openModal(p); }
+    }
+  }
 
   document.addEventListener('click', e => {
     const host = e.target.closest('.ripple-host');
     if (!host) return;
-    const r = document.createElement('span');
-    r.className = 'ripple-el';
+    const r = document.createElement('span'); r.className = 'ripple-el';
     const rect = host.getBoundingClientRect();
     r.style.left = (e.clientX - rect.left) + 'px';
     r.style.top  = (e.clientY - rect.top)  + 'px';
@@ -816,664 +822,461 @@
     r.addEventListener('animationend', () => r.remove(), { once: true });
   });
 
-  function cmpVer(a, b) {
-    const norm = s => String(s || '').replace(/_/g, '.').split('.').map(x => parseInt(x, 10) || 0);
-    const pa = norm(a), pb = norm(b);
-    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-      const d = (pa[i] || 0) - (pb[i] || 0);
-      if (d !== 0) return d;
+  document.addEventListener('click', e => {
+    if (!sortDrop.classList.contains('hidden') && !sortDrop.contains(e.target) && e.target !== sortBtn) {
+      sortDrop.classList.add('hidden'); sortBtn.setAttribute('aria-expanded','false');
     }
+    if (histDrop.style.display !== 'none' && !histDrop.contains(e.target) && e.target !== searchInput) {
+      histDrop.style.display = 'none';
+    }
+  });
+
+  function cmpVer(a, b) {
+    const n = s => String(s||'').replace(/_/g,'.').split('.').map(x => parseInt(x,10)||0);
+    const pa = n(a), pb = n(b), len = Math.max(pa.length,pb.length);
+    for (let i = 0; i < len; i++) { const d = (pa[i]||0)-(pb[i]||0); if (d) return d; }
     return 0;
   }
 
-  function deduplicatePackages(raw) {
+  function dedup(raw) {
     const map = new Map();
-    for (const pkg of raw) {
-      const key = (pkg.name || '').trim().toLowerCase();
-      if (!key) continue;
-      const existing = map.get(key);
-      if (!existing || cmpVer(pkg.version, existing.version) > 0) {
-        map.set(key, pkg);
-      }
+    for (const p of raw) {
+      const k = (p.name||'').trim().toLowerCase();
+      if (!k) continue;
+      const ex = map.get(k);
+      if (!ex || cmpVer(p.version, ex.version) > 0) map.set(k, p);
     }
     return [...map.values()];
   }
 
-  function categorize(name, desc) {
-    const t = (name || '') + ' ' + (desc || '');
+  function cat(name, desc) {
+    const t = (name||'') + ' ' + (desc||'');
     for (const c of CATS) if (c.re.test(t)) return c;
     return CAT_DEF;
   }
 
-  function showSkeletons(n) {
-    const f = document.createDocumentFragment();
-    for (let i = 0; i < n; i++) {
-      const d = document.createElement('div');
-      d.className = 'glass-card rounded-[20px] p-5 flex flex-col gap-3.5';
-      d.setAttribute('aria-hidden', 'true');
-      d.innerHTML =
-        '<div class="skel h-6 w-2/5"></div>' +
-        '<div class="skel h-4 w-1/5"></div>' +
-        '<div class="skel h-3.5 w-full"></div>' +
-        '<div class="skel h-3.5 w-4/5"></div>' +
-        '<div class="skel h-10 w-full mt-auto"></div>';
-      f.appendChild(d);
-    }
-    grid.innerHTML = '';
-    grid.appendChild(f);
+  function sorted(arr) {
+    return [...arr].sort((a,b) => {
+      if (activeSort==='az')     return (a.name||'').localeCompare(b.name||'');
+      if (activeSort==='za')     return (b.name||'').localeCompare(a.name||'');
+      if (activeSort==='newest') return cmpVer(b.version, a.version);
+      if (activeSort==='oldest') return cmpVer(a.version, b.version);
+      return 0;
+    });
   }
 
-  function render(packages, animate) {
-    if (!packages.length) {
-      grid.innerHTML = '';
-      const empty = document.createElement('div');
-      empty.className = 'col-span-full text-center py-20 text-slate-500';
-      empty.setAttribute('role', 'status');
-      const icon = document.createElement('i');
-      icon.className = 'fas fa-ghost text-5xl block mb-5 opacity-20 animate-bounce';
-      icon.setAttribute('aria-hidden', 'true');
-      const p1 = document.createElement('p');
-      p1.className = 'text-base font-light';
-      p1.textContent = 'No packages found.';
-      const p2 = document.createElement('p');
-      p2.className = 'text-sm mt-1.5 text-slate-600';
-      p2.textContent = 'Try a different term or clear the filter.';
-      empty.appendChild(icon); empty.appendChild(p1); empty.appendChild(p2);
-      grid.appendChild(empty);
-      return;
+  function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+  function hlText(text, terms) {
+    if (!terms.length || !text) return document.createTextNode(text||'');
+    const re = new RegExp('('+terms.map(escRe).join('|')+')','gi');
+    const frag = document.createDocumentFragment();
+    let last=0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
+      const mk = document.createElement('mark'); mk.className='hl'; mk.textContent=m[0]; frag.appendChild(mk);
+      last = re.lastIndex;
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    return frag;
+  }
+
+  function showSkels(n) {
+    const f = document.createDocumentFragment();
+    for (let i=0;i<n;i++) {
+      const d = document.createElement('div');
+      d.className='glass-card rounded-[18px] p-5 flex flex-col gap-3'; d.setAttribute('aria-hidden','true');
+      d.innerHTML='<div class="skel h-5 w-2/5"></div><div class="skel h-3 w-1/5 mt-0.5"></div><div class="skel h-3.5 w-full mt-1"></div><div class="skel h-3.5 w-4/5"></div><div class="skel h-10 w-full mt-auto"></div>';
+      f.appendChild(d);
+    }
+    grid.innerHTML=''; grid.appendChild(f);
+  }
+
+  function render(pkgs, animate) {
+    focusIdx = -1;
+    if (!pkgs.length) {
+      grid.innerHTML='';
+      const w=document.createElement('div'); w.className='col-span-full text-center py-20'; w.setAttribute('role','status'); w.style.color='var(--text3)';
+      const ico=document.createElement('i'); ico.className='fas fa-ghost text-5xl block mb-5 opacity-20 animate-bounce'; ico.setAttribute('aria-hidden','true');
+      const p1=document.createElement('p'); p1.className='text-base font-light'; p1.style.color='var(--text2)'; p1.textContent='No packages found.';
+      const p2=document.createElement('p'); p2.className='text-sm mt-1.5'; p2.textContent='Try a different term or clear filters.';
+      w.appendChild(ico); w.appendChild(p1); w.appendChild(p2); grid.appendChild(w); return;
     }
 
-    const frag = document.createDocumentFragment();
+    const terms = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const frag  = document.createDocumentFragment();
 
-    packages.forEach((pkg, idx) => {
-      const cat  = categorize(pkg.name, pkg.description);
+    pkgs.forEach((pkg, idx) => {
+      const c = cat(pkg.name, pkg.description);
       const card = document.createElement('article');
-      card.className = 'glass-card rounded-[20px] p-5 flex flex-col h-full relative overflow-hidden group';
-      card.setAttribute('role', 'listitem');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', (pkg.name || '') + ' package details');
+      card.className='glass-card rounded-[18px] p-5 flex flex-col h-full relative overflow-hidden group';
+      card.setAttribute('role','listitem'); card.setAttribute('tabindex','0');
+      card.setAttribute('aria-label',(pkg.name||'')+' \u2014 '+(pkg.description||'package'));
 
-      if (animate) {
-        card.style.animation      = 'fadeUp 0.48s cubic-bezier(0.22,1,0.36,1) both';
-        card.style.animationDelay = Math.min(idx, STAGGER_CAP) * 48 + 'ms';
-      }
+      if (animate && !isLowEnd) { card.style.animation='fadeUp 0.44s cubic-bezier(0.22,1,0.36,1) both'; card.style.animationDelay=Math.min(idx,STAGGER_CAP)*44+'ms'; }
 
-      card.innerHTML =
-        '<div class="card-icon absolute -right-7 -top-7 text-8xl" style="color:rgba(20,35,60,0.65)" aria-hidden="true">' +
-          '<i class="fas ' + cat.icon + '"></i>' +
-        '</div>' +
-        '<div class="mb-3 z-10">' +
-          '<h2 class="pkg-name text-lg font-display font-bold text-slate-100 tracking-tight leading-tight ' +
-               'group-hover:text-transparent group-hover:bg-clip-text ' +
-               'group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-cyan-400 ' +
-               'transition-all duration-300"></h2>' +
-        '</div>' +
-        '<div class="flex items-center gap-2 mb-3.5 z-10 flex-wrap">' +
-          '<span class="cat-badge inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold ' +
-                       'tracking-wider border ' + cat.cls + ' uppercase">' +
-            '<i class="fas ' + cat.icon + ' mr-1.5 text-[9px] opacity-70" aria-hidden="true"></i>' +
-          '</span>' +
-          '<span class="pkg-ver inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono ' +
-                       'bg-slate-900/55 text-slate-400 border border-slate-700/35"></span>' +
-        '</div>' +
-        '<p class="pkg-desc text-sm text-slate-400 mb-5 flex-grow z-10 leading-relaxed font-light line-clamp-3"></p>' +
-        '<div class="mt-auto z-10 pt-4 flex gap-2" style="border-top:1px solid rgba(255,255,255,0.045)">' +
-          '<button class="install-btn ripple-host flex-grow flex items-center justify-between ' +
-                         'text-slate-300 py-2.5 px-4 rounded-xl text-sm font-semibold ' +
-                         'focus:outline-none focus:ring-2 focus:ring-indigo-500/50" ' +
-                  'aria-label="Copy install command">' +
-            '<span class="flex items-center gap-2">' +
-              '<i class="fas fa-terminal ti text-xs" aria-hidden="true"></i>' +
-              '<span>Install</span>' +
-            '</span>' +
-            '<i class="far fa-copy ci text-xs" aria-hidden="true"></i>' +
-          '</button>' +
-          '<button class="details-btn glass w-10 h-10 rounded-xl flex items-center justify-center ' +
-                         'text-slate-500 hover:text-slate-200 transition-colors flex-shrink-0" ' +
-                  'aria-label="View package details">' +
-            '<i class="fas fa-expand-alt text-xs" aria-hidden="true"></i>' +
-          '</button>' +
+      card.innerHTML=
+        '<div class="card-icon absolute -right-7 -top-7 text-8xl" aria-hidden="true"><i class="fas '+c.icon+'" style="color:rgba(20,35,60,0.6)"></i></div>'+
+        '<div class="mb-3 z-10"><h2 class="pkg-name text-[17px] font-display font-bold tracking-tight leading-tight line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-cyan-400 transition-all duration-250" style="color:var(--text1)"></h2></div>'+
+        '<div class="flex items-center gap-2 mb-3 z-10 flex-wrap">'+
+          '<span class="cat-badge inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider border '+c.cls+' uppercase"><i class="fas '+c.icon+' mr-1.5 text-[9px] opacity-70" aria-hidden="true"></i></span>'+
+          '<span class="pkg-ver inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono border" style="background:rgba(15,23,42,0.5);color:var(--text2);border-color:var(--border)"></span>'+
+        '</div>'+
+        '<p class="pkg-desc text-sm mb-4 flex-grow z-10 leading-relaxed font-light line-clamp-3" style="color:var(--text2)"></p>'+
+        '<div class="mt-auto z-10 pt-3.5 flex gap-2" style="border-top:1px solid var(--border)">'+
+          '<button class="install-btn ripple-host flex-grow flex items-center justify-between py-2.5 px-4 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50" style="color:var(--text2)" aria-label="Copy install command">'+
+            '<span class="flex items-center gap-2"><i class="fas fa-terminal ti text-xs" aria-hidden="true"></i><span>Install</span></span>'+
+            '<i class="far fa-copy ci text-xs" aria-hidden="true"></i>'+
+          '</button>'+
+          '<button class="details-btn glass glass-blur-sm w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0" style="color:var(--text3)" aria-label="View package details">'+
+            '<i class="fas fa-circle-info text-xs" aria-hidden="true"></i>'+
+          '</button>'+
         '</div>';
 
-      card.querySelector('.pkg-name').textContent  = pkg.name        || '';
-      card.querySelector('.pkg-ver').textContent   = pkg.version     || '';
-      card.querySelector('.pkg-desc').textContent  = pkg.description || 'Custom compiled Void Linux package.';
-      const badge = card.querySelector('.cat-badge');
-      badge.appendChild(document.createTextNode(cat.label));
-
-      const installBtn  = card.querySelector('.install-btn');
-      const detailsBtn  = card.querySelector('.details-btn');
-      installBtn.dataset.installPkg = pkg.name || '';
-      detailsBtn.dataset.detailPkg  = pkg.name || '';
-
-      card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(pkg); }
-      });
-
+      const nEl = card.querySelector('.pkg-name');
+      const dEl = card.querySelector('.pkg-desc');
+      nEl.appendChild(hlText(pkg.name||'', terms));
+      dEl.appendChild(hlText(pkg.description||'Custom compiled Void Linux package.', terms));
+      card.querySelector('.pkg-ver').textContent = pkg.version||'';
+      const badge = card.querySelector('.cat-badge'); badge.appendChild(document.createTextNode(c.label));
+      card.querySelector('.install-btn').dataset.installPkg = pkg.name||'';
+      card.querySelector('.details-btn').dataset.detailPkg  = pkg.name||'';
+      card.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); openModal(pkg); } });
       frag.appendChild(card);
     });
 
-    grid.innerHTML = '';
-    grid.appendChild(frag);
+    grid.innerHTML=''; grid.appendChild(frag);
   }
 
   grid.addEventListener('click', e => {
-    const install = e.target.closest('[data-install-pkg]');
-    if (install) {
-      e.stopPropagation();
-      const name = install.dataset.installPkg;
-      if (name) copyToClipboard('sudo xbps-install -S ' + name, name, 'install');
-      return;
-    }
-    const details = e.target.closest('[data-detail-pkg]');
-    if (details) {
-      e.stopPropagation();
-      const name = details.dataset.detailPkg;
-      const pkg  = allPackages.find(p => p.name === name);
-      if (pkg) openModal(pkg);
-      return;
-    }
+    const inst = e.target.closest('[data-install-pkg]');
+    if (inst) { e.stopPropagation(); const n=inst.dataset.installPkg; if (n) clip('sudo xbps-install -S '+n, n, 'install'); return; }
+    const det = e.target.closest('[data-detail-pkg]');
+    if (det) { e.stopPropagation(); const p=allPkgs.find(x=>x.name===det.dataset.detailPkg); if (p) openModal(p); return; }
     const card = e.target.closest('.glass-card');
-    if (card) {
-      const nameEl = card.querySelector('.pkg-name');
-      if (!nameEl) return;
-      const name = nameEl.textContent.trim();
-      const pkg  = allPackages.find(p => p.name === name);
-      if (pkg) openModal(pkg);
-    }
+    if (card) { const n=card.querySelector('.pkg-name'); if (!n) return; const p=allPkgs.find(x=>x.name===n.textContent.trim()); if (p) openModal(p); }
   });
 
+  function buildMeta(pkg) {
+    const c=cat(pkg.name,pkg.description), frag=document.createDocumentFragment();
+    const sp=document.createElement('span'); sp.className='inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider border '+c.cls+' uppercase';
+    sp.innerHTML='<i class="fas '+c.icon+' mr-1.5 text-[9px] opacity-70" aria-hidden="true"></i>'; sp.appendChild(document.createTextNode(c.label)); frag.appendChild(sp);
+    if (pkg.version) { const v=document.createElement('span'); v.className='inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono border'; v.style.cssText='background:rgba(15,23,42,0.5);color:var(--text2);border-color:var(--border)'; v.textContent=pkg.version; frag.appendChild(v); }
+    return frag;
+  }
+
+  function buildBody(pkg) {
+    const cmd='sudo xbps-install -S '+(pkg.name||'');
+    const gh='https://github.com/Ackerman-00/void-nexus/tree/main/'+encodeURIComponent(pkg.name||'');
+    const frag=document.createDocumentFragment();
+    const p=document.createElement('p'); p.className='text-sm leading-relaxed'; p.style.color='var(--text2)'; p.textContent=pkg.description||'Custom compiled Void Linux package.'; frag.appendChild(p);
+    const cw=document.createElement('div');
+    cw.innerHTML='<div class="text-xs font-medium uppercase tracking-wider mb-2" style="color:var(--text3)">Install command</div><div class="cmd-box glass-blur-sm rounded-xl px-4 py-3 flex items-center gap-3"><code class="mc font-mono text-sm flex-grow overflow-x-auto hide-scroll whitespace-nowrap scroll-touch" style="color:#a5b4fc"></code><button class="mb glass glass-blur-sm ripple-host flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[36px] hover:border-indigo-400/50 flex-shrink-0" style="color:var(--text2)" aria-label="Copy"><i class="far fa-copy text-xs" aria-hidden="true"></i><span>Copy</span></button></div>';
+    cw.querySelector('.mc').textContent=cmd;
+    cw.querySelector('.mb').addEventListener('click', () => clip(cmd, pkg.name||'', 'install'));
+    frag.appendChild(cw);
+    const a=document.createElement('a'); a.href=gh; a.target='_blank'; a.rel='noopener noreferrer'; a.className='flex items-center gap-2 text-sm transition-colors'; a.style.color='var(--text2)'; a.innerHTML='<i class="fab fa-github text-sm" aria-hidden="true"></i><span>View on GitHub</span><i class="fas fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>'; frag.appendChild(a);
+    return frag;
+  }
+
   function openModal(pkg) {
-    const cat = categorize(pkg.name, pkg.description);
-    modalTitle.textContent = pkg.name || '';
-    modalDesc.textContent  = pkg.description || 'Custom compiled Void Linux package.';
-
-    modalMeta.innerHTML = '';
-    const catSpan = document.createElement('span');
-    catSpan.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider border ' + cat.cls + ' uppercase';
-    const catIcon = document.createElement('i');
-    catIcon.className = 'fas ' + cat.icon + ' mr-1.5 text-[9px] opacity-70';
-    catIcon.setAttribute('aria-hidden', 'true');
-    catSpan.appendChild(catIcon);
-    catSpan.appendChild(document.createTextNode(cat.label));
-    modalMeta.appendChild(catSpan);
-
-    if (pkg.version) {
-      const verSpan = document.createElement('span');
-      verSpan.className = 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-900/55 text-slate-400 border border-slate-700/35';
-      verSpan.textContent = pkg.version;
-      modalMeta.appendChild(verSpan);
-    }
-
-    const installCmd = 'sudo xbps-install -S ' + (pkg.name || '');
-    modalCmd.textContent = installCmd;
-    modalCopyBtn.onclick = () => copyToClipboard(installCmd, pkg.name || '', 'install');
-
-    const ghHref = 'https://github.com/Ackerman-00/void-nexus/tree/main/' + encodeURIComponent(pkg.name || '');
-    modalGhLink.href = ghHref;
-
-    modalOverlay.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    modalClose.focus();
+    curModalPkg = pkg;
+    modalTitleD.textContent = modalTitleM.textContent = pkg.name||'';
+    modalMetaD.innerHTML = modalMetaM.innerHTML = '';
+    modalBodyD.innerHTML = modalBodyM.innerHTML = '';
+    modalMetaD.appendChild(buildMeta(pkg));
+    modalMetaM.appendChild(buildMeta(pkg));
+    modalBodyD.appendChild(buildBody(pkg));
+    modalBodyM.appendChild(buildBody(pkg));
+    modalOverlay.style.display='';
+    requestAnimationFrame(() => modalOverlay.classList.add('open'));
+    document.body.style.overflow='hidden';
+    const url=new URL(location.href); url.searchParams.set('pkg', pkg.name||'');
+    history.pushState({pkg:pkg.name},'',url);
+    setTimeout(() => { (window.innerWidth<640 ? modalCloseM : modalCloseD).focus(); },50);
   }
 
   function closeModal() {
-    modalOverlay.classList.add('hidden');
-    document.body.style.overflow = '';
+    modalOverlay.classList.add('closing'); modalOverlay.classList.remove('open');
+    setTimeout(() => { modalOverlay.style.display='none'; modalOverlay.classList.remove('closing'); document.body.style.overflow=''; curModalPkg=null; },220);
+    const url=new URL(location.href); url.searchParams.delete('pkg');
+    history.pushState({},'',url);
   }
 
-  modalClose.addEventListener('click', closeModal);
+  modalCloseD.addEventListener('click', closeModal);
+  modalCloseM.addEventListener('click', closeModal);
   modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
 
+  const mobileSheetWrap = $('mobileSheetWrap');
+  if (mobileSheetWrap) {
+    mobileSheetWrap.addEventListener('click', e => { if (e.target === mobileSheetWrap) closeModal(); });
+  }
+
+  let swipeStartScrollTop = 0;
+  modalMobile.addEventListener('touchstart', e => {
+    swipeY = e.touches[0].clientY;
+    swipeStartScrollTop = modalBodyM.scrollTop;
+  }, { passive: true });
+  modalMobile.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - swipeY;
+    if (dy > 80 && swipeStartScrollTop <= 0) closeModal();
+  }, { passive: true });
+
+  window.addEventListener('popstate', () => {
+    const n = new URLSearchParams(location.search).get('pkg');
+    if (n) {
+      const p = allPkgs.find(x => x.name === n);
+      if (p && !isModalOpen()) openModal(p);
+    } else if (isModalOpen()) {
+      modalOverlay.classList.add('closing'); modalOverlay.classList.remove('open');
+      setTimeout(() => {
+        modalOverlay.style.display = 'none'; modalOverlay.classList.remove('closing');
+        document.body.style.overflow = ''; curModalPkg = null;
+      }, 220);
+    }
+  });
+
+  sortBtn.addEventListener('click', () => {
+    const open = !sortDrop.classList.contains('hidden');
+    sortDrop.classList.toggle('hidden', open); sortBtn.setAttribute('aria-expanded', open?'false':'true');
+  });
+  sortDrop.querySelectorAll('.sort-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const s=btn.dataset.sort; if (s===activeSort) { sortDrop.classList.add('hidden'); return; }
+      activeSort=s; sortDrop.querySelectorAll('.sort-opt').forEach(b=>b.classList.toggle('active-sort',b.dataset.sort===s));
+      if (sortLabel) sortLabel.textContent=SORT_LBL[s]||s;
+      sortDrop.classList.add('hidden'); sortBtn.setAttribute('aria-expanded','false');
+      applyAndRender(true);
+    });
+  });
+
   filterPills.addEventListener('click', e => {
-    const pill = e.target.closest('[data-cat]');
-    if (!pill) return;
-    const cat = pill.dataset.cat;
-    if (cat === activeFilter) return;
-    activeFilter = cat;
-    filterPills.querySelectorAll('[data-cat]').forEach(p => {
-      p.classList.toggle('active', p.dataset.cat === cat);
-      p.setAttribute('aria-pressed', p.dataset.cat === cat ? 'true' : 'false');
-    });
-    applyFiltersAndRender(true);
+    const pill=e.target.closest('[data-cat]'); if (!pill) return;
+    const c=pill.dataset.cat; if (c===activeCat) return;
+    activeCat=c;
+    filterPills.querySelectorAll('[data-cat]').forEach(p => { p.classList.toggle('active',p.dataset.cat===c); p.setAttribute('aria-pressed',p.dataset.cat===c?'true':'false'); });
+    applyAndRender(true);
   });
 
-  function loadHistory() {
-    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
-    catch { return []; }
-  }
+  function loadHist() { try { return JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); } catch { return []; } }
+  function saveHist(t) { if (!t||t.length<2) return; let h=loadHist().filter(x=>x!==t); h.unshift(t); try { localStorage.setItem(HIST_KEY,JSON.stringify(h.slice(0,HIST_MAX))); } catch {} }
 
-  function saveHistory(term) {
-    if (!term || term.length < 2) return;
-    let h = loadHistory().filter(t => t !== term);
-    h.unshift(term);
-    h = h.slice(0, HISTORY_MAX);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); } catch {}
-  }
-
-  function showHistoryDrop() {
-    const h = loadHistory();
-    if (!h.length) { historyDrop.classList.add('hidden'); return; }
-    historyDrop.innerHTML = '';
-
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between px-4 py-2';
-    const label = document.createElement('span');
-    label.className = 'text-xs text-slate-500 font-medium uppercase tracking-wider';
-    label.textContent = 'Recent searches';
-    const clearAll = document.createElement('button');
-    clearAll.className = 'text-xs text-slate-600 hover:text-slate-400 transition-colors';
-    clearAll.textContent = 'Clear';
-    clearAll.addEventListener('click', e => {
-      e.stopPropagation();
-      try { localStorage.removeItem(HISTORY_KEY); } catch {}
-      historyDrop.classList.add('hidden');
-    });
-    header.appendChild(label);
-    header.appendChild(clearAll);
-    historyDrop.appendChild(header);
-
+  function showHistDrop() {
+    const h=loadHist(); if (!h.length) { histDrop.style.display='none'; return; }
+    histDrop.innerHTML='';
+    const hdr=document.createElement('div'); hdr.className='flex items-center justify-between px-4 py-2';
+    const lbl=document.createElement('span'); lbl.className='text-xs font-medium uppercase tracking-wider'; lbl.style.color='var(--text3)'; lbl.textContent='Recent';
+    const clr=document.createElement('button'); clr.className='text-xs transition-colors hover:text-indigo-400'; clr.style.color='var(--text3)'; clr.textContent='Clear';
+    clr.addEventListener('click', e => { e.stopPropagation(); try{localStorage.removeItem(HIST_KEY);}catch{} histDrop.style.display='none'; });
+    hdr.appendChild(lbl); hdr.appendChild(clr); histDrop.appendChild(hdr);
     h.forEach(term => {
-      const item = document.createElement('button');
-      item.className = 'w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-indigo-500/10 transition-colors text-left';
-      item.setAttribute('role', 'option');
-      const icon = document.createElement('i');
-      icon.className = 'fas fa-clock-rotate-left text-xs text-slate-500 flex-shrink-0';
-      icon.setAttribute('aria-hidden', 'true');
-      const span = document.createElement('span');
-      span.textContent = term;
-      item.appendChild(icon); item.appendChild(span);
-      item.addEventListener('click', () => {
-        searchInput.value = term;
-        historyDrop.classList.add('hidden');
-        handleSearchInput();
-      });
-      historyDrop.appendChild(item);
+      const it=document.createElement('button'); it.className='w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left hover:bg-indigo-500/10'; it.style.color='var(--text1)'; it.setAttribute('role','option');
+      const ico=document.createElement('i'); ico.className='fas fa-clock-rotate-left text-xs flex-shrink-0'; ico.style.color='var(--text3)'; ico.setAttribute('aria-hidden','true');
+      const sp=document.createElement('span'); sp.textContent=term;
+      it.appendChild(ico); it.appendChild(sp);
+      it.addEventListener('click', () => { searchInput.value=term; histDrop.style.display='none'; handleSearch(); });
+      histDrop.appendChild(it);
     });
-
-    historyDrop.classList.remove('hidden');
+    histDrop.style.display='block';
   }
 
-  searchInput.addEventListener('focus', () => {
-    if (!searchInput.value.trim()) showHistoryDrop();
-  });
+  searchInput.addEventListener('focus',   () => { if (!searchInput.value.trim()) showHistDrop(); });
+  searchInput.addEventListener('keydown', e => { if (e.key==='Enter'&&searchInput.value.trim()) { saveHist(searchInput.value.trim()); histDrop.style.display='none'; } });
 
-  document.addEventListener('click', e => {
-    if (!historyDrop.classList.contains('hidden') &&
-        !historyDrop.contains(e.target) && e.target !== searchInput) {
-      historyDrop.classList.add('hidden');
-    }
-  });
-
-  function handleSearchInput() {
-    const val = searchInput.value;
-    const hasVal = val.length > 0;
-    clearBtn.classList.toggle('sr-hide', !hasVal);
-    if (kbdHint) kbdHint.style.opacity = hasVal ? '0' : '1';
-
-    if (!hasVal) {
-      showHistoryDrop();
-    } else {
-      historyDrop.classList.add('hidden');
-    }
-
+  function handleSearch() {
+    const v=searchInput.value;
+    clearBtn.classList.toggle('sr-hide', !v.length);
+    if (kbdHint) kbdHint.style.opacity=v.length?'0':'1';
+    if (!v) showHistDrop(); else histDrop.style.display='none';
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      const url = new URL(location.href);
-      if (val.trim()) url.searchParams.set('search', val.trim());
-      else url.searchParams.delete('search');
-      history.replaceState(null, '', url);
-      applyFiltersAndRender(true);
-    }, 120);
+    searchTimer=setTimeout(() => {
+      const url=new URL(location.href);
+      if (v.trim()) url.searchParams.set('search',v.trim()); else url.searchParams.delete('search');
+      history.replaceState(null,'',url);
+      applyAndRender(true);
+    },100);
   }
 
-  searchInput.addEventListener('input', handleSearchInput);
-
-  clearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    handleSearchInput();
-    searchInput.focus();
-  });
-
+  searchInput.addEventListener('input', handleSearch);
+  const searchIconWrap = $('searchIconWrap');
+  if (searchIconWrap) {
+    searchIconWrap.addEventListener('click', () => searchInput.focus());
+    searchInput.addEventListener('focus',  () => { searchIconWrap.style.color = '#818cf8'; });
+    searchInput.addEventListener('blur',   () => { searchIconWrap.style.color = 'var(--text3)'; });
+  }
+  clearBtn.addEventListener('click', () => { searchInput.value=''; handleSearch(); searchInput.focus(); });
   clearFilters.addEventListener('click', () => {
-    searchInput.value = '';
-    activeFilter = 'all';
-    filterPills.querySelectorAll('[data-cat]').forEach(p => {
-      p.classList.toggle('active', p.dataset.cat === 'all');
-    });
-    handleSearchInput();
+    searchInput.value=''; activeCat='all';
+    filterPills.querySelectorAll('[data-cat]').forEach(p=>p.classList.toggle('active',p.dataset.cat==='all'));
+    clearFilters.classList.add('hidden');
+    handleSearch();
+  });
+  copyAllBtn.addEventListener('click', () => {
+    const f=getFiltered(); if (!f.length) return;
+    clip(f.map(p=>p.name).join('\n'), f.length+' packages', 'list');
   });
 
   function getFiltered() {
-    const terms = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    return allPackages.filter(p => {
-      const t = ((p.name || '') + ' ' + (p.description || '')).toLowerCase();
-      const textOk = !terms.length || terms.every(term => t.includes(term));
-      const catOk  = activeFilter === 'all' || categorize(p.name, p.description).label === activeFilter;
-      return textOk && catOk;
-    });
+    const terms=searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    return sorted(allPkgs.filter(p => {
+      const t=((p.name||'')+' '+(p.description||'')).toLowerCase();
+      return (!terms.length||terms.every(w=>t.includes(w))) && (activeCat==='all'||cat(p.name,p.description).label===activeCat);
+    }));
   }
 
-  function applyFiltersAndRender(animate) {
-    const filtered = getFiltered();
-    const isFiltering = searchInput.value.trim().length > 0 || activeFilter !== 'all';
-
-    if (isFiltering) {
-      resultRow.classList.remove('hidden');
-      resultCount.textContent = filtered.length + ' of ' + allPackages.length + ' packages';
-      clearFilters.classList.remove('hidden');
-    } else {
-      resultRow.classList.add('hidden');
-    }
-
-    render(filtered, animate);
+  function applyAndRender(animate) {
+    const f=getFiltered(), filtering=searchInput.value.trim().length>0||activeCat!=='all';
+    if (filtering) { resultRow.style.display='flex'; resultCount.textContent=f.length+' of '+allPkgs.length+' packages'; clearFilters.classList.remove('hidden'); }
+    else { resultRow.style.display='none'; }
+    render(f, animate);
   }
 
-  function updateStats(count) {
-    statPkgsNum.textContent = count;
-    statPkgs.classList.remove('hidden');
-  }
+  function updateStats(n) { statPkgsNum.textContent=n; lastSyncTime.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
 
-  let syncResetT = null;
-  const SYNC_COLORS = { active:'#22d3ee', checking:'#facc15', updated:'#34d399', error:'#f87171' };
+  let syncResetT=null;
+  const SC={ active:'#22d3ee', checking:'#facc15', updated:'#34d399', error:'#f87171' };
 
   function setSyncState(state, info) {
     clearTimeout(syncResetT);
-    const color = SYNC_COLORS[state] || '#22d3ee';
-    syncBadge.className = syncBadge.className.replace(/sync-\w+/g,'').trim() + ' sync-' + state;
-    syncPing.style.background = color;
-    syncCore.style.background = color;
-
-    if (state === 'checking') {
-      syncPing.style.display = 'none';
-      syncCore.style.background = 'transparent';
-      syncCore.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="font-size:8px;color:' + color + '" aria-hidden="true"></i>';
-      syncLabel.textContent = 'Checking\u2026';
+    const col=SC[state]||'#22d3ee';
+    syncBadge.className=syncBadge.className.replace(/sync-\w+/g,'').trim()+' sync-'+state;
+    syncPing.style.background=col; syncCore.style.background=col;
+    if (state==='checking') {
+      syncPing.style.display='none'; syncCore.style.background='transparent';
+      syncCore.innerHTML='<i class="fas fa-circle-notch fa-spin" style="font-size:8px;color:'+col+'" aria-hidden="true"></i>';
+      syncLabel.textContent='Checking\u2026';
     } else {
-      syncPing.style.display = '';
-      syncCore.innerHTML = '';
-      syncCore.className = 'relative inline-flex rounded-full h-2 w-2';
-      syncCore.style.background = color;
-
-      if (state === 'updated') {
-        syncLabel.textContent = 'Updated \u00b7 ' + info + ' pkg' + (info !== 1 ? 's' : '');
-        syncResetT = setTimeout(() => setSyncState('active', null), 5000);
-      } else if (state === 'error') {
-        syncLabel.textContent = 'Sync error \u2014 retrying';
-      } else {
-        const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        syncLabel.textContent = info ? 'Synced \u00b7 ' + t : 'Nexus Sync Active';
-      }
+      syncPing.style.display=''; syncCore.innerHTML=''; syncCore.className='relative inline-flex rounded-full h-2 w-2'; syncCore.style.background=col;
+      if (state==='updated') { syncLabel.textContent='Updated \u00b7 '+info+' pkg'+(info!==1?'s':''); syncResetT=setTimeout(()=>setSyncState('active',null),5000); }
+      else if (state==='error') { syncLabel.textContent='Sync error \u2014 retrying'; }
+      else { const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); syncLabel.textContent=info?'Synced \u00b7 '+t:'Nexus Sync Active'; }
     }
   }
 
-  function showToast(parts, iconClass, iconColor) {
-    toastIcon.className   = 'fas ' + iconClass + ' flex-shrink-0';
-    toastIcon.style.color = iconColor || '#34d399';
-    toastMsg.textContent  = '';
-    for (const p of parts) {
-      if (p.bold) {
-        const b = document.createElement('b');
-        b.textContent = p.t;
-        toastMsg.appendChild(b);
-      } else {
-        toastMsg.appendChild(document.createTextNode(p.t));
-      }
-    }
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  function showToast(parts, iconCls, iconCol) {
+    toastIcon.className='fas '+iconCls+' flex-shrink-0'; toastIcon.style.color=iconCol||'#34d399';
+    toastMsg.textContent='';
+    for (const p of parts) { if (p.bold){const b=document.createElement('b');b.textContent=p.t;toastMsg.appendChild(b);}else toastMsg.appendChild(document.createTextNode(p.t)); }
+    toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('show'),3000);
   }
 
-  function copyToClipboard(text, label, type) {
-    if (!navigator.clipboard) {
-      showToast([{ t: 'Clipboard not available' }], 'fa-times-circle', '#f87171');
-      return;
-    }
+  function clip(text, label, type) {
+    if (!navigator.clipboard) { showToast([{t:'Copy not available'}],'fa-times-circle','#f87171'); return; }
     navigator.clipboard.writeText(text).then(() => {
-      if (type === 'install') {
-        showToast([{ t: 'Install copied \u2014 ' }, { t: label, bold: true }], 'fa-terminal', '#818cf8');
-      } else {
-        showToast([{ t: 'Command copied!' }], 'fa-check-circle', '#34d399');
-      }
-    }).catch(() => {
-      showToast([{ t: 'Copy failed \u2014 copy manually' }], 'fa-times-circle', '#f87171');
-    });
+      if (type==='install') showToast([{t:'Copied \u2014 '},{t:label,bold:true}],'fa-terminal','#818cf8');
+      else if (type==='list') showToast([{t:'Copied '},{t:label,bold:true}],'fa-copy','#34d399');
+      else showToast([{t:'Copied!'}],'fa-check-circle','#34d399');
+    }).catch(()=>showToast([{t:'Copy failed'}],'fa-times-circle','#f87171'));
   }
 
-  function typeCommand(text, speed) {
-    clearTimeout(typeTimer);
-    cmdText.textContent = '';
-    let i = 0;
-    const cursor = document.createElement('span');
-    cursor.className = 'type-cursor';
-    cursor.setAttribute('aria-hidden', 'true');
-    cmdText.appendChild(cursor);
-    cmdScroller.scrollLeft = 0;
-    updateScrollFades();
-
+  function typeCmd(text, speed) {
+    clearTimeout(typeTimer); cmdText.textContent=''; let i=0;
+    const cur=document.createElement('span'); cur.className='type-cursor'; cur.setAttribute('aria-hidden','true');
+    cmdText.appendChild(cur); cmdScroller.scrollLeft=0; updateFades();
     function tick() {
-      if (i < text.length) {
-        cursor.before(document.createTextNode(text[i++]));
-        typeTimer = setTimeout(tick, speed);
-        if (cmdScroller.scrollWidth > cmdScroller.clientWidth) {
-          cmdScroller.scrollLeft = cmdScroller.scrollWidth;
-          updateScrollFades();
-        }
-      } else {
-        typeTimer = setTimeout(() => {
-          if (cursor.parentNode) cursor.remove();
-          updateScrollFades();
-        }, 800);
-      }
+      if (i<text.length) { cur.before(document.createTextNode(text[i++])); typeTimer=setTimeout(tick,speed); if (cmdScroller.scrollWidth>cmdScroller.clientWidth){cmdScroller.scrollLeft=cmdScroller.scrollWidth;updateFades();} }
+      else typeTimer=setTimeout(()=>{if(cur.parentNode)cur.remove();updateFades();},750);
     }
     tick();
   }
 
-  function updateScrollFades() {
-    const sl   = cmdScroller.scrollLeft;
-    const maxSl = cmdScroller.scrollWidth - cmdScroller.clientWidth;
-    const isLong = maxSl > 4;
-    const showL  = isLong && sl > 4;
-    const showR  = isLong && sl < maxSl - 4;
-    cmdFadeL.style.opacity  = showL ? '1' : '0';
-    cmdFadeR.style.opacity  = showR ? '1' : '0';
-    cmdScrollL.style.opacity = showL ? '1' : '0';
-    cmdScrollR.style.opacity = showR ? '1' : '0';
+  function updateFades() {
+    const sl=cmdScroller.scrollLeft, mx=cmdScroller.scrollWidth-cmdScroller.clientWidth, lg=mx>4;
+    if (cmdFadeL) { cmdFadeL.style.opacity=lg&&sl>4?'1':'0'; }
+    if (cmdFadeR) { cmdFadeR.style.opacity=lg&&sl<mx-4?'1':'0'; }
+    if (cmdScrollL) cmdScrollL.style.opacity=lg&&sl>4?'1':'0';
+    if (cmdScrollR) cmdScrollR.style.opacity=lg&&sl<mx-4?'1':'0';
   }
 
-  cmdScroller.addEventListener('scroll', updateScrollFades, { passive: true });
-  cmdScrollL.addEventListener('click', () => { cmdScroller.scrollLeft -= 160; });
-  cmdScrollR.addEventListener('click', () => { cmdScroller.scrollLeft += 160; });
+  cmdScroller.addEventListener('scroll', updateFades, {passive:true});
+  if (cmdScrollL) cmdScrollL.addEventListener('click',()=>{cmdScroller.scrollLeft-=150;});
+  if (cmdScrollR) cmdScrollR.addEventListener('click',()=>{cmdScroller.scrollLeft+=150;});
 
   function goToStep(idx) {
-    clearTimeout(stepAutoTimer);
-    clearInterval(progTimer);
-    stepProgress = 0;
-    progressBar.style.width = '0%';
-
-    stepIdx = idx;
-    const step = STEPS[idx];
-
-    stepTitleEl.className = stepTitleEl.className.replace(/step-\w+/g, '').trim();
-    stepDescEl .className = stepDescEl .className.replace(/step-\w+/g, '').trim();
+    clearInterval(progTimer); stepProgress=0; progressBar.style.width='0%'; stepIdx=idx;
+    const s=STEPS[idx];
+    stepTitleEl.className=stepTitleEl.className.replace(/step-\w+/g,'').trim();
+    stepDescEl.className=stepDescEl.className.replace(/step-\w+/g,'').trim();
     void stepTitleEl.offsetWidth;
-    stepTitleEl.classList.add('step-enter');
-    stepDescEl .classList.add('step-enter');
-
-    stepTitleEl.textContent = step.title;
-    stepDescEl.innerHTML    = step.desc;
-
-    stepNumEl.textContent  = String(idx + 1).padStart(2, '0');
-    stepPrev.disabled      = idx === 0;
-    stepNext.disabled      = idx === STEPS.length - 1;
-
-    stepDots.forEach((d, i) => {
-      d.classList.toggle('active', i === idx);
-      d.style.background = i === idx ? '#22d3ee' : 'rgba(100,116,139,0.4)';
-      d.style.width      = i === idx ? '24px' : '8px';
-      d.setAttribute('aria-selected', i === idx ? 'true' : 'false');
-    });
-
-    const raw = STEPS[idx].cmd;
-    typeCommand(raw, raw.length > 40 ? 13 : 20);
-    copyCmd.onclick = () => copyToClipboard(raw, '', 'cmd');
-
-    if (!stepHovered && idx < STEPS.length - 1) startAutoAdvance();
+    stepTitleEl.classList.add('step-enter'); stepDescEl.classList.add('step-enter');
+    stepTitleEl.textContent=s.title; stepDescEl.innerHTML=s.desc;
+    stepNumEl.textContent=String(idx+1).padStart(2,'0');
+    stepPrev.disabled=idx===0; stepNext.disabled=idx===STEPS.length-1;
+    stepDots.forEach((d,i)=>{ d.classList.toggle('active',i===idx); d.style.background=i===idx?'#22d3ee':'rgba(100,116,139,0.38)'; d.style.width=i===idx?'24px':'8px'; d.setAttribute('aria-selected',i===idx?'true':'false'); });
+    if (isLowEnd) { cmdText.textContent=s.cmd; } else typeCmd(s.cmd, s.cmd.length>40?12:20);
+    copyCmd.onclick=()=>clip(s.cmd,'','cmd');
+    if (!stepHovered && idx<STEPS.length-1) startAuto();
   }
 
-  function startAutoAdvance() {
-    clearTimeout(stepAutoTimer);
-    clearInterval(progTimer);
-    stepProgress = 0;
-    const tick = 80;
-    progTimer = setInterval(() => {
+  function startAuto() {
+    clearInterval(progTimer); stepProgress=0;
+    progTimer=setInterval(()=>{
       if (stepHovered) return;
-      stepProgress += tick;
-      progressBar.style.width = Math.min(100, (stepProgress / STEP_AUTO_MS) * 100) + '%';
-      if (stepProgress >= STEP_AUTO_MS) {
-        clearInterval(progTimer);
-        if (stepIdx < STEPS.length - 1) goToStep(stepIdx + 1);
-      }
-    }, tick);
+      stepProgress+=80; progressBar.style.width=Math.min(100,(stepProgress/STEP_AUTO_MS)*100)+'%';
+      if (stepProgress>=STEP_AUTO_MS) { clearInterval(progTimer); if (stepIdx<STEPS.length-1) goToStep(stepIdx+1); }
+    },80);
   }
 
-  const setupSection = document.getElementById('setup');
-  setupSection.addEventListener('mouseenter', () => { stepHovered = true; clearInterval(progTimer); });
-  setupSection.addEventListener('mouseleave', () => {
-    stepHovered = false;
-    if (stepIdx < STEPS.length - 1) startAutoAdvance();
-  });
+  const setupSec=$('setup');
+  setupSec.addEventListener('mouseenter',()=>{stepHovered=true;clearInterval(progTimer);});
+  setupSec.addEventListener('mouseleave',()=>{stepHovered=false;if(stepIdx<STEPS.length-1)startAuto();});
+  stepPrev.addEventListener('click',()=>{if(stepIdx>0)goToStep(stepIdx-1);});
+  stepNext.addEventListener('click',()=>{if(stepIdx<STEPS.length-1)goToStep(stepIdx+1);});
+  stepDots.forEach((d,i)=>d.addEventListener('click',()=>goToStep(i)));
 
-  stepPrev.addEventListener('click', () => { if (stepIdx > 0) goToStep(stepIdx - 1); });
-  stepNext.addEventListener('click', () => { if (stepIdx < STEPS.length - 1) goToStep(stepIdx + 1); });
-  stepDots.forEach((d, i) => d.addEventListener('click', () => goToStep(i)));
-
-  async function fetchWithRetry(url, opts, retries) {
-    let delay = 1500;
-    for (let attempt = 0; attempt <= retries; attempt++) {
+  async function fetchRetry(url, sig, retries) {
+    let delay=1500;
+    for (let att=0; att<=retries; att++) {
       try {
-        const res = await fetch(url, opts);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res;
-      } catch (err) {
-        if (err.name === 'AbortError') throw err;
-        if (attempt === retries) throw err;
-        await new Promise(r => setTimeout(r, delay));
-        delay = Math.min(delay * 2, 10000);
-      }
+        const r=await fetch(url,{signal:sig,cache:'no-store',headers:{'Cache-Control':'no-cache,no-store,must-revalidate','Pragma':'no-cache'}});
+        if (!r.ok) throw new Error('HTTP '+r.status); return r;
+      } catch(e) { if (e.name==='AbortError') throw e; if (att===retries) throw e; await new Promise(r=>setTimeout(r,delay)); delay=Math.min(delay*2,12000); }
     }
   }
 
-  async function fetchPackages(isInitial) {
+  async function fetchPkgs(isInit) {
     if (fetchCtrl) fetchCtrl.abort();
-    fetchCtrl = new AbortController();
-
-    if (!isInitial) setSyncState('checking');
-
+    fetchCtrl=new AbortController();
+    if (!isInit) setSyncState('checking');
     try {
-      const res  = await fetchWithRetry(
-        './packages.json?t=' + Date.now(),
-        {
-          signal: fetchCtrl.signal,
-          cache:  'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma':        'no-cache'
-          }
-        },
-        MAX_RETRIES
-      );
-
-      const raw = await res.json();
+      const res=await fetchRetry('./packages.json?t='+Date.now(), fetchCtrl.signal, MAX_RETRIES);
+      const raw=await res.json();
       if (!Array.isArray(raw)) throw new Error('Invalid payload');
-
-      retryCount = 0;
-
-      const deduped  = deduplicatePackages(raw);
-      const sorted   = deduped.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      const newHash  = sorted.map(p => (p.name || '') + '@' + (p.version || '')).join('|');
-      const changed  = newHash !== currentHash;
-
-      if (changed) {
-        currentHash = newHash;
-        allPackages = Object.freeze(sorted);
-        updateStats(sorted.length);
-        applyFiltersAndRender(!isInitial);
-      }
-
-      setSyncState(changed && !isInitial ? 'updated' : 'active', sorted.length);
-
-      if (changed && !isInitial) {
-        showToast(
-          [{ t: 'Repo updated \u2014 ' }, { t: sorted.length + ' packages', bold: true }, { t: ' available' }],
-          'fa-sync-alt', '#818cf8'
-        );
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      console.warn('[VoidNexus] Sync error:', err.message);
-      setSyncState('error');
-      if (isInitial) {
-        grid.innerHTML = '';
-        const wrap = document.createElement('div');
-        wrap.className = 'col-span-full text-center py-24 glass rounded-3xl';
-        wrap.style.borderStyle = 'dashed';
-        wrap.setAttribute('role', 'status');
-        const ico = document.createElement('i');
-        ico.className = 'fas fa-satellite-dish text-5xl block mb-5 opacity-25';
-        ico.style.color = '#f87171';
-        ico.setAttribute('aria-hidden', 'true');
-        const h3 = document.createElement('h3');
-        h3.className = 'text-xl font-display font-bold text-slate-200 mb-2';
-        h3.textContent = 'Sync Error';
-        const p = document.createElement('p');
-        p.className = 'text-slate-400 mb-4 text-sm';
-        p.textContent = 'Could not load package data. Check your connection.';
-        const link = document.createElement('a');
-        link.href = 'https://github.com/Ackerman-00/void-nexus/actions';
-        link.target = '_blank'; link.rel = 'noopener noreferrer';
-        link.className = 'text-indigo-400 hover:underline text-sm';
-        link.textContent = 'Check GitHub Actions status';
-        wrap.appendChild(ico); wrap.appendChild(h3); wrap.appendChild(p); wrap.appendChild(link);
-        grid.appendChild(wrap);
+      const dd=dedup(raw), srt=dd.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+      const nh=srt.map(p=>(p.name||'')+'@'+(p.version||'')).join('|'), changed=nh!==curHash;
+      if (changed) { curHash=nh; allPkgs=Object.freeze(srt); updateStats(srt.length); applyAndRender(!isInit); if (!isInit) showToast([{t:'Repo updated \u2014 '},{t:srt.length+' packages',bold:true},{t:' available'}],'fa-sync-alt','#818cf8'); }
+      setSyncState(changed&&!isInit?'updated':'active', srt.length);
+      if (isInit && urlPkg) { const p=srt.find(x=>x.name===urlPkg); if (p) openModal(p); }
+    } catch(err) {
+      if (err.name==='AbortError') return;
+      console.warn('[VoidNexus] Sync error:',err.message); setSyncState('error');
+      if (isInit) {
+        grid.innerHTML='';
+        const w=document.createElement('div'); w.className='col-span-full text-center py-24 glass glass-blur rounded-3xl'; w.style.borderStyle='dashed'; w.setAttribute('role','status');
+        w.innerHTML='<i class="fas fa-satellite-dish text-5xl block mb-5 opacity-25" style="color:#f87171" aria-hidden="true"></i><h3 class="text-xl font-display font-bold mb-2" style="color:var(--text1)">Sync Error</h3><p class="text-sm mb-5" style="color:var(--text2)">Could not load package data.</p>';
+        const rb=document.createElement('button'); rb.className='glass glass-blur-sm ripple-host inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:border-indigo-400/50'; rb.style.color='var(--text2)'; rb.innerHTML='<i class="fas fa-rotate-right text-xs" aria-hidden="true"></i><span>Retry</span>';
+        rb.addEventListener('click',()=>{w.remove();showSkels(6);fetchPkgs(true);});
+        w.appendChild(rb); grid.appendChild(w);
       }
     }
   }
 
-  function startPolling() { stopPolling(); pollTimer = setInterval(() => fetchPackages(false), POLL_MS); }
-  function stopPolling()  { clearInterval(pollTimer); pollTimer = null; }
+  function startPoll() { stopPoll(); pollTimer=setInterval(()=>fetchPkgs(false),POLL_MS); }
+  function stopPoll()  { clearInterval(pollTimer); pollTimer=null; }
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      stopPolling();
-    } else {
-      fetchPackages(false);
-      startPolling();
-    }
-  });
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden)stopPoll(); else{fetchPkgs(false);startPoll();} });
+  syncRefreshBtn.addEventListener('click',()=>{stopPoll();fetchPkgs(false).then(startPoll);});
 
-  syncRefreshBtn.addEventListener('click', () => {
-    stopPolling();
-    fetchPackages(false).then(startPolling);
-  });
+  window.addEventListener('scroll',()=>{ if(scrollRafId)return; scrollRafId=requestAnimationFrame(()=>{ backToTop.classList.toggle('visible',window.scrollY>window.innerHeight*2); scrollRafId=null; }); },{passive:true});
+  backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
-  showSkeletons(6);
+  window.addEventListener('resize',()=>{ if(resizeRafId)return; resizeRafId=requestAnimationFrame(()=>{ resizeRafId=null; }); },{passive:true});
+
+  if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
+
+  showSkels(6);
   goToStep(0);
-  fetchPackages(true).then(() => {
-    startPolling();
-    if (urlParam) {
-      saveHistory(urlParam.trim());
-      applyFiltersAndRender(false);
-    }
-  });
-
-  searchInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && searchInput.value.trim()) {
-      saveHistory(searchInput.value.trim());
-      historyDrop.classList.add('hidden');
-    }
-  });
+  fetchPkgs(true).then(()=>{ startPoll(); if(urlSrch) applyAndRender(false); });
 
 })();
 </script>
