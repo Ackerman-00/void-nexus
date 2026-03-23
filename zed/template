@@ -6,6 +6,11 @@ archs="x86_64* aarch64*"
 build_style=cargo
 make_install_args="--path crates/zed"
 make_check_args="-- --test-threads 1"
+
+# Force cargo to vendor libgit2 during BOTH build and install phases
+make_build_env="LIBGIT2_NO_VENDOR=0"
+make_install_env="LIBGIT2_NO_VENDOR=0"
+
 hostmakedepends="
   clang18
   cmake
@@ -36,11 +41,6 @@ homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
 checksum=12c0385514ca0615eb9b8f4ec81b7a2e5ecc124f3b528130c663da7e07a08822
-
-pre_build() {
-	# Force cargo to compile its own embedded libgit2 because Void's system version is too old
-	export LIBGIT2_NO_VENDOR=0
-}
 
 post_install() {
 	vlicense ${wrksrc}/LICENSE-AGPL
