@@ -1,44 +1,53 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=2.2.5
+version=0.9.106
 revision=1
-archs="x86_64"
-nostrip=yes
+archs="x86_64* aarch64*"
 depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core"
-short_desc="Discord alternative for gaming communities"
+short_desc="Discord alternative for gaming communities and large online groups"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="custom"
 homepage="https://www.rootapp.com"
-distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}.AppImage"
-checksum=8896f6a96ffd8b88f7531db90a894f2e42b6f935da92ed04066b716368175f8d
+
+case "$XBPS_TARGET_MACHINE" in
+	x86_64*)
+		distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}-x86_64.AppImage"
+		checksum=b81d23935e1db25e5dc5f857944fe71e072e3895db1c0c8195bd178374737206
+		;;
+	aarch64*)
+		distfiles="https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage>Root-${version}-aarch64.AppImage"
+		checksum=a18f0e050a4c42f6e6eb77cfb7e54b531c9c13de37d7e64e353b8b10c8022fc8
+		;;
+esac
+
+nostrip=yes
 
 do_extract() {
-        local _appimage="${XBPS_SRCDISTDIR}/${pkgname}-${version}/Root-${version}.AppImage"
-        chmod +x "${_appimage}"
-        "${_appimage}" --appimage-extract
+	local _appimage="${XBPS_SRCDISTDIR}/${pkgname}-${version}/Root-${version}-*.AppImage"
+	chmod +x ${_appimage}
+	${_appimage} --appimage-extract
 }
 
 do_install() {
-        vmkdir opt/rootapp
-        cp -a squashfs-root/* "${DESTDIR}/opt/rootapp/"
-        chmod 755 "${DESTDIR}/opt/rootapp/AppRun"
+	vmkdir opt/rootapp
+	cp -a squashfs-root/* "${DESTDIR}/opt/rootapp/"
+	chmod 755 "${DESTDIR}/opt/rootapp/AppRun"
 
-        vmkdir usr/bin
-        ln -sf /opt/rootapp/AppRun "${DESTDIR}/usr/bin/rootapp"
+	vmkdir usr/bin
+	ln -sf /opt/rootapp/AppRun "${DESTDIR}/usr/bin/rootapp"
 
-        vinstall squashfs-root/Root.png 0644 usr/share/pixmaps rootapp.png
+	vinstall squashfs-root/Root.png 0644 usr/share/pixmaps rootapp.png
 
-        vmkdir usr/share/icons/hicolor/256x256/apps
-        cp squashfs-root/Root.png \
-                "${DESTDIR}/usr/share/icons/hicolor/256x256/apps/rootapp.png"
+	vmkdir usr/share/icons/hicolor/256x256/apps
+	cp squashfs-root/Root.png "${DESTDIR}/usr/share/icons/hicolor/256x256/apps/rootapp.png"
 
-        vmkdir usr/share/applications
-        cat > "${DESTDIR}/usr/share/applications/rootapp.desktop" <<-EOF
+	vmkdir usr/share/applications
+	cat > "${DESTDIR}/usr/share/applications/rootapp.desktop" <<-EOF
 [Desktop Entry]
 Type=Application
 Name=Root
-Comment=Discord alternative designed for gaming communities and large online groups
-Exec=rootapp %U
+Comment=Root App is a new Discord alternative, designed for gaming communities and large online groups
+Exec=env AVALONIA_PLATFORM=wayland rootapp %U
 Icon=rootapp
 Terminal=false
 StartupWMClass=Root
