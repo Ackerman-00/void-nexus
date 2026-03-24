@@ -36,7 +36,6 @@ jobs:
 
           FORCE_UPDATE="false"
           if [[ "$OLD_VERSION" == 202* ]]; then
-              echo "⚠️ Date version detected ($OLD_VERSION). Forcing repair."
               FORCE_UPDATE="true"
           fi
 
@@ -44,15 +43,10 @@ jobs:
             chmod +x Root_x64.AppImage
             ./Root_x64.AppImage --appimage-extract > /dev/null
 
-            STARTUP_LOG=$(./Root_x64.AppImage 2>&1 || true)
-            NEW_VERSION=$(echo "$STARTUP_LOG" | grep -ioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            NEW_VERSION=$(grep -ahrioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' squashfs-root/ 2>/dev/null | head -1)
 
             if [ -z "$NEW_VERSION" ]; then
-                NEW_VERSION=$(strings squashfs-root/Root 2>/dev/null | grep -ioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-            fi
-
-            if [ -z "$NEW_VERSION" ] && [ -f squashfs-root/package.json ]; then
-                NEW_VERSION=$(grep -oP '"version":\s*"\K[0-9]+\.[0-9]+\.[0-9]+' squashfs-root/package.json | head -1)
+                NEW_VERSION=$(./Root_x64.AppImage --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
             fi
 
             if [ -z "$NEW_VERSION" ]; then
