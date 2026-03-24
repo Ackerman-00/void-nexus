@@ -1,0 +1,53 @@
+name: RootApp Auto-Update
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-rootapp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Install libfuse2
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
+
+      - name: Check for Updates and Update Template
+        run: |
+          TEMPLATE_PATH="rootapp/template"
+
+          wget -qO Root_x64.AppImage "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
+          wget -qO Root_arm64.AppImage "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
+
+          NEW_HASH_X64=$(sha256sum Root_x64.AppImage | awk '{print $1}')
+          NEW_HASH_ARM64=$(sha256sum Root_arm64.AppImage | awk '{print $1}')
+
+          OLD_HASH_X64=$(grep -A 5 'x86_64\*)' $TEMPLATE_PATH | grep 'checksum=' | head -1 | cut -d= -f2 | tr -d ' ')
+          OLD_HASH_ARM64=$(grep -A 5 'aarch64\*)' $TEMPLATE_PATH | grep 'checksum=' | head -1 | cut -d= -f2 | tr -d ' ')
+
+          if [ "$OLD_HASH_X64" != "$NEW_HASH_X64" ] || [ "$OLD_HASH_ARM64" != "$NEW_HASH_ARM64" ]; then
+            chmod +x Root_x64.AppImage
+            ./Root_x64.AppImage --appimage-extract > /dev/null
+
+            NEW_VERSION=$(grep -i "^Version=" squashfs-root/*.desktop 2>/dev/null | head -1 | cut -d= -f2)
+            if [ -z "$NEW_VERSION" ]; then
+                NEW_VERSION=$(date +%Y.%m.%d)
+            fi
+
+            sed -i "s/^version=.*/version=$NEW_VERSION/" $TEMPLATE_PATH
+            sed -i "s/^revision=.*/revision=1/" $TEMPLATE_PATH
+            sed -i "s/$OLD_HASH_X64/$NEW_HASH_X64/" $TEMPLATE_PATH
+            sed -i "s/$OLD_HASH_ARM64/$NEW_HASH_ARM64/" $TEMPLATE_PATH
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add $TEMPLATE_PATH
+            git commit -m "auto-update: rootapp to $NEW_VERSION"
+            git push
+          fi
