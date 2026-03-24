@@ -11,8 +11,15 @@
                  connect-src 'self' https://ackerman-00.github.io;
                  img-src 'self' data: https:;
                  worker-src 'self' blob:;
-                 frame-ancestors 'none';">
+                 form-action 'none';
+                 base-uri 'self';
+                 object-src 'none';
+                 frame-ancestors 'none';
+                 upgrade-insecure-requests;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-XSS-Protection" content="0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
   <title>Void Nexus — Custom XBPS Package Repository for Void Linux</title>
   <meta name="description" content="Void Nexus: community-maintained custom XBPS repository for Void Linux. Bleeding-edge packages, automatically built and signed via GitHub Actions.">
   <meta name="keywords" content="void linux packages, xbps repository, custom xbps repo, void linux hyprland, xbps-install, void nexus">
@@ -30,12 +37,13 @@
   <meta property="og:image" content="https://ackerman-00.github.io/void-nexus/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
+  <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap&display=swap" rel="stylesheet">
 
   <script>
     tailwind.config = {
@@ -90,6 +98,7 @@
       --card-border: rgba(255,255,255,0.055);
       --cmd-bg:      rgba(2,5,15,0.7);
       --cmd-border:  rgba(99,102,241,0.22);
+      --code-color:  #a5b4fc;
       --mark-bg:     rgba(99,102,241,0.3);
       --mark-color:  #e0e7ff;
     }
@@ -105,6 +114,8 @@
       --card-border: rgba(0,0,0,0.07);
       --cmd-bg:      rgba(15,23,42,0.05);
       --cmd-border:  rgba(99,102,241,0.25);
+      --code-color:  #1e3a5f;
+      --filter-active-color: #4338ca;
       --mark-bg:     rgba(99,102,241,0.18);
       --mark-color:  #3730a3;
     }
@@ -159,10 +170,13 @@
       border: 1px solid var(--card-border);
       box-shadow: 0 4px 20px rgba(0,0,0,0.19), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.13);
       transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), border-color 0.22s ease, box-shadow 0.22s ease;
-      will-change: transform;
+      contain: layout style;
+      content-visibility: auto;
+      contain-intrinsic-size: 0 280px;
       backdrop-filter: blur(18px) saturate(140%);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
     }
+    @media (hover: hover) { .glass-card:hover { will-change: transform; } }
     html.light .glass-card { box-shadow: 0 3px 18px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9); }
     @media (hover: hover) {
       .glass-card:hover {
@@ -223,10 +237,15 @@
     .cmd-box {
       background: var(--cmd-bg);
       border: 1px solid var(--cmd-border);
-      box-shadow: 0 4px 18px rgba(0,0,0,0.28), inset 0 1px 0 rgba(var(--accent-rgb),0.08);
       cursor: default;
       user-select: none;
       -webkit-user-select: none;
+    }
+    html.light .cmd-box { background: rgba(235,240,255,0.7); border-color: rgba(99,102,241,0.2); }
+    html.light #cmdFadeL { background: linear-gradient(to right, rgba(235,240,255,1) 0%, transparent 100%) !important; }
+    html.light #cmdFadeR { background: linear-gradient(to left,  rgba(235,240,255,1) 0%, transparent 100%) !important; }
+    @media (hover: hover) {
+      #cmdScrollL:hover, #cmdScrollR:hover { opacity: 1 !important; background: rgba(20,30,60,0.92) !important; }
     }
     .cmd-fade-l { background: linear-gradient(to right, var(--cmd-bg) 0%, transparent 100%); pointer-events: none; }
     .cmd-fade-r { background: linear-gradient(to left,  var(--cmd-bg) 0%, transparent 100%); pointer-events: none; }
@@ -262,7 +281,7 @@
     }
     html.light .filter-pill { background: rgba(99,102,241,0.05); border-color: rgba(99,102,241,0.15); color: #475569; }
     @media (hover: hover) { .filter-pill:hover { border-color: rgba(var(--accent-rgb),0.38); background: rgba(var(--accent-rgb),0.09); } }
-    .filter-pill.active { background: rgba(var(--accent-rgb),0.16); border-color: rgba(var(--accent-rgb),0.5); color: #a5b4fc; box-shadow: 0 0 10px rgba(var(--accent-rgb),0.13); }
+    .filter-pill.active { background: rgba(var(--accent-rgb),0.16); border-color: rgba(var(--accent-rgb),0.5); color: var(--filter-active-color, #a5b4fc); box-shadow: 0 0 10px rgba(var(--accent-rgb),0.13); }
     html.light .filter-pill.active { color: #4338ca; }
 
     #searchInput:focus { box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.38), 0 6px 20px rgba(var(--accent-rgb),0.07); outline: none; }
@@ -470,13 +489,31 @@
       </div>
     </div>
     <p id="stepDesc" class="text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed step-enter" style="color:var(--text2);animation-delay:20ms"></p>
-    <div style="position:relative;margin-bottom:12px;min-width:0">
-      <div id="cmdFadeL" style="position:absolute;left:0;top:0;bottom:0;width:24px;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.2s;background:linear-gradient(to right,var(--cmd-bg) 0%,transparent 100%)"></div>
-      <div id="cmdFadeR" style="position:absolute;right:0;top:0;bottom:0;width:24px;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.2s;background:linear-gradient(to left,var(--cmd-bg) 0%,transparent 100%)"></div>
-      <div class="cmd-box glass-blur-sm hide-scroll scroll-touch" id="cmdScroller"
-           style="border-radius:0.75rem;padding:12px 14px;overflow-x:auto;width:100%;max-width:100%;box-sizing:border-box;-webkit-overflow-scrolling:touch"
-           aria-label="Installation command">
-        <code id="cmdText" style="font-family:'JetBrains Mono',ui-monospace,monospace;white-space:nowrap;display:block;color:#a5b4fc;font-size:clamp(10px,2.6vw,13px);cursor:default;user-select:all;-webkit-user-select:all"></code>
+    <div style="margin-bottom:12px;min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">
+        <button id="cmdScrollL"
+                style="display:none;flex-shrink:0;width:32px;height:42px;border-radius:8px;
+                       align-items:center;justify-content:center;cursor:pointer;
+                       opacity:0;transition:opacity 0.18s;color:var(--text2)"
+                class="glass glass-blur-sm" aria-label="Scroll command left">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div style="position:relative;flex:1 1 0%;min-width:0;overflow:hidden">
+          <div id="cmdFadeL" style="position:absolute;left:0;top:0;bottom:0;width:24px;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.2s;background:linear-gradient(to right,var(--cmd-bg) 0%,transparent 100%)"></div>
+          <div id="cmdFadeR" style="position:absolute;right:0;top:0;bottom:0;width:24px;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.2s;background:linear-gradient(to left,var(--cmd-bg) 0%,transparent 100%)"></div>
+          <div class="cmd-box glass-blur-sm hide-scroll" id="cmdScroller"
+               style="border-radius:0.75rem;padding:11px 14px;overflow-x:auto;width:100%;max-width:100%;box-sizing:border-box;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain"
+               aria-label="Installation command">
+            <code id="cmdText" style="font-family:'JetBrains Mono',ui-monospace,monospace;white-space:nowrap;display:block;color:var(--code-color);font-size:clamp(10px,2.6vw,13px);cursor:default;user-select:all;-webkit-user-select:all"></code>
+          </div>
+        </div>
+        <button id="cmdScrollR"
+                style="display:none;flex-shrink:0;width:32px;height:42px;border-radius:8px;
+                       align-items:center;justify-content:center;cursor:pointer;
+                       opacity:0;transition:opacity 0.18s;color:var(--text2)"
+                class="glass glass-blur-sm" aria-label="Scroll command right">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
       </div>
       <p id="cmdScrollHint" style="text-align:center;font-size:11px;margin-top:5px;color:var(--text3);opacity:0;transition:opacity 0.3s;pointer-events:none;letter-spacing:0.02em">swipe to scroll ←→</p>
     </div>
@@ -527,7 +564,7 @@
 
 <section style="position:relative;z-index:10;width:100%;max-width:80rem;margin:2rem auto 1.25rem;padding:0 1rem;box-sizing:border-box" aria-label="Package search and filters">
   <div style="display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin-bottom:1rem">
-    <div class="search-wrap" style="position:relative;flex:1 1 0%;min-width:0;box-sizing:border-box">
+    <div class="search-wrap" style="position:relative;flex:1 1 0%;min-width:0;max-width:560px;box-sizing:border-box">
       <span id="searchIconWrap" class="search-icon" style="position:absolute;top:0;bottom:0;left:0;width:44px;display:flex;align-items:center;justify-content:center;z-index:2;color:var(--text3);cursor:text;pointer-events:auto">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;flex-shrink:0" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       </span>
@@ -920,7 +957,7 @@
         '<div class="mt-auto z-10 pt-3.5 flex gap-2" style="border-top:1px solid var(--border)">'+
           '<button class="install-btn ripple-host flex-grow flex items-center justify-between py-2.5 px-4 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50" style="color:var(--text2)" aria-label="Copy install command">'+
             '<span class="flex items-center gap-2"><i class="fas fa-terminal ti text-xs" aria-hidden="true"></i><span>Install</span></span>'+
-            '<i class="far fa-copy ci text-xs" aria-hidden="true"></i>'+
+            '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>'+
           '</button>'+
           '<button class="details-btn glass glass-blur-sm w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0" style="color:var(--text3)" aria-label="View package details">'+
             '<i class="fas fa-circle-info text-xs" aria-hidden="true"></i>'+
@@ -965,7 +1002,7 @@
     const frag=document.createDocumentFragment();
     const p=document.createElement('p'); p.className='text-sm leading-relaxed'; p.style.color='var(--text2)'; p.textContent=pkg.description||'Custom compiled Void Linux package.'; frag.appendChild(p);
     const cw=document.createElement('div');
-    cw.innerHTML='<div class="text-xs font-medium uppercase tracking-wider mb-2" style="color:var(--text3)">Install command</div><div class="cmd-box glass-blur-sm rounded-xl px-4 py-3 flex items-center gap-3"><code class="mc font-mono text-sm flex-grow overflow-x-auto hide-scroll whitespace-nowrap scroll-touch" style="color:#a5b4fc"></code><button class="mb glass glass-blur-sm ripple-host flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[36px] hover:border-indigo-400/50 flex-shrink-0" style="color:var(--text2)" aria-label="Copy"><i class="far fa-copy text-xs" aria-hidden="true"></i><span>Copy</span></button></div>';
+    cw.innerHTML='<div class="text-xs font-medium uppercase tracking-wider mb-2" style="color:var(--text3)">Install command</div><div class="cmd-box glass-blur-sm rounded-xl px-4 py-3 flex items-center gap-3"><code class="mc font-mono text-sm flex-grow overflow-x-auto hide-scroll whitespace-nowrap scroll-touch" style="color:var(--code-color)"></code><button class="mb glass glass-blur-sm ripple-host flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[36px] hover:border-indigo-400/50 flex-shrink-0" style="color:var(--text2)" aria-label="Copy"><i class="far fa-copy text-xs" aria-hidden="true"></i><span>Copy</span></button></div>';
     cw.querySelector('.mc').textContent=cmd;
     cw.querySelector('.mb').addEventListener('click', () => clip(cmd, pkg.name||'', 'install'));
     frag.appendChild(cw);
@@ -1174,7 +1211,12 @@
     syncPing.style.background=col; syncCore.style.background=col;
     if (state==='checking') {
       syncPing.style.display='none'; syncCore.style.background='transparent';
-      syncCore.innerHTML='<i class="fas fa-circle-notch fa-spin" style="font-size:8px;color:'+col+'" aria-hidden="true"></i>';
+      syncCore.textContent='';
+      const spinner = document.createElement('i');
+      spinner.className = 'fas fa-circle-notch fa-spin';
+      spinner.setAttribute('aria-hidden','true');
+      spinner.style.cssText = 'font-size:8px;color:'+col;
+      syncCore.appendChild(spinner);
       syncLabel.textContent='Checking\u2026';
     } else {
       syncPing.style.display=''; syncCore.innerHTML=''; syncCore.className='relative inline-flex rounded-full h-2 w-2'; syncCore.style.background=col;
@@ -1212,21 +1254,32 @@
   }
 
   const cmdScrollHint = $('cmdScrollHint');
+  const isPointer = window.matchMedia('(pointer:fine)').matches;
 
   function updateFades() {
     const sl = cmdScroller.scrollLeft;
     const mx = cmdScroller.scrollWidth - cmdScroller.clientWidth;
     const hasScroll = mx > 4;
-    if (cmdFadeL) cmdFadeL.style.opacity = hasScroll && sl > 4 ? '1' : '0';
-    if (cmdFadeR) cmdFadeR.style.opacity = hasScroll && sl < mx - 4 ? '1' : '0';
-    if (cmdScrollHint) cmdScrollHint.style.opacity = hasScroll ? '1' : '0';
-    if (cmdScrollL) cmdScrollL.style.opacity = hasScroll && sl > 4 ? '1' : '0';
-    if (cmdScrollR) cmdScrollR.style.opacity = hasScroll && sl < mx - 4 ? '1' : '0';
+    const scrolledLeft  = hasScroll && sl > 4;
+    const scrolledRight = hasScroll && sl < mx - 4;
+
+    if (cmdFadeL) cmdFadeL.style.opacity = scrolledLeft  ? '1' : '0';
+    if (cmdFadeR) cmdFadeR.style.opacity = scrolledRight ? '1' : '0';
+
+    if (isPointer) {
+      if (cmdScrollL) { cmdScrollL.style.display = hasScroll ? 'flex' : 'none'; cmdScrollL.style.opacity = scrolledLeft  ? '1' : '0.35'; }
+      if (cmdScrollR) { cmdScrollR.style.display = hasScroll ? 'flex' : 'none'; cmdScrollR.style.opacity = scrolledRight ? '1' : '0.35'; }
+      if (cmdScrollHint) cmdScrollHint.style.opacity = '0';
+    } else {
+      if (cmdScrollL) cmdScrollL.style.display = 'none';
+      if (cmdScrollR) cmdScrollR.style.display = 'none';
+      if (cmdScrollHint) cmdScrollHint.style.opacity = hasScroll ? '1' : '0';
+    }
   }
 
-  cmdScroller.addEventListener('scroll', updateFades, {passive:true});
-  if (cmdScrollL) cmdScrollL.addEventListener('click',()=>{cmdScroller.scrollLeft-=150;});
-  if (cmdScrollR) cmdScrollR.addEventListener('click',()=>{cmdScroller.scrollLeft+=150;});
+  cmdScroller.addEventListener('scroll', updateFades, { passive: true });
+  if (cmdScrollL) cmdScrollL.addEventListener('click', () => { cmdScroller.scrollLeft -= 160; });
+  if (cmdScrollR) cmdScrollR.addEventListener('click', () => { cmdScroller.scrollLeft += 160; });
 
   function goToStep(idx) {
     clearInterval(progTimer); stepProgress=0; progressBar.style.width='0%'; stepIdx=idx;
