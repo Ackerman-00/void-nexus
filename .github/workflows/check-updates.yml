@@ -183,6 +183,7 @@ jobs:
 
           templates = []
           for d in os.listdir('.'):
+              if d == 'rootapp': continue
               tpath = os.path.join(d, 'template')
               if os.path.isdir(d) and os.path.isfile(tpath):
                   templates.append(Path(tpath))
@@ -275,7 +276,7 @@ jobs:
               if checksum_changed and not new_ver and not new_sha:
                   sniffed_ver = None
                   with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp: tmp_path = tmp.name
-                  if fetch_file(resolved_urls[0], tmp_path): sniffed_ver = get_appimage_version(tmp_path)
+                  if fetch_file(resolved_urls, tmp_path): sniffed_ver = get_appimage_version(tmp_path)
                   try: os.unlink(tmp_path)
                   except OSError: pass
                   if sniffed_ver:
@@ -351,7 +352,6 @@ jobs:
             exit 0
           fi
 
-          # Hyprland dependency chain — must build in this exact order
           PRIORITY_ORDER=(
             "hyprutils"
             "hyprlang"
@@ -377,14 +377,12 @@ jobs:
           CHANGED=$(cat changed_packages.txt)
           ORDERED=()
 
-          # Add priority packages first, in order, only if they changed
           for pkg in "${PRIORITY_ORDER[@]}"; do
             if echo "$CHANGED" | grep -qx "$pkg"; then
               ORDERED+=("$pkg")
             fi
           done
 
-          # Then add everything else that isn't in the priority list
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             already=false
@@ -396,7 +394,6 @@ jobs:
             fi
           done < changed_packages.txt
 
-          # Build in correct order — exit-status halts chain if a dependency fails
           for pkg in "${ORDERED[@]}"; do
             echo "🚀 Dispatching build for $pkg"
             before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -410,7 +407,7 @@ jobs:
             run_id=$(gh run list \
               --workflow="${WORKFLOW_NAME}" \
               --json databaseId,createdAt \
-              --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | .[0].databaseId // empty")
+              --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | ..databaseId // empty")
 
             if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then
               echo "  Watching run ${run_id}"
