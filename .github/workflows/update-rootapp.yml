@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
 
     steps:
       - name: Checkout Repository
@@ -19,6 +20,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libfuse2
 
       - name: Check for Updates and Update Template
+        id: update
         run: |
           TEMPLATE_PATH="rootapp/template"
 
@@ -50,4 +52,35 @@ jobs:
             git add $TEMPLATE_PATH
             git commit -m "auto-update: rootapp to $NEW_VERSION"
             git push
+
+            echo "updates_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "updates_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger build
+        if: steps.update.outputs.updates_found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.REPO_PAT }}
+        run: |
+          set -e
+          WORKFLOW_NAME="Build and Deploy Custom XBPS"
+          
+          before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          gh workflow run "${WORKFLOW_NAME}" \
+            --ref "${GITHUB_REF_NAME}" \
+            -f package_name="rootapp"
+
+          sleep 8
+
+          run_id=$(gh run list \
+            --workflow="${WORKFLOW_NAME}" \
+            --json databaseId,createdAt \
+            --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | ..databaseId // empty")
+
+          if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then
+            gh run watch "${run_id}" --exit-status
+          else
+            sleep 90
           fi
