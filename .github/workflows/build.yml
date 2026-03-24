@@ -13,6 +13,7 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
   NODE_OPTIONS: '--no-warnings'
 
 jobs:
@@ -49,10 +50,6 @@ jobs:
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
-          
-          # --- FIRE THE VOID POLICE ---
-          # This script strictly crashes builds if it detects automated library version bumps. 
-          # We delete it so the Action can build new versions without throwing an error.
           rm -f common/hooks/pre-pkg/99-pkglint.sh
 
       - name: Cache repository
@@ -63,7 +60,7 @@ jobs:
           restore-keys: public-x86_64-
 
       - name: Checkout custom templates
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           path: custom-templates-temp
 
@@ -80,7 +77,6 @@ jobs:
       - name: Restore existing repository
         run: |
           if [ -f public/x86_64/x86_64-repodata ]; then
-            echo "Cache hit — skipping download"
             exit 0
           fi
           PAGES_URL="https://ackerman-00.github.io/void-nexus"
@@ -102,17 +98,12 @@ jobs:
       - name: Build self-healing shlibs map
         run: |
           if ! ls public/x86_64/*.xbps 1>/dev/null 2>&1; then
-            echo "No existing packages — skipping shlibs map"
             exit 0
           fi
-          echo "Building shlibs map from existing packages..."
           
-          # Only remove lines we're about to re-add (preserve any manual entries)
           TMP_SHLIBS=$(mktemp)
           for file in public/x86_64/*.xbps; do
             fname=$(basename "$file")
-            
-            # Parse pkgver safely from filename
             pkg_full=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
             REPO_DIR="$PWD/public/x86_64"
             
@@ -125,7 +116,6 @@ jobs:
             done
           done
           
-          # Merge: keep existing manual shlibs entries, append new ones, deduplicate
           if [ -f common/shlibs ]; then
             cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
           else
@@ -133,8 +123,6 @@ jobs:
           fi
           
           mv /tmp/merged_shlibs common/shlibs
-          echo "Shlibs map ready:"
-          cat common/shlibs
           rm -f "$TMP_SHLIBS"
 
       - name: Build package
@@ -146,21 +134,23 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
 
-          echo "=== FILTERING PACKAGES ==="
           mkdir -p public/clean_x86_64
           
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
-            [ "$pkg_name" = ".github" ] && continue
-            [ "$pkg_name" = "README.md" ] && continue
-            [ "$pkg_name" = "index.html" ] && continue
+            [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             
-            find hostdir/binpkgs public/x86_64 -maxdepth 1 -type f -name "${pkg_name}-[0-9]*.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
+            tmpl="custom-templates-temp/$pkg_name/template"
+            if [ -f "$tmpl" ]; then
+              ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+              rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+              
+              find hostdir/binpkgs public/x86_64 -type f -name "${pkg_name}*-${ver}_${rev}.x86_64.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
+            fi
           done
 
           rm -rf public/x86_64
           mv public/clean_x86_64 public/x86_64
 
-          echo "=== SIGNING REPOSITORY ==="
           cd public/x86_64
           
           if ls *.xbps 1>/dev/null 2>&1; then
@@ -169,7 +159,6 @@ jobs:
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
           fi
 
-          echo "=== GENERATING UI DATA ==="
           cd ..
           if [ -f ../custom-templates-temp/index.html ]; then
             cp ../custom-templates-temp/index.html ./
@@ -181,25 +170,15 @@ jobs:
           for file in x86_64/*.xbps; do
             [ -e "$file" ] || continue
             
-            fname=$(basename "$file")
-            pkg_full=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
+            name=$(xbps-query -p pkgname -f "$file" 2>/dev/null | tr -d '\n\r')
+            pkgver=$(xbps-query -p pkgver -f "$file" 2>/dev/null | tr -d '\n\r')
+            ver=${pkgver#$name-}
+            desc=$(xbps-query -p short_desc -f "$file" 2>/dev/null | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr -d '\n\r')
             
-            name=$(xbps-query --repository=./x86_64 -p pkgname "$pkg_full" 2>/dev/null || echo "")
-            name=$(echo "$name" | tr -d '\n\r')
             if [ -z "$name" ]; then
-              name=$(echo "$pkg_full" | sed -r 's/-[0-9].*//')
-            fi
-            
-            ver=$(xbps-query --repository=./x86_64 -p version "$pkg_full" 2>/dev/null || echo "")
-            ver=$(echo "$ver" | sed "s/^$name-//" | tr -d '\n\r')
-            if [ -z "$ver" ]; then
-              ver=$(echo "$pkg_full" | sed -r "s/^$name-//")
-            fi
-            
-            desc=$(xbps-query --repository=./x86_64 -p short_desc "$pkg_full" 2>/dev/null || echo "")
-            # THE JSON ESCAPE FIX: Backslashes first, then quotes!
-            desc=$(echo "$desc" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr -d '\n\r')
-            if [ -z "$desc" ]; then
+              fname=$(basename "$file")
+              name=$(echo "$fname" | sed -r 's/-[0-9].*//')
+              ver=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//' | sed -r "s/^$name-//")
               desc="Custom compiled Void package"
             fi
             
@@ -208,9 +187,6 @@ jobs:
             echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
           done
           echo "]" >> packages.json
-
-          echo "=== JSON GENERATED ==="
-          cat packages.json
 
           rm -f /tmp/private.pem
 
@@ -229,6 +205,9 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
