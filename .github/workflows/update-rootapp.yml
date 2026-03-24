@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libfuse2 binutils
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
 
       - name: Check for Updates and Update Template
         id: update
@@ -37,19 +37,34 @@ jobs:
             chmod +x Root_x64.AppImage
             ./Root_x64.AppImage --appimage-extract > /dev/null
 
-            NEW_VERSION=$(grep -i "^X-AppImage-Version=" squashfs-root/*.desktop 2>/dev/null | head -1 | cut -d= -f2)
-            
+            NEW_VERSION=""
+
+            # Method 1: Capture the console output. (App crashes without a display, but prints the banner first)
+            STARTUP_LOG=$(./Root_x64.AppImage 2>&1 || true)
+            NEW_VERSION=$(echo "$STARTUP_LOG" | grep -ioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+
+            # Method 2: Extract binary strings if the console log failed
             if [ -z "$NEW_VERSION" ]; then
-                NEW_VERSION=$(strings squashfs-root/Root 2>/dev/null | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+                NEW_VERSION=$(strings squashfs-root/Root* 2>/dev/null | grep -ioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
             fi
 
+            # Method 3: Standard AppImage metadata
             if [ -z "$NEW_VERSION" ]; then
-                NEW_VERSION=$(grep -roP '\b[0-9]+\.[0-9]+\.[0-9]+\b' squashfs-root/ 2>/dev/null | grep -vE '^(1\.0|1\.0\.0|0\.0\.0)$' | head -1 | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')
+                NEW_VERSION=$(grep -i "^X-AppImage-Version=" squashfs-root/*.desktop 2>/dev/null | head -1 | cut -d= -f2)
             fi
-            
+
+            # Method 4: Aggressive fallback searching the main binary for a raw SemVer string
             if [ -z "$NEW_VERSION" ]; then
-                NEW_VERSION=$(date +%Y.%m.%d)
+                NEW_VERSION=$(strings squashfs-root/Root 2>/dev/null | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vE '^(0\.0\.0|1\.0\.0)$' | head -1)
             fi
+
+            # ABORT if the version cannot be found. Do NOT use dates.
+            if [ -z "$NEW_VERSION" ]; then
+                echo "❌ CRITICAL: Could not extract the real version from the AppImage!"
+                exit 1
+            fi
+
+            echo "✅ Extracted Version: $NEW_VERSION"
 
             sed -i "s/^version=.*/version=$NEW_VERSION/" $TEMPLATE_PATH
             sed -i "s/^revision=.*/revision=1/" $TEMPLATE_PATH
