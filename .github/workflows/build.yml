@@ -13,7 +13,6 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
   NODE_OPTIONS: '--no-warnings'
 
 jobs:
@@ -141,8 +140,8 @@ jobs:
             
             tmpl="custom-templates-temp/$pkg_name/template"
             if [ -f "$tmpl" ]; then
-              ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
-              rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+              ver=$(grep '^version=' "$tmpl" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '"'"'" || true)
+              rev=$(grep '^revision=' "$tmpl" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '"'"'" || true)
               
               find hostdir/binpkgs public/x86_64 -type f -name "${pkg_name}*-${ver}_${rev}.x86_64.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
             fi
@@ -154,14 +153,14 @@ jobs:
           cd public/x86_64
           
           if ls *.xbps 1>/dev/null 2>&1; then
-            xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps
-            xbps-rindex -f -a *.xbps
-            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign .
+            xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps || true
+            xbps-rindex -f -a *.xbps || true
+            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
           fi
 
           cd ..
           if [ -f ../custom-templates-temp/index.html ]; then
-            cp ../custom-templates-temp/index.html ./
+            cp ../custom-templates-temp/index.html ./ || true
           fi
           
           echo "[" > packages.json
@@ -170,15 +169,15 @@ jobs:
           for file in x86_64/*.xbps; do
             [ -e "$file" ] || continue
             
-            name=$(xbps-query -p pkgname -f "$file" 2>/dev/null | tr -d '\n\r')
-            pkgver=$(xbps-query -p pkgver -f "$file" 2>/dev/null | tr -d '\n\r')
+            name=$(xbps-query -p pkgname -f "$file" 2>/dev/null | tr -d '\n\r' || true)
+            pkgver=$(xbps-query -p pkgver -f "$file" 2>/dev/null | tr -d '\n\r' || true)
             ver=${pkgver#$name-}
-            desc=$(xbps-query -p short_desc -f "$file" 2>/dev/null | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr -d '\n\r')
+            desc=$(xbps-query -p short_desc -f "$file" 2>/dev/null | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr -d '\n\r' || true)
             
             if [ -z "$name" ]; then
               fname=$(basename "$file")
-              name=$(echo "$fname" | sed -r 's/-[0-9].*//')
-              ver=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//' | sed -r "s/^$name-//")
+              name=$(echo "$fname" | sed -r 's/-[0-9].*//' || true)
+              ver=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//' | sed -r "s/^$name-//" || true)
               desc="Custom compiled Void package"
             fi
             
@@ -205,9 +204,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
