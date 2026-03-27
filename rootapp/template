@@ -1,6 +1,6 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=0.9.107
+version=0.9.108
 revision=1
 archs="x86_64* aarch64*"
 depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core"
@@ -12,11 +12,11 @@ homepage="https://www.rootapp.com"
 case "$XBPS_TARGET_MACHINE" in
 	x86_64*)
 		distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}-x86_64.AppImage"
-		checksum=8896f6a96ffd8b88f7531db90a894f2e42b6f935da92ed04066b716368175f8d
+		checksum=450bd26e4732f4e1e3f467ea9f15cc73555f3355d423e34ef9aa7e33de81b403
 		;;
 	aarch64*)
 		distfiles="https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage>Root-${version}-aarch64.AppImage"
-		checksum=9078466316a52d15579f080d0ff4e04131a1d811d51f31f6c63ac2eff371648c
+		checksum=3baf3f9875b3946966691981f41400fadf683e8e849dac1fecf80a1f38a1c43e
 		;;
 esac
 
