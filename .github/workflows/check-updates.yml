@@ -323,7 +323,7 @@ jobs:
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin HEAD:"${GITHUB_REF_NAME}"
 
-      - name: Trigger builds asynchronously
+      - name: Trigger Relay Race (Strict Sequential)
         if: steps.scan.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
@@ -380,11 +380,11 @@ jobs:
               ORDERED+=("$pkg")
             fi
           done < changed_packages.txt
-
-          for pkg in "${ORDERED[@]}"; do
-            echo "Dispatching build for $pkg"
-            gh workflow run "${WORKFLOW_NAME}" \
-              --ref "${GITHUB_REF_NAME}" \
-              -f package_name="${pkg}"
-            sleep 5
-          done
+          
+          # Pass the full array as a single string to start the chain
+          LIST="${ORDERED[*]}"
+          echo "Starting relay race with: $LIST"
+          
+          gh workflow run "${WORKFLOW_NAME}" \
+            --ref "${GITHUB_REF_NAME}" \
+            -f package_list="$LIST"
