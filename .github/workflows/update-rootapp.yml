@@ -84,7 +84,7 @@ jobs:
             echo "updates_found=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Trigger build asynchronously
+      - name: Trigger Relay Race
         if: steps.update.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
@@ -94,4 +94,4 @@ jobs:
           echo "Dispatching build for rootapp"
           gh workflow run "${WORKFLOW_NAME}" \
             --ref "${GITHUB_REF_NAME}" \
-            -f package_name="rootapp"
+            -f package_list="rootapp"
