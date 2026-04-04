@@ -44,7 +44,6 @@ jobs:
           import os, re, requests, subprocess, hashlib, datetime, tempfile, stat
           from packaging import version as pkg_version
           from pathlib import Path
-
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
               '$GNOME_SITE':          'https://download.gnome.org/sources',
@@ -315,7 +314,6 @@ jobs:
           set -e
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           if [ ! -s changed_files.txt ]; then
             echo "No changed files list found."
             exit 0
@@ -334,7 +332,7 @@ jobs:
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin HEAD:"${GITHUB_REF_NAME}"
 
-      - name: Trigger builds sequentially
+      - name: Trigger builds asynchronously (Fire and Forget)
         if: steps.scan.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
@@ -395,25 +393,12 @@ jobs:
           done < changed_packages.txt
 
           for pkg in "${ORDERED[@]}"; do
-            echo "🚀 Dispatching build for $pkg"
-            before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
+            echo "Dispatching build for $pkg"
             gh workflow run "${WORKFLOW_NAME}" \
               --ref "${GITHUB_REF_NAME}" \
               -f package_name="${pkg}"
-
-            sleep 8
-
-            run_id=$(gh run list \
-              --workflow="${WORKFLOW_NAME}" \
-              --json databaseId,createdAt \
-              --jq "[.[] | select(.createdAt >= \"${before_ts}\")] | ..databaseId // empty")
-
-            if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then
-              echo "  Watching run ${run_id}"
-              gh run watch "${run_id}" --exit-status
-            else
-              echo "  ⚠️ Could not get run ID — waiting 90s"
-              sleep 90
-            fi
+            
+            sleep 5
           done
+          
+          echo "All builds dispatched. GitHub Actions will queue and process them automatically."
