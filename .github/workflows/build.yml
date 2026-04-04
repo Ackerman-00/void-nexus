@@ -98,8 +98,7 @@ jobs:
         run: |
           if ! ls public/x86_64/*.xbps 1>/dev/null 2>&1; then
             exit 0
-          fi
-          
+          fi          
           TMP_SHLIBS=$(mktemp)
           for file in public/x86_64/*.xbps; do
             fname=$(basename "$file")
@@ -132,7 +131,6 @@ jobs:
           set -e
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
-
           mkdir -p public/clean_x86_64
           
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
