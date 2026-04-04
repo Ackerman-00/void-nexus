@@ -23,7 +23,6 @@ jobs:
         id: update
         run: |
           TEMPLATE_PATH="rootapp/template"
-
           wget -qO Root_x64.AppImage "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
           wget -qO Root_arm64.AppImage "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
 
@@ -65,7 +64,7 @@ jobs:
             fi
 
             if [ -z "$NEW_VERSION" ]; then
-                echo "❌ CRITICAL: Could not find 'Root Version: X.Y.Z'."
+                echo "CRITICAL: Could not find 'Root Version: X.Y.Z'."
                 cat startup.log || true
                 exit 1
             fi
@@ -86,29 +85,14 @@ jobs:
             echo "updates_found=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Trigger build
+      - name: Trigger build asynchronously
         if: steps.update.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           set -e
-          WORKFLOW_NAME="Build and Deploy Custom XBPS"
-          
-          before_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
+          WORKFLOW_NAME="Build and Deploy Custom XBPS"          
+          echo "Dispatching build for rootapp"
           gh workflow run "${WORKFLOW_NAME}" \
             --ref "${GITHUB_REF_NAME}" \
             -f package_name="rootapp"
-
-          sleep 8
-
-          run_id=$(gh run list \
-            --workflow="${WORKFLOW_NAME}" \
-            --json databaseId,createdAt \
-            -q ".[] | select(.createdAt >= \"${before_ts}\") | .databaseId" | head -n 1)
-
-          if [ -n "${run_id}" ]; then
-            gh run watch "${run_id}" --exit-status
-          else
-            sleep 90
-          fi
