@@ -86,37 +86,46 @@ jobs:
             set -o pipefail || true
           fi
 
-      - name: Build self-healing shlibs map
+      - name: Check if Binary Already Exists (Zero-Compile)
+        id: check_bin
         run: |
-          if ! ls public/x86_64/*.xbps 1>/dev/null 2>&1; then
-            exit 0
-          fi          
-          TMP_SHLIBS=$(mktemp)
-          for file in public/x86_64/*.xbps; do
-            fname=$(basename "$file")
-            pkg_full=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
-            REPO_DIR="$PWD/public/x86_64"
-            
-            PKGVER=$(xbps-query --repository="$REPO_DIR" -p pkgver "$pkg_full" 2>/dev/null || echo "")
-            [ -z "$PKGVER" ] && continue
-            
-            SHLIBS=$(xbps-query --repository="$REPO_DIR" -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
-            for so in $SHLIBS; do
-              echo "$so $PKGVER" >> "$TMP_SHLIBS"
-            done
-          done
-          
-          if [ -f common/shlibs ]; then
-            cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
+          TARGET="${{ env.TARGET_PKG }}"
+          TMPL="srcpkgs/$TARGET/template"
+          if [ -f "$TMPL" ]; then
+            VER=$(grep '^version=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            REV=$(grep '^revision=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
+            if [ -f "public/x86_64/${EXPECTED_PKG}" ]; then
+              echo "skip_build=true" >> $GITHUB_OUTPUT
+              mkdir -p hostdir/binpkgs
+              cp "public/x86_64/${EXPECTED_PKG}" hostdir/binpkgs/
+            else
+              echo "skip_build=false" >> $GITHUB_OUTPUT
+            fi
           else
-            sort -u "$TMP_SHLIBS" > /tmp/merged_shlibs
+            echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
-          
-          mv /tmp/merged_shlibs common/shlibs
-          rm -f "$TMP_SHLIBS"
 
       - name: Build package
+        if: steps.check_bin.outputs.skip_build != 'true'
         run: ./xbps-src pkg "${{ env.TARGET_PKG }}"
+
+      - name: Build self-healing shlibs map
+        run: |
+          TMP_SHLIBS=$(mktemp)
+          for folder in public/x86_64 hostdir/binpkgs; do
+            [ ! -d "$folder" ] && continue
+            for file in $folder/*.xbps; do
+              [ -e "$file" ] || continue
+              pkg_full=$(basename "$file" | sed -E 's/\.[^.]+\.xbps$//')
+              PKGVER=$(xbps-query -R "$folder" -p pkgver "$pkg_full" 2>/dev/null || echo "")
+              [ -z "$PKGVER" ] && continue
+              SHLIBS=$(xbps-query -R "$folder" -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
+              for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
+            done
+          done
+          [ -f common/shlibs ] && cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged || sort -u "$TMP_SHLIBS" > /tmp/merged
+          mv /tmp/merged common/shlibs
 
       - name: Sign and index repository
         run: |
@@ -124,28 +133,20 @@ jobs:
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
           mkdir -p public/clean_x86_64
-          
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
-            
             tmpl="custom-templates-temp/$pkg_name/template"
-            if [ -f "$tmpl" ]; then
-              ver=$(grep '^version=' "$tmpl" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '"'"'" || true)
-              rev=$(grep '^revision=' "$tmpl" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '"'"'" || true)
-              
-              find hostdir/binpkgs public/x86_64 -type f -name "${pkg_name}*-${ver}_${rev}.x86_64.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
-            fi
+            [ ! -f "$tmpl" ] && continue
+            ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            find hostdir/binpkgs public/x86_64 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
           done
-
-          rm -rf public/x86_64
-          mv public/clean_x86_64 public/x86_64
-
+          rm -rf public/x86_64 && mv public/clean_x86_64 public/x86_64
           cd public/x86_64
-          
           if ls *.xbps 1>/dev/null 2>&1; then
             xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps || true
             xbps-rindex -f -a *.xbps || true
-            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
+            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot" --sign . || true
           fi
           rm -f /tmp/private.pem
 
@@ -176,8 +177,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
-          cd repo
-          find . -type f -exec gh release upload rolling {} --clobber \;
+          find repo/ -type f -exec gh release upload rolling {} --clobber \;
           
       - name: Trigger Next Package in Queue (Relay Race)
         env:
