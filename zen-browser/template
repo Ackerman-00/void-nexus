@@ -14,7 +14,7 @@ homepage="https://www.zen-browser.app/"
 case "${XBPS_TARGET_MACHINE}" in
 x86_64*)
     _upstream_arch=x86_64
-    _checksum=3b03eaeecfb222ecd62d37b9d6d409d704ce2437ff8286626e17b0289eb60c91
+    _checksum=87978f0854fc279191b4f95a41bdb0c5b7df6f6b6c1d986c97ef75915cd6686c
     ;;
 aarch64*)
     _upstream_arch=aarch64
