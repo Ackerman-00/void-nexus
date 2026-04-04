@@ -95,25 +95,32 @@ jobs:
           # Scan restored repo and any newly built packages in hostdir
           for folder in public/x86_64 hostdir/binpkgs; do
             [ ! -d "$folder" ] && continue
+            echo "Scanning $folder for SONAME providers..."
             for file in $folder/*.xbps; do
               [ -e "$file" ] || continue
               pkg_full=$(basename "$file" | sed -E 's/\.[^.]+\.xbps$//')
+              
+              # Extract version and provided shlibs using the folder as a temp repo
               PKGVER=$(xbps-query -R "$folder" -p pkgver "$pkg_full" 2>/dev/null || echo "")
               [ -z "$PKGVER" ] && continue
+              
               SHLIBS=$(xbps-query -R "$folder" -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
               for so in $SHLIBS; do
+                echo "Mapping: $so -> $PKGVER"
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
               done
             done
           done
           
-          # Merge and unique
-          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged
-          mv /tmp/merged common/shlibs
+          # Merge into the repository's shlibs file and remove duplicates
+          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
+          mv /tmp/merged_shlibs common/shlibs
           
-          # Force masterdir to recognize these shlibs during build
+          # CRITICAL: Inject into xbps-src's internal configuration so the current build sees it
           mkdir -p masterdir/usr/lib/xbps
           cp common/shlibs masterdir/usr/lib/xbps/shlibs.local
+          
+          echo "Internal xbps-src shlib map updated."
           rm -f "$TMP_SHLIBS"
 
       - name: Check if Binary Already Exists (Zero-Compile)
@@ -148,7 +155,7 @@ jobs:
           chmod 600 /tmp/private.pem
           mkdir -p public/clean_x86_64
           
-          # Cleanup: only keep the versions defined in current templates
+          # Only keep binaries that match our current templates
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
@@ -204,5 +211,5 @@ jobs:
             echo "Relaying to next packages: $REMAINING"
             gh workflow run "Build and Deploy Custom XBPS" --ref "${GITHUB_REF_NAME}" -f package_list="$REMAINING"
           else
-            echo "Queue complete."
+            echo "Relay complete. Queue empty."
           fi
