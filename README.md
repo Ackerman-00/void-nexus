@@ -23,7 +23,7 @@
 **① Add the repository**
 
 ```bash
-echo 'repository=https://ackerman-00.github.io/void-nexus/x86_64' \
+echo 'repository=https://github.com/Ackerman-00/void-nexus/releases/download/rolling' \
   | sudo tee /etc/xbps.d/10-nexus.conf
 ```
 
