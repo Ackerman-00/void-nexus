@@ -64,8 +64,7 @@ jobs:
             fi
 
             if [ -z "$NEW_VERSION" ]; then
-                echo "CRITICAL: Could not find 'Root Version: X.Y.Z'."
-                cat startup.log || true
+                echo "Error: Could not find version string."
                 exit 1
             fi
 
