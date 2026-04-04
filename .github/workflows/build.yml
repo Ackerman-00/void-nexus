@@ -3,13 +3,9 @@ name: Build and Deploy Custom XBPS
 on:
   workflow_dispatch:
     inputs:
-      package_name:
-        description: 'Package to build'
+      package_list:
+        description: 'Space-separated list of packages to build'
         required: true
-
-concurrency:
-  group: void-nexus-build-queue
-  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -55,6 +51,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: custom-templates-temp
+
+      - name: Parse Package List
+        run: |
+          LIST="${{ github.event.inputs.package_list }}"
+          read -r -a PKGS <<< "$LIST"
+          echo "TARGET_PKG=${PKGS}" >> $GITHUB_ENV
 
       - name: Inject custom templates
         run: |
@@ -114,7 +116,7 @@ jobs:
           rm -f "$TMP_SHLIBS"
 
       - name: Build package
-        run: ./xbps-src pkg "${{ github.event.inputs.package_name }}"
+        run: ./xbps-src pkg "${{ env.TARGET_PKG }}"
 
       - name: Sign and index repository
         run: |
@@ -154,7 +156,7 @@ jobs:
           path: public/x86_64/
 
   deploy:
-    name: Deploy to GitHub Releases
+    name: Deploy and Relay
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -162,11 +164,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: void-repo
           path: repo/
+      
       - name: Deploy to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -174,3 +178,18 @@ jobs:
           gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
           cd repo
           find . -type f -exec gh release upload rolling {} --clobber \;
+          
+      - name: Trigger Next Package in Queue (Relay Race)
+        env:
+          GH_TOKEN: ${{ secrets.REPO_PAT }}
+        run: |
+          LIST="${{ github.event.inputs.package_list }}"
+          read -r -a PKGS <<< "$LIST"
+          REMAINING="${PKGS[@]:1}"
+          
+          if [ -n "$REMAINING" ]; then
+            echo "Dispatching remaining packages: $REMAINING"
+            gh workflow run "Build and Deploy Custom XBPS" --ref "${GITHUB_REF_NAME}" -f package_list="$REMAINING"
+          else
+            echo "Queue finished! All packages built."
+          fi
