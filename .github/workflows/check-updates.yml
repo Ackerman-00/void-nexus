@@ -206,7 +206,7 @@ jobs:
               curr_sha = commit_m.group(1) if commit_m else None
               tmpl_vars = extract_template_vars(raw)
 
-              print(f"🔍 {pkgname} (current: {curr_ver})")
+              print(f"Checking {pkgname}")
               new_ver, new_sha = None, None
 
               if curr_sha is not None:
@@ -269,7 +269,6 @@ jobs:
               checksum_changed = (new_checksums != curr_hashes_plain)
 
               if not new_ver and not new_sha and not checksum_changed:
-                  print(f"  ✓ Up to date")
                   continue
 
               if checksum_changed and not new_ver and not new_sha:
@@ -289,13 +288,7 @@ jobs:
                   tpath.write_text(candidate, encoding='utf-8')
                   changed_packages.append(pkgname)
                   changed_files.append(str(tpath))
-
-                  ver_display = new_ver if new_ver else curr_ver
-                  sha_suffix = f' ({new_sha[:8]})' if new_sha else ''
-                  ck_suffix = ' (checksum refresh)' if checksum_changed and not new_ver and not new_sha else ''
-                  print(f"  ✨ {pkgname}: {curr_ver} → {ver_display}{sha_suffix}{ck_suffix}")
-              else:
-                  print(f"  ✓ Up to date (content identical)")
+                  print(f"Updated {pkgname}")
 
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
@@ -315,7 +308,6 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ ! -s changed_files.txt ]; then
-            echo "No changed files list found."
             exit 0
           fi
 
@@ -324,7 +316,6 @@ jobs:
           done < changed_files.txt
 
           if git diff --cached --quiet; then
-            echo "No actual changes to commit. Exiting cleanly."
             exit 0
           fi
 
@@ -332,7 +323,7 @@ jobs:
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin HEAD:"${GITHUB_REF_NAME}"
 
-      - name: Trigger builds asynchronously (Fire and Forget)
+      - name: Trigger builds asynchronously
         if: steps.scan.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
@@ -341,12 +332,10 @@ jobs:
           WORKFLOW_NAME="Build and Deploy Custom XBPS"
 
           if git diff --quiet HEAD~1 HEAD 2>/dev/null; then
-            echo "No new commit was made. Skipping builds."
             exit 0
           fi
 
           if [ ! -s changed_packages.txt ]; then
-            echo "No packages to build"
             exit 0
           fi
 
@@ -397,8 +386,5 @@ jobs:
             gh workflow run "${WORKFLOW_NAME}" \
               --ref "${GITHUB_REF_NAME}" \
               -f package_name="${pkg}"
-            
             sleep 5
           done
-          
-          echo "All builds dispatched. GitHub Actions will queue and process them automatically."
