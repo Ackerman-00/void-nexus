@@ -1,6 +1,6 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=0.9.109
+version=0.9.108
 revision=1
 archs="x86_64* aarch64*"
 depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core"
