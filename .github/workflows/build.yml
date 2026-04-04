@@ -88,39 +88,41 @@ jobs:
 
       - name: Build self-healing shlibs map
         run: |
-          # Ensure common/shlibs exists
+          # Ensure directories exist
+          mkdir -p common
           touch common/shlibs
+          mkdir -p /usr/lib/xbps/shlibs.d
           TMP_SHLIBS=$(mktemp)
           
           # Scan restored repo and any newly built packages in hostdir
+          # We use -R to treat directories as repositories for query
           for folder in public/x86_64 hostdir/binpkgs; do
             [ ! -d "$folder" ] && continue
-            echo "Scanning $folder for SONAME providers..."
             for file in $folder/*.xbps; do
               [ -e "$file" ] || continue
               pkg_full=$(basename "$file" | sed -E 's/\.[^.]+\.xbps$//')
-              
-              # Extract version and provided shlibs using the folder as a temp repo
               PKGVER=$(xbps-query -R "$folder" -p pkgver "$pkg_full" 2>/dev/null || echo "")
               [ -z "$PKGVER" ] && continue
-              
               SHLIBS=$(xbps-query -R "$folder" -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
               for so in $SHLIBS; do
-                echo "Mapping: $so -> $PKGVER"
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
               done
             done
           done
           
-          # Merge into the repository's shlibs file and remove duplicates
-          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
-          mv /tmp/merged_shlibs common/shlibs
+          # 1. Update the local repo shlibs
+          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged
+          mv /tmp/merged common/shlibs
           
-          # CRITICAL: Inject into xbps-src's internal configuration so the current build sees it
-          mkdir -p masterdir/usr/lib/xbps
-          cp common/shlibs masterdir/usr/lib/xbps/shlibs.local
+          # 2. Update the system-wide shlibs inside the builder container
+          # This is what xbps-src uses to resolve dependencies
+          cp common/shlibs /usr/lib/xbps/shlibs.d/void-nexus.shlibs
           
-          echo "Internal xbps-src shlib map updated."
+          # 3. Also inject it into the masterdir which xbps-src actually chroots into
+          mkdir -p masterdir/usr/lib/xbps/shlibs.d
+          cp common/shlibs masterdir/usr/lib/xbps/shlibs.d/void-nexus.shlibs
+          
+          echo "Shlibs injected into system and masterdir."
           rm -f "$TMP_SHLIBS"
 
       - name: Check if Binary Already Exists (Zero-Compile)
@@ -155,7 +157,6 @@ jobs:
           chmod 600 /tmp/private.pem
           mkdir -p public/clean_x86_64
           
-          # Only keep binaries that match our current templates
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
@@ -208,8 +209,7 @@ jobs:
           read -r -a PKGS <<< "$LIST"
           REMAINING="${PKGS[@]:1}"
           if [ -n "$REMAINING" ]; then
-            echo "Relaying to next packages: $REMAINING"
             gh workflow run "Build and Deploy Custom XBPS" --ref "${GITHUB_REF_NAME}" -f package_list="$REMAINING"
           else
-            echo "Relay complete. Queue empty."
+            echo "Queue finished."
           fi
