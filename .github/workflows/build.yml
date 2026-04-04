@@ -8,7 +8,7 @@ on:
         required: true
 
 concurrency:
-  group: build-repo-${{ github.ref }}
+  group: void-nexus-build-queue
   cancel-in-progress: false
 
 env:
@@ -17,7 +17,7 @@ env:
 
 jobs:
   build:
-    name: Build & Index
+    name: Build and Index
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/void-linux/void-glibc-full:latest
@@ -68,9 +68,6 @@ jobs:
 
       - name: Restore existing repository
         run: |
-          if [ -f public/x86_64/x86_64-repodata ]; then
-            exit 0
-          fi
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/rolling"
           mkdir -p public/x86_64
           if curl -sfL "${RELEASE_URL}/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
@@ -148,7 +145,6 @@ jobs:
             xbps-rindex -f -a *.xbps || true
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
           fi
-
           rm -f /tmp/private.pem
 
       - name: Upload artifact
