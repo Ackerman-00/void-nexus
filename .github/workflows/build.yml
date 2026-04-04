@@ -51,13 +51,6 @@ jobs:
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
           rm -f common/hooks/pre-pkg/99-pkglint.sh
 
-      - name: Cache repository
-        uses: actions/cache@v4
-        with:
-          path: public/x86_64
-          key: public-x86_64-${{ github.run_id }}
-          restore-keys: public-x86_64-
-
       - name: Checkout custom templates
         uses: actions/checkout@v4
         with:
@@ -78,9 +71,9 @@ jobs:
           if [ -f public/x86_64/x86_64-repodata ]; then
             exit 0
           fi
-          PAGES_URL="https://ackerman-00.github.io/void-nexus"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/rolling"
           mkdir -p public/x86_64
-          if curl -sfL "${PAGES_URL}/x86_64/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
+          if curl -sfL "${RELEASE_URL}/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
             REPO_DIR="$PWD/public/x86_64"
             set +o pipefail || true
             xbps-query --repository="$REPO_DIR" -l 2>/dev/null | awk '{print $2}' > /tmp/pkgs.txt || true
@@ -88,8 +81,8 @@ jobs:
               [ -z "$pkg" ] && continue
               fname=$(xbps-query --repository="$REPO_DIR" -p filename "$pkg" 2>/dev/null) || continue
               [ -z "$fname" ] && continue
-              curl -sfL "${PAGES_URL}/x86_64/${fname}" -o "public/x86_64/${fname}" || true
-              curl -sfL "${PAGES_URL}/x86_64/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
+              curl -sfL "${RELEASE_URL}/${fname}" -o "public/x86_64/${fname}" || true
+              curl -sfL "${RELEASE_URL}/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
             done < /tmp/pkgs.txt
             set -o pipefail || true
           fi
@@ -156,53 +149,32 @@ jobs:
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
           fi
 
-          cd ..
-          if [ -f ../custom-templates-temp/index.html ]; then
-            cp ../custom-templates-temp/index.html ./ || true
-          fi
-          
-          echo "[" > packages.json
-          first=1
-          
-          for file in x86_64/*.xbps; do
-            [ -e "$file" ] || continue
-            
-            name=$(xbps-query -p pkgname -f "$file" 2>/dev/null | tr -d '\n\r' || true)
-            pkgver=$(xbps-query -p pkgver -f "$file" 2>/dev/null | tr -d '\n\r' || true)
-            ver=${pkgver#$name-}
-            desc=$(xbps-query -p short_desc -f "$file" 2>/dev/null | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | tr -d '\n\r' || true)
-            
-            if [ -z "$name" ]; then
-              fname=$(basename "$file")
-              name=$(echo "$fname" | sed -r 's/-[0-9].*//' || true)
-              ver=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//' | sed -r "s/^$name-//" || true)
-              desc="Custom compiled Void package"
-            fi
-            
-            [ "$first" -eq 0 ] && echo "," >> packages.json
-            first=0
-            echo "  {\"name\": \"$name\", \"version\": \"$ver\", \"description\": \"$desc\"}" >> packages.json
-          done
-          echo "]" >> packages.json
-
           rm -f /tmp/private.pem
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: public/
+          name: void-repo
+          path: public/x86_64/
 
   deploy:
-    name: Deploy to GitHub Pages
+    name: Deploy to GitHub Releases
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      contents: write
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: void-repo
+          path: repo/
+      - name: Deploy to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
+          cd repo
+          find . -type f -exec gh release upload rolling {} --clobber \;
