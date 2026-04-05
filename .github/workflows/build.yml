@@ -87,27 +87,24 @@ jobs:
 
       - name: Build self-healing shlibs map
         run: |
-          echo "Generating shlibs map from cached binaries..."
+          echo "Generating shlibs map by directly extracting props.plist from binaries..."
           touch common/shlibs
           TMP_SHLIBS=$(mktemp)
           
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             for file in hostdir/binpkgs/*.xbps; do
               [ -e "$file" ] || continue
+              
+              # Extract pure package name & version (e.g. hyprutils-0.12.0_1)
               fname=$(basename "$file")
+              PKGVER=$(echo "$fname" | sed -E 's/\.x86_64\.xbps$//')
               
-              # Extract pure package name (e.g., hyprutils-0.12.0_1.x86_64.xbps -> hyprutils)
-              pkg_nv=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
-              pkg_name=$(echo "$pkg_nv" | sed -E 's/-[0-9].*$//')
+              # Bypass xbps entirely: Unpack the plist from the binary and read the XML!
+              SHLIBS=$(tar xOf "$file" props.plist 2>/dev/null | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
               
-              # Query the local repo cache using the valid package name
-              PKGVER=$(xbps-query -R hostdir/binpkgs -p pkgver "$pkg_name" 2>/dev/null || echo "")
-              [ -z "$PKGVER" ] && continue
-              
-              SHLIBS=$(xbps-query -R hostdir/binpkgs -p shlib-provides "$pkg_name" 2>/dev/null || echo "")
               for so in $SHLIBS; do
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
-                echo "✅ Found shlib: $so -> $PKGVER"
+                echo "✅ Extracted shlib: $so -> $PKGVER"
               done
             done
           fi
