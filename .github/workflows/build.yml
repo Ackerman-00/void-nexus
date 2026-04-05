@@ -82,8 +82,6 @@ jobs:
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
-          
-          echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
       - name: Build self-healing shlibs map
         run: |
@@ -93,20 +91,27 @@ jobs:
           
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             for file in hostdir/binpkgs/*.xbps; do
-              pkg_full=$(basename "$file" | sed -E 's/\.[^.]+\.xbps$//')
-              PKGVER=$(xbps-query -R hostdir/binpkgs -p pkgver "$pkg_full" 2>/dev/null || echo "")
+              [ -e "$file" ] || continue
+              
+              # DIRECT FILE QUERY - 100% reliable, skips repo index entirely
+              PKGVER=$(xbps-query -p pkgver -f "$file" 2>/dev/null || echo "")
               [ -z "$PKGVER" ] && continue
-              SHLIBS=$(xbps-query -R hostdir/binpkgs -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
+              
+              SHLIBS=$(xbps-query -p shlib-provides -f "$file" 2>/dev/null || echo "")
               for so in $SHLIBS; do
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
               done
             done
           fi
           
-          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
-          mv /tmp/merged_shlibs common/shlibs
+          if [ -s "$TMP_SHLIBS" ]; then
+            cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
+            mv /tmp/merged_shlibs common/shlibs
+            echo "Successfully injected new shlibs! Total entries now: $(wc -l < common/shlibs)"
+          else
+            echo "No custom shlibs found to inject."
+          fi
           rm -f "$TMP_SHLIBS"
-          echo "Updated common/shlibs with $(wc -l < common/shlibs) total entries."
 
       - name: Check if Binary Already Exists (Zero-Compile)
         id: check_bin
