@@ -8,7 +8,7 @@
                  script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
                  font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
-                 connect-src 'self' https://github.com https://*.githubusercontent.com;
+                 connect-src 'self';
                  img-src 'self' data: https:;
                  worker-src 'self' blob:;
                  form-action 'none';
@@ -693,11 +693,11 @@
   const THEME_KEY    = 'vn_t';
   const HIST_MAX     = 6;
 
-  // Uses the GitHub Release directly.
+  // The Void Linux XBPS Repository
   const REPO_URL     = 'https://github.com/Ackerman-00/void-nexus/releases/download/rolling';
   
-  // Bypasses API Rate limits by fetching the JSON file created by your runner!
-  const API_URL      = 'https://github.com/Ackerman-00/void-nexus/releases/download/rolling/packages.json';
+  // Directly loads the JSON created by your github action (Zero API Limits, No CORS)
+  const API_URL      = './packages.json';
 
   const PKG_DESCRIPTIONS = {
     'zen-browser': 'Experience tranquillity while browsing the web. Privacy-focused.',
@@ -731,7 +731,7 @@
     { re:/\bdev\b|code|compil|editor|\bide\b|neovim|vim|zed/i,          icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   ];
   const CAT_DEF = { icon:'fa-box', label:'Utility', cls:'bg-slate-500/10 text-slate-400 border-slate-500/20' };
-  const SORT_LBL = { az:'A\u2013Z', za:'Z\u2013A', newest:'Newest', oldest:'Oldest' };
+  const SORT_LBL = { az:'A–Z', za:'Z–A', newest:'Newest', oldest:'Oldest' };
 
   let allPkgs       = [];
   let curHash       = '';
@@ -750,7 +750,6 @@
   let resizeRafId   = null;
   let focusIdx      = -1;
   let curModalPkg   = null;
-  let swipeY        = 0;
 
   const $ = id => document.getElementById(id);
   const grid          = $('packagesGrid');
@@ -780,6 +779,7 @@
   const cmdScrollL    = $('cmdScrollL');
   const cmdScrollR    = $('cmdScrollR');
   const copyCmd       = $('copyCmd');
+  const stepPrev      = $('stepPrev');
   const stepNext      = $('stepNext');
   const progressBar   = $('progressBar');
   const stepDots      = document.querySelectorAll('.step-dot');
@@ -1065,6 +1065,7 @@
     mobileSheetWrap.addEventListener('click', e => { if (e.target === mobileSheetWrap) closeModal(); });
   }
 
+  let swipeY = 0;
   let swipeStartScrollTop = 0;
   modalMobile.addEventListener('touchstart', e => {
     swipeY = e.touches.clientY;
@@ -1082,10 +1083,7 @@
       if (p && !isModalOpen()) openModal(p);
     } else if (isModalOpen()) {
       modalOverlay.classList.add('closing'); modalOverlay.classList.remove('open');
-      setTimeout(() => {
-        modalOverlay.style.display = 'none'; modalOverlay.classList.remove('closing');
-        document.body.style.overflow = ''; curModalPkg = null;
-      }, 220);
+      setTimeout(() => { modalOverlay.style.display='none'; modalOverlay.classList.remove('closing'); document.body.style.overflow=''; curModalPkg=null; },220);
     }
   });
 
@@ -1128,12 +1126,8 @@
 
   sortBtn.addEventListener('click', () => {
     const open = sortDrop.style.display !== 'none';
-    if (open) {
-      sortDrop.style.display = 'none'; sortBtn.setAttribute('aria-expanded','false');
-    } else {
-      positionSortDrop();
-      sortDrop.style.display = 'block'; sortBtn.setAttribute('aria-expanded','true');
-    }
+    if (open) { sortDrop.style.display='none'; sortBtn.setAttribute('aria-expanded','false'); }
+    else { positionSortDrop(); sortDrop.style.display='block'; sortBtn.setAttribute('aria-expanded','true'); }
   });
   sortDrop.querySelectorAll('.sort-opt').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1141,7 +1135,7 @@
       activeSort = s;
       sortDrop.querySelectorAll('.sort-opt').forEach(b => b.classList.toggle('active-sort', b.dataset.sort === s));
       if (sortLabel) sortLabel.textContent = SORT_LBL[s] || s;
-      sortDrop.style.display = 'none'; sortBtn.setAttribute('aria-expanded','false');
+      sortDrop.style.display='none'; sortBtn.setAttribute('aria-expanded','false');
       applyAndRender(true);
     });
   });
