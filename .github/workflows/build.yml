@@ -82,6 +82,8 @@ jobs:
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
+          
+          echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
       - name: Build self-healing shlibs map
         run: |
@@ -92,14 +94,20 @@ jobs:
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             for file in hostdir/binpkgs/*.xbps; do
               [ -e "$file" ] || continue
+              fname=$(basename "$file")
               
-              # DIRECT FILE QUERY - 100% reliable, skips repo index entirely
-              PKGVER=$(xbps-query -p pkgver -f "$file" 2>/dev/null || echo "")
+              # Extract pure package name (e.g., hyprutils-0.12.0_1.x86_64.xbps -> hyprutils)
+              pkg_nv=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
+              pkg_name=$(echo "$pkg_nv" | sed -E 's/-[0-9].*$//')
+              
+              # Query the local repo cache using the valid package name
+              PKGVER=$(xbps-query -R hostdir/binpkgs -p pkgver "$pkg_name" 2>/dev/null || echo "")
               [ -z "$PKGVER" ] && continue
               
-              SHLIBS=$(xbps-query -p shlib-provides -f "$file" 2>/dev/null || echo "")
+              SHLIBS=$(xbps-query -R hostdir/binpkgs -p shlib-provides "$pkg_name" 2>/dev/null || echo "")
               for so in $SHLIBS; do
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
+                echo "✅ Found shlib: $so -> $PKGVER"
               done
             done
           fi
