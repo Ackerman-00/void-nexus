@@ -1,13 +1,10 @@
 # Template file for 'zed'
 pkgname=zed
 version=0.230.1
-revision=2
+revision=4
 archs="x86_64* aarch64*"
 build_style=cargo
-
-# completely disables Zed's internal auto-updater
-make_cmd="env -u LIBGIT2_NO_VENDOR ZED_UPDATE_EXPLANATION='Updates are handled by Void Nexus' cargo"
-
+make_cmd="env -u LIBGIT2_NO_VENDOR cargo"
 make_install_args="--path crates/zed"
 make_check_args="-- --test-threads 1"
 
@@ -42,10 +39,14 @@ changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
 checksum=54b3f92c4f48d033adb4c2f37a946fb173692dd080341563f58b57d2a74951a8
 
+pre_build() {
+    export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
+}
+
 post_install() {
     vlicense ${wrksrc}/LICENSE-AGPL
 
-    # 1. Drop the icon into the pixmaps folder
+    # 1. Drop the icon into the universal pixmaps folder
     vinstall ${wrksrc}/crates/zed/resources/app-icon.png 644 usr/share/pixmaps zed.png
 
     # 2. Inject a hardcoded, unbreakable desktop file
