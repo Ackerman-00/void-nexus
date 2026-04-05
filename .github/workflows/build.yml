@@ -49,25 +49,18 @@ jobs:
 
       - name: Inject Real-Time Shlibs Hook
         run: |
-          # This runs AFTER a dependency (like aquamarine) builds but BEFORE the main package (hyprtoolkit).
-          # It guarantees brand-new shlibs are instantly available to the build environment.
+          # This runs AFTER a dependency builds but BEFORE the main package.
           mkdir -p common/hooks/post-pkg
           cat << 'EOF' > common/hooks/post-pkg/99-shlibs-inject.sh
           hook() {
-            # FIXED: Pointing strictly to the repository folder where xbps-src drops new binaries
             local pkg_file="$XBPS_REPOSITORY/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
-            
             if [ -f "$pkg_file" ]; then
                echo "=> ${pkgname}: Dynamically injecting shlibs from ${pkg_file}..."
-               # Safely parse the XML from the archive to extract shared libraries
                local new_shlibs=$( (tar xOf "$pkg_file" ./props.plist 2>/dev/null || tar xOf "$pkg_file" props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true )
-               
                for so in $new_shlibs; do
                  echo "$so ${pkgname}-${version}_${revision}" >> $XBPS_DISTDIR/common/shlibs
                  echo "   -> Successfully Injected: $so"
                done
-            else
-               echo "=> ${pkgname}: WARNING: Could not find ${pkg_file} to inject shlibs!"
             fi
           }
           EOF
@@ -99,7 +92,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p hostdir/binpkgs
-          
           echo "Downloading existing packages from rolling release..."
           gh release download rolling -p "*.xbps" -p "*.sig2" -p "*-repodata" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
           
@@ -108,7 +100,6 @@ jobs:
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
-          
           echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
       - name: Build self-healing shlibs map
@@ -120,17 +111,11 @@ jobs:
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             for file in hostdir/binpkgs/*.xbps; do
               [ -e "$file" ] || continue
-              
               fname=$(basename "$file")
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
-              
               PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
-              
               SHLIBS=$(echo "$PLIST" | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
-              
-              for so in $SHLIBS; do
-                echo "$so $PKGVER" >> "$TMP_SHLIBS"
-              done
+              for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
             done
           fi
           
@@ -177,22 +162,35 @@ jobs:
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
-            
+            # ONLY copy .xbps files. DO NOT copy old .sig2 files.
             find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/x86_64/ \; 2>/dev/null || true
-            find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps.sig2" -exec cp {} public/x86_64/ \; 2>/dev/null || true
           done
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
+            echo "Generating fresh RSA signatures for all packages..."
+            rm -f *.sig2
             for pkg in *.xbps; do
-              if [ ! -f "${pkg}.sig2" ]; then
-                xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
-              fi
+              xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
             done
             
-            echo "Generating index for $(ls *.xbps | wc -l) packages..."
+            echo "Generating repodata index..."
             xbps-rindex -f -a *.xbps || true
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
+            
+            echo "Generating packages.json to bypass GitHub API limits..."
+            echo "[" > packages.json
+            first=1
+            for pkg in *.xbps; do
+              [ -e "$pkg" ] || continue
+              if [ "$first" -eq 0 ]; then echo "," >> packages.json; fi
+              fname=$(basename "$pkg" .x86_64.xbps)
+              version="${fname##*-}"
+              name="${fname%-$version}"
+              echo -n "  {\"name\": \"$name\", \"version\": \"$version\"}" >> packages.json
+              first=0
+            done
+            echo -e "\n]" >> packages.json
           fi
           rm -f /tmp/private.pem
 
