@@ -33,7 +33,8 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli
+          # ADDED zstd HERE SO TAR CAN DECOMPRESS .XBPS ARCHIVES
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli zstd
           git config --global --add safe.directory '*'
 
       - name: Clone void-packages
@@ -97,10 +98,13 @@ jobs:
               
               # Extract pure package name & version (e.g. hyprutils-0.12.0_1)
               fname=$(basename "$file")
-              PKGVER=$(echo "$fname" | sed -E 's/\.x86_64\.xbps$//')
+              PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
               
-              # Bypass xbps entirely: Unpack the plist from the binary and read the XML!
-              SHLIBS=$(tar xOf "$file" props.plist 2>/dev/null | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
+              # Bypass xbps key prompts entirely: Unpack the plist directly using tar + zstd
+              # We try both ./props.plist and props.plist just to be perfectly safe
+              PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
+              
+              SHLIBS=$(echo "$PLIST" | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
               
               for so in $SHLIBS; do
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
