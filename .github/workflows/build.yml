@@ -49,17 +49,25 @@ jobs:
 
       - name: Inject Real-Time Shlibs Hook
         run: |
-          # This script runs inside the chroot AFTER every package builds.
-          # It extracts the shlibs from the newly built package and adds them to common/shlibs instantly.
+          # This runs AFTER a dependency (like aquamarine) builds but BEFORE the main package (hyprtoolkit).
+          # It guarantees brand-new shlibs are instantly available to the build environment.
           mkdir -p common/hooks/post-pkg
           cat << 'EOF' > common/hooks/post-pkg/99-shlibs-inject.sh
           hook() {
-            local pkg_file="${PKGDESTDIR%/*}/binpkgs/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
+            # FIXED: Pointing strictly to the repository folder where xbps-src drops new binaries
+            local pkg_file="$XBPS_REPOSITORY/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
+            
             if [ -f "$pkg_file" ]; then
-               local new_shlibs=$(tar --zstd -xOf "$pkg_file" props.plist 2>/dev/null | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
+               echo "=> ${pkgname}: Dynamically injecting shlibs from ${pkg_file}..."
+               # Safely parse the XML from the archive to extract shared libraries
+               local new_shlibs=$( (tar xOf "$pkg_file" ./props.plist 2>/dev/null || tar xOf "$pkg_file" props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true )
+               
                for so in $new_shlibs; do
                  echo "$so ${pkgname}-${version}_${revision}" >> $XBPS_DISTDIR/common/shlibs
+                 echo "   -> Successfully Injected: $so"
                done
+            else
+               echo "=> ${pkgname}: WARNING: Could not find ${pkg_file} to inject shlibs!"
             fi
           }
           EOF
