@@ -8,7 +8,7 @@
                  script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
                  font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
-                 connect-src 'self' https://api.github.com;
+                 connect-src 'self' https://github.com https://*.githubusercontent.com;
                  img-src 'self' data: https:;
                  worker-src 'self' blob:;
                  form-action 'none';
@@ -693,13 +693,12 @@
   const THEME_KEY    = 'vn_t';
   const HIST_MAX     = 6;
 
-  // UPDATED: Points directly to the GitHub Releases URL
+  // Uses the GitHub Release directly.
   const REPO_URL     = 'https://github.com/Ackerman-00/void-nexus/releases/download/rolling';
   
-  // UPDATED: Uses GitHub API to fetch real-time package list directly from the release
-  const API_URL      = 'https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling';
+  // Bypasses API Rate limits by fetching the JSON file created by your runner!
+  const API_URL      = 'https://github.com/Ackerman-00/void-nexus/releases/download/rolling/packages.json';
 
-  // NEW: Description dictionary since GitHub release filenames don't contain descriptions
   const PKG_DESCRIPTIONS = {
     'zen-browser': 'Experience tranquillity while browsing the web. Privacy-focused.',
     'brave-browser': 'Secure, fast & private web browser with adblocker.',
@@ -1346,30 +1345,18 @@
     }
   }
 
-  // UPDATED: Fetches direct from GitHub API and parses the .xbps filenames!
   async function fetchPkgs(isInit) {
     if (fetchCtrl) fetchCtrl.abort();
     fetchCtrl=new AbortController();
     if (!isInit) setSyncState('checking');
     try {
-      const res=await fetchRetry(API_URL + '?t=' + Date.now(), fetchCtrl.signal, MAX_RETRIES);
-      const releaseData = await res.json();
-      if (!releaseData || !Array.isArray(releaseData.assets)) throw new Error('Invalid API payload');
+      const res = await fetchRetry(API_URL + '?t=' + Date.now(), fetchCtrl.signal, MAX_RETRIES);
+      const parsedPkgs = await res.json();
+      
+      if (!Array.isArray(parsedPkgs)) throw new Error('Invalid payload');
 
-      const parsedPkgs = [];
-      const xbpsRegex = /^(.+?)-([\d][\w\.]*_\d+)\.[^.]+\.xbps$/;
-
-      releaseData.assets.forEach(asset => {
-        const match = asset.name.match(xbpsRegex);
-        if (match) {
-          const pkgName = match;
-          const pkgVer = match;
-          parsedPkgs.push({
-            name: pkgName,
-            version: pkgVer,
-            description: PKG_DESCRIPTIONS[pkgName] || 'Custom compiled Void Linux package.'
-          });
-        }
+      parsedPkgs.forEach(p => {
+        p.description = PKG_DESCRIPTIONS[p.name] || 'Custom compiled Void Linux package.';
       });
 
       const dd=dedup(parsedPkgs), srt=dd.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
@@ -1390,7 +1377,7 @@
       if (isInit) {
         grid.innerHTML='';
         const w=document.createElement('div'); w.className='col-span-full text-center py-24 glass glass-blur rounded-3xl'; w.style.borderStyle='dashed'; w.setAttribute('role','status');
-        w.innerHTML='<i class="fas fa-satellite-dish text-5xl block mb-5 opacity-25" style="color:#f87171" aria-hidden="true"></i><h3 class="text-xl font-display font-bold mb-2" style="color:var(--text1)">Sync Error</h3><p class="text-sm mb-5" style="color:var(--text2)">Could not connect to GitHub API.</p>';
+        w.innerHTML='<i class="fas fa-satellite-dish text-5xl block mb-5 opacity-25" style="color:#f87171" aria-hidden="true"></i><h3 class="text-xl font-display font-bold mb-2" style="color:var(--text1)">Sync Error</h3><p class="text-sm mb-5" style="color:var(--text2)">Could not connect to Void Nexus backend.</p>';
         const rb=document.createElement('button'); rb.className='glass glass-blur-sm ripple-host inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:border-indigo-400/50'; rb.style.color='var(--text2)'; rb.innerHTML='<i class="fas fa-rotate-right text-xs" aria-hidden="true"></i><span>Retry</span>';
         rb.addEventListener('click',()=>{w.remove();showSkels(6);fetchPkgs(true);});
         w.appendChild(rb); grid.appendChild(w);
