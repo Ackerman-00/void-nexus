@@ -33,7 +33,6 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          # ADDED github-cli HERE SO THE DOWNLOAD STEP ACTUALLY WORKS
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli
           git config --global --add safe.directory '*'
 
@@ -76,7 +75,6 @@ jobs:
           mkdir -p hostdir/binpkgs
           
           echo "Downloading existing packages from rolling release..."
-          # This will now successfully download all your old packages
           gh release download rolling -p "*.xbps" -p "*.sig2" -p "*-repodata" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
           
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
@@ -86,6 +84,29 @@ jobs:
           fi
           
           echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
+
+      - name: Build self-healing shlibs map
+        run: |
+          echo "Generating shlibs map from cached binaries..."
+          touch common/shlibs
+          TMP_SHLIBS=$(mktemp)
+          
+          if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
+            for file in hostdir/binpkgs/*.xbps; do
+              pkg_full=$(basename "$file" | sed -E 's/\.[^.]+\.xbps$//')
+              PKGVER=$(xbps-query -R hostdir/binpkgs -p pkgver "$pkg_full" 2>/dev/null || echo "")
+              [ -z "$PKGVER" ] && continue
+              SHLIBS=$(xbps-query -R hostdir/binpkgs -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
+              for so in $SHLIBS; do
+                echo "$so $PKGVER" >> "$TMP_SHLIBS"
+              done
+            done
+          fi
+          
+          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
+          mv /tmp/merged_shlibs common/shlibs
+          rm -f "$TMP_SHLIBS"
+          echo "Updated common/shlibs with $(wc -l < common/shlibs) total entries."
 
       - name: Check if Binary Already Exists (Zero-Compile)
         id: check_bin
@@ -136,7 +157,6 @@ jobs:
               fi
             done
             
-            # This generates the master index containing ALL packages!
             echo "Generating index for $(ls *.xbps | wc -l) packages..."
             xbps-rindex -f -a *.xbps || true
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
