@@ -14,73 +14,111 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REPO_PAT }}
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libfuse2 xvfb
+        run: sudo apt-get update && sudo apt-get install -y libfuse2t64 xvfb
 
       - name: Check for Updates and Update Template
         id: update
         run: |
+          set -eo pipefail
+          
           TEMPLATE_PATH="rootapp/template"
-          wget -qO Root_x64.AppImage "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
-          wget -qO Root_arm64.AppImage "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
+          
+          if [ ! -f "$TEMPLATE_PATH" ]; then
+            echo "Error: $TEMPLATE_PATH not found. Ensure the 'rootapp' directory exists."
+            exit 1
+          fi
 
+          echo "Downloading X64 AppImage..."
+          wget -q --show-progress -O Root_x64.AppImage "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage" || { echo "Error: Failed to download X64 AppImage"; exit 1; }
+          
+          echo "Downloading ARM64 AppImage..."
+          wget -q --show-progress -O Root_arm64.AppImage "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage" || { echo "Error: Failed to download ARM64 AppImage"; exit 1; }
+
+          echo "Calculating new SHA256 hashes..."
           NEW_HASH_X64=$(sha256sum Root_x64.AppImage | awk '{print $1}')
           NEW_HASH_ARM64=$(sha256sum Root_arm64.AppImage | awk '{print $1}')
 
-          OLD_HASH_X64=$(grep -A 5 'x86_64\*)' $TEMPLATE_PATH | grep 'checksum=' | head -1 | cut -d= -f2 | tr -d ' ')
-          OLD_HASH_ARM64=$(grep -A 5 'aarch64\*)' $TEMPLATE_PATH | grep 'checksum=' | head -1 | cut -d= -f2 | tr -d ' ')
-          OLD_VERSION=$(grep '^version=' $TEMPLATE_PATH | cut -d= -f2 | tr -d '"' | tr -d "'")
+          echo "Extracting current information from template..."
+          OLD_HASH_X64=$(grep -A 5 'x86_64' $TEMPLATE_PATH | grep 'checksum=' | head -1 | cut -d= -f2 | tr -d ' ' | tr -d '"' | tr -d "'" || true)
+          OLD_HASH_ARM64=$(grep -A 5 'aarch64' $TEMPLATE_PATH | grep 'checksum=' | head -1 | cut -d= -f2 | tr -d ' ' | tr -d '"' | tr -d "'" || true)
+          OLD_VERSION=$(grep '^version=' $TEMPLATE_PATH | cut -d= -f2 | tr -d '"' | tr -d "'" || true)
 
           FORCE_UPDATE="false"
           if [[ "$OLD_VERSION" == 202* ]]; then
               FORCE_UPDATE="true"
           fi
 
+          echo "Current Version: $OLD_VERSION"
+          echo "Current X64 Hash: $OLD_HASH_X64"
+          echo "New X64 Hash:     $NEW_HASH_X64"
+
           if [ "$OLD_HASH_X64" != "$NEW_HASH_X64" ] || [ "$OLD_HASH_ARM64" != "$NEW_HASH_ARM64" ] || [ "$FORCE_UPDATE" == "true" ]; then
+            echo "Updates detected. Extracting new version number..."
+            
             chmod +x Root_x64.AppImage
-            ./Root_x64.AppImage --appimage-extract > /dev/null
+            ./Root_x64.AppImage --appimage-extract > /dev/null || true
 
             NEW_VERSION=""
-            DESKTOP_FILE=$(find squashfs-root -maxdepth 1 -name "*.desktop" | head -n 1)
+            if [ -d "squashfs-root" ]; then
+              DESKTOP_FILE=$(find squashfs-root -maxdepth 1 -name "*.desktop" | head -n 1 || true)
 
-            if [ -n "$DESKTOP_FILE" ]; then
-                NEW_VERSION=$(grep -i "^X-AppImage-Version=" "$DESKTOP_FILE" | head -n 1 | cut -d= -f2 | xargs)
-                if [ -z "$NEW_VERSION" ]; then
-                    NEW_VERSION=$(grep -i "^Version=" "$DESKTOP_FILE" | head -n 1 | cut -d= -f2 | xargs)
-                fi
-                if [[ "$NEW_VERSION" == "1.0" || "$NEW_VERSION" == "1.0.0" ]]; then
-                    NEW_VERSION=""
-                fi
+              if [ -n "$DESKTOP_FILE" ]; then
+                  NEW_VERSION=$(grep -i "^X-AppImage-Version=" "$DESKTOP_FILE" | head -n 1 | cut -d= -f2 | xargs || true)
+                  if [ -z "$NEW_VERSION" ]; then
+                      NEW_VERSION=$(grep -i "^Version=" "$DESKTOP_FILE" | head -n 1 | cut -d= -f2 | xargs || true)
+                  fi
+                  if [[ "$NEW_VERSION" == "1.0" || "$NEW_VERSION" == "1.0.0" ]]; then
+                      NEW_VERSION=""
+                  fi
+              fi
+
+              if [ -z "$NEW_VERSION" ]; then
+                  echo "Running AppRun via xvfb to extract version from logs..."
+                  xvfb-run -a ./squashfs-root/AppRun > startup.log 2>&1 &
+                  APP_PID=$!
+                  sleep 5
+                  kill $APP_PID 2>/dev/null || true
+                  NEW_VERSION=$(grep -ioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' startup.log | head -1 || true)
+              fi
             fi
 
             if [ -z "$NEW_VERSION" ]; then
-                xvfb-run -a ./squashfs-root/AppRun > startup.log 2>&1 &
-                APP_PID=$!
-                sleep 5
-                kill $APP_PID 2>/dev/null || true
-                NEW_VERSION=$(grep -ioP 'Root Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' startup.log | head -1)
-            fi
-
-            if [ -z "$NEW_VERSION" ]; then
-                echo "Error: Could not find version string."
+                echo "Error: Could not find version string inside the AppImage."
                 exit 1
             fi
+            
+            echo "Updating template with version: $NEW_VERSION"
 
             sed -i "s/^version=.*/version=$NEW_VERSION/" $TEMPLATE_PATH
             sed -i "s/^revision=.*/revision=1/" $TEMPLATE_PATH
-            sed -i "s/$OLD_HASH_X64/$NEW_HASH_X64/" $TEMPLATE_PATH
-            sed -i "s/$OLD_HASH_ARM64/$NEW_HASH_ARM64/" $TEMPLATE_PATH
+            
+            if [ -n "$OLD_HASH_X64" ]; then
+              sed -i "s/$OLD_HASH_X64/$NEW_HASH_X64/" $TEMPLATE_PATH
+            fi
+            if [ -n "$OLD_HASH_ARM64" ]; then
+              sed -i "s/$OLD_HASH_ARM64/$NEW_HASH_ARM64/" $TEMPLATE_PATH
+            fi
 
+            echo "Committing changes to git..."
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add $TEMPLATE_PATH
-            git commit -m "auto-update: rootapp to $NEW_VERSION"
-            git push
-
-            echo "updates_found=true" >> $GITHUB_OUTPUT
+            
+            if git diff --cached --quiet; then
+              echo "No file changes detected after sed operations. Possible hash collision."
+              echo "updates_found=false" >> $GITHUB_OUTPUT
+            else
+              git commit -m "auto-update: rootapp to $NEW_VERSION"
+              git push
+              echo "updates_found=true" >> $GITHUB_OUTPUT
+            fi
           else
+            echo "No updates found. Hashes match."
             echo "updates_found=false" >> $GITHUB_OUTPUT
           fi
 
@@ -91,7 +129,7 @@ jobs:
         run: |
           set -e
           WORKFLOW_NAME="Build and Deploy Custom XBPS"          
-          echo "Dispatching build for rootapp"
+          echo "Dispatching build workflow for rootapp"
           gh workflow run "${WORKFLOW_NAME}" \
             --ref "${GITHUB_REF_NAME}" \
             -f package_list="rootapp"
