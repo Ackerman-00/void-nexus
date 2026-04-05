@@ -49,7 +49,6 @@ jobs:
 
       - name: Inject Real-Time Shlibs Hook
         run: |
-          # This runs AFTER a dependency builds but BEFORE the main package.
           mkdir -p common/hooks/post-pkg
           cat << 'EOF' > common/hooks/post-pkg/99-shlibs-inject.sh
           hook() {
@@ -162,13 +161,12 @@ jobs:
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
-            # ONLY copy .xbps files. DO NOT copy old .sig2 files.
             find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/x86_64/ \; 2>/dev/null || true
           done
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
-            echo "Generating fresh RSA signatures for all packages..."
+            echo "Deleting old signatures and generating fresh ones..."
             rm -f *.sig2
             for pkg in *.xbps; do
               xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
@@ -178,7 +176,7 @@ jobs:
             xbps-rindex -f -a *.xbps || true
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
             
-            echo "Generating packages.json to bypass GitHub API limits..."
+            echo "Generating packages.json for the website..."
             echo "[" > packages.json
             first=1
             for pkg in *.xbps; do
@@ -209,7 +207,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+        with:
+          token: ${{ secrets.REPO_PAT }}
+          
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -221,7 +221,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
-          find repo/ -type f -exec gh release upload rolling {} --clobber \;
+          # Only upload binary files to the release, keep JSON out
+          find repo/ -type f ! -name "packages.json" -exec gh release upload rolling {} --clobber \;
+          
+      - name: Commit packages.json to Website
+        run: |
+          if [ -f repo/packages.json ]; then
+            cp repo/packages.json ./packages.json
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add packages.json
+            git commit -m "chore: update website packages data" || true
+            git push || true
+          fi
           
       - name: Trigger Next Package in Queue (Relay Race)
         env:
