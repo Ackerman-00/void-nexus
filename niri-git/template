@@ -1,7 +1,7 @@
 # Template file for 'niri-git'
 pkgname=niri-git
-_commit=8f48f56fe19918b5cfa02e5d68a47ebaf7bf3dee
-version=20260328
+_commit=d1a0380eed224363749f1704ca3ff2ab1690b7f2
+version=20260405
 revision=1
 build_style=cargo
 build_helper="qemu"
@@ -20,7 +20,7 @@ conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=18a1aff7ebc9f0ca49fc2cbe9ba82b5f7af9df20c3555ace9915da20f2f30404
+checksum=66a975ea496f5c54c0f3a6663275e6bb8a0d645daf6111520c15eb16ee64cc19
 
 pre_check() {
     export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")
