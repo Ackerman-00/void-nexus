@@ -1,6 +1,6 @@
 # Template file for 'heroic-games-launcher'
 pkgname=heroic-games-launcher
-version=2.20.0
+version=2.20.1
 revision=1
 archs="x86_64"
 build_style=fetch
