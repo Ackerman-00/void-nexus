@@ -8,7 +8,7 @@
                  script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
                  font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
-                 connect-src 'self' https://ackerman-00.github.io;
+                 connect-src 'self' https://api.github.com;
                  img-src 'self' data: https:;
                  worker-src 'self' blob:;
                  form-action 'none';
@@ -631,7 +631,7 @@
 </footer>
 
 <div id="toast"
-     class="glass glass-blur fixed bottom-5 right-4 left-4 sm:left-auto sm:max-w-xs px-4 py-3 rounded-2xl z-[200] flex items-center gap-2.5 text-sm font-medium shadow-2xl"
+     class="glass glass-blur fixed bottom-5 right-4 left-4 sm:left-auto sm:max-w-xs px-4 py-3 rounded-2xl z- flex items-center gap-2.5 text-sm font-medium shadow-2xl"
      style="transform:translateY(5rem);opacity:0;border-color:rgba(var(--accent-rgb),0.3);color:var(--text1)"
      role="alert" aria-live="assertive" aria-atomic="true">
   <i id="toastIcon" class="fas fa-check-circle flex-shrink-0" style="color:#34d399" aria-hidden="true"></i>
@@ -639,7 +639,7 @@
 </div>
 
 <div id="modalOverlay"
-     class="modal-overlay fixed inset-0 z-[150]"
+     class="modal-overlay fixed inset-0 z-"
      style="display:none"
      role="dialog" aria-modal="true" aria-labelledby="modalTitleD">
 
@@ -677,7 +677,7 @@
   </div>
 </div>
 
-<button id="backToTop" class="fixed bottom-5 left-4 z-[100] glass glass-blur-sm w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style="color:var(--text2)" aria-label="Back to top">
+<button id="backToTop" class="fixed bottom-5 left-4 z- glass glass-blur-sm w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style="color:var(--text2)" aria-label="Back to top">
   <i class="fas fa-arrow-up text-sm" aria-hidden="true"></i>
 </button>
 
@@ -692,7 +692,30 @@
   const HIST_KEY     = 'vn_h';
   const THEME_KEY    = 'vn_t';
   const HIST_MAX     = 6;
-  const REPO_URL     = 'https://ackerman-00.github.io/void-nexus/x86_64';
+
+  // UPDATED: Points directly to the GitHub Releases URL
+  const REPO_URL     = 'https://github.com/Ackerman-00/void-nexus/releases/download/rolling';
+  
+  // UPDATED: Uses GitHub API to fetch real-time package list directly from the release
+  const API_URL      = 'https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling';
+
+  // NEW: Description dictionary since GitHub release filenames don't contain descriptions
+  const PKG_DESCRIPTIONS = {
+    'zen-browser': 'Experience tranquillity while browsing the web. Privacy-focused.',
+    'brave-browser': 'Secure, fast & private web browser with adblocker.',
+    'vesktop': 'A custom Discord App giving you better performance and Vencord.',
+    'heroic-games-launcher': 'Open source launcher for GOG, Epic, and Amazon Games.',
+    'rootapp': 'Discord alternative for gaming communities and large online groups.',
+    'hyprland': 'A dynamic tiling Wayland compositor that doesn\'t sacrifice on its looks.',
+    'hyprutils': 'Hyprland utilities library.',
+    'hyprlang': 'The official configuration language for Hyprland.',
+    'hyprcursor': 'The hyprland cursor format, library and utilities.',
+    'hyprgraphics': 'Hyprland graphics and resource utilities.',
+    'hyprwayland-scanner': 'A Wayland scanner implementation used by Hyprland.',
+    'aquamarine': 'A very light linux rendering backend library.',
+    'niri-git': 'A scrollable-tiling Wayland compositor.',
+    'zed': 'High-performance, multiplayer code editor from the creators of Atom.'
+  };
 
   const STEPS = [
     { title:'Step 1 \u2014 Add Repository',   desc:'Add the Void Nexus repository config so <code style="font-family:monospace;font-size:0.8em;background:rgba(99,102,241,0.12);padding:1px 4px;border-radius:4px">xbps-install</code> knows where to find packages.', cmd:"echo 'repository="+REPO_URL+"' | sudo tee /etc/xbps.d/10-nexus.conf" },
@@ -701,12 +724,12 @@
   ];
 
   const CATS = [
-    { re:/game|gaming|wine|proton|emulat/i,                         icon:'fa-gamepad',    label:'Gaming',  cls:'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-    { re:/discord|chat|social|messag/i,                             icon:'fa-comments',   label:'Social',  cls:'bg-violet-500/10 text-violet-400 border-violet-500/20' },
-    { re:/browser|web|internet|chromium|firefox/i,                  icon:'fa-globe',      label:'Web',     cls:'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-    { re:/\bwm\b|shell|desktop|hypr|wayland|x11|sway|compositor/i, icon:'fa-layer-group',label:'Desktop', cls:'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' },
-    { re:/media|video|audio|music|player|mpv|vlc/i,                 icon:'fa-play-circle',label:'Media',   cls:'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    { re:/\bdev\b|code|compil|editor|\bide\b|neovim|vim/i,         icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { re:/game|gaming|wine|proton|emulat/i,                             icon:'fa-gamepad',    label:'Gaming',  cls:'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+    { re:/discord|chat|social|messag/i,                                 icon:'fa-comments',   label:'Social',  cls:'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+    { re:/browser|web|internet|chromium|firefox/i,                      icon:'fa-globe',      label:'Web',     cls:'bg-sky-500/10 text-sky-400 border-sky-500/20' },
+    { re:/\bwm\b|shell|desktop|hypr|wayland|x11|sway|compositor|niri/i, icon:'fa-layer-group',label:'Desktop', cls:'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' },
+    { re:/media|video|audio|music|player|mpv|vlc/i,                     icon:'fa-play-circle',label:'Media',   cls:'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    { re:/\bdev\b|code|compil|editor|\bide\b|neovim|vim|zed/i,          icon:'fa-code',       label:'Dev',     cls:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   ];
   const CAT_DEF = { icon:'fa-box', label:'Utility', cls:'bg-slate-500/10 text-slate-400 border-slate-500/20' };
   const SORT_LBL = { az:'A\u2013Z', za:'Z\u2013A', newest:'Newest', oldest:'Oldest' };
@@ -905,7 +928,7 @@
     let last=0, m;
     while ((m = re.exec(text)) !== null) {
       if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
-      const mk = document.createElement('mark'); mk.className='hl'; mk.textContent=m[0]; frag.appendChild(mk);
+      const mk = document.createElement('mark'); mk.className='hl'; mk.textContent=m; frag.appendChild(mk);
       last = re.lastIndex;
     }
     if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
@@ -1045,11 +1068,11 @@
 
   let swipeStartScrollTop = 0;
   modalMobile.addEventListener('touchstart', e => {
-    swipeY = e.touches[0].clientY;
+    swipeY = e.touches.clientY;
     swipeStartScrollTop = modalBodyM.scrollTop;
   }, { passive: true });
   modalMobile.addEventListener('touchend', e => {
-    const dy = e.changedTouches[0].clientY - swipeY;
+    const dy = e.changedTouches.clientY - swipeY;
     if (dy > 80 && swipeStartScrollTop <= 0) closeModal();
   }, { passive: true });
 
@@ -1217,12 +1240,12 @@
       spinner.setAttribute('aria-hidden','true');
       spinner.style.cssText = 'font-size:8px;color:'+col;
       syncCore.appendChild(spinner);
-      syncLabel.textContent='Checking\u2026';
+      syncLabel.textContent='Checking…';
     } else {
       syncPing.style.display=''; syncCore.innerHTML=''; syncCore.className='relative inline-flex rounded-full h-2 w-2'; syncCore.style.background=col;
-      if (state==='updated') { syncLabel.textContent='Updated \u00b7 '+info+' pkg'+(info!==1?'s':''); syncResetT=setTimeout(()=>setSyncState('active',null),5000); }
-      else if (state==='error') { syncLabel.textContent='Sync error \u2014 retrying'; }
-      else { const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); syncLabel.textContent=info?'Synced \u00b7 '+t:'Nexus Sync Active'; }
+      if (state==='updated') { syncLabel.textContent='Updated · '+info+' pkg'+(info!==1?'s':''); syncResetT=setTimeout(()=>setSyncState('active',null),5000); }
+      else if (state==='error') { syncLabel.textContent='Sync error — retrying'; }
+      else { const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); syncLabel.textContent=info?'Synced · '+t:'Nexus Sync Active'; }
     }
   }
 
@@ -1236,7 +1259,7 @@
   function clip(text, label, type) {
     if (!navigator.clipboard) { showToast([{t:'Copy not available'}],'fa-times-circle','#f87171'); return; }
     navigator.clipboard.writeText(text).then(() => {
-      if (type==='install') showToast([{t:'Copied \u2014 '},{t:label,bold:true}],'fa-terminal','#818cf8');
+      if (type==='install') showToast([{t:'Copied — '},{t:label,bold:true}],'fa-terminal','#818cf8');
       else if (type==='list') showToast([{t:'Copied '},{t:label,bold:true}],'fa-copy','#34d399');
       else showToast([{t:'Copied!'}],'fa-check-circle','#34d399');
     }).catch(()=>showToast([{t:'Copy failed'}],'fa-times-circle','#f87171'));
@@ -1323,17 +1346,42 @@
     }
   }
 
+  // UPDATED: Fetches direct from GitHub API and parses the .xbps filenames!
   async function fetchPkgs(isInit) {
     if (fetchCtrl) fetchCtrl.abort();
     fetchCtrl=new AbortController();
     if (!isInit) setSyncState('checking');
     try {
-      const res=await fetchRetry('./packages.json?t='+Date.now(), fetchCtrl.signal, MAX_RETRIES);
-      const raw=await res.json();
-      if (!Array.isArray(raw)) throw new Error('Invalid payload');
-      const dd=dedup(raw), srt=dd.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+      const res=await fetchRetry(API_URL + '?t=' + Date.now(), fetchCtrl.signal, MAX_RETRIES);
+      const releaseData = await res.json();
+      if (!releaseData || !Array.isArray(releaseData.assets)) throw new Error('Invalid API payload');
+
+      const parsedPkgs = [];
+      const xbpsRegex = /^(.+?)-([\d][\w\.]*_\d+)\.[^.]+\.xbps$/;
+
+      releaseData.assets.forEach(asset => {
+        const match = asset.name.match(xbpsRegex);
+        if (match) {
+          const pkgName = match;
+          const pkgVer = match;
+          parsedPkgs.push({
+            name: pkgName,
+            version: pkgVer,
+            description: PKG_DESCRIPTIONS[pkgName] || 'Custom compiled Void Linux package.'
+          });
+        }
+      });
+
+      const dd=dedup(parsedPkgs), srt=dd.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
       const nh=srt.map(p=>(p.name||'')+'@'+(p.version||'')).join('|'), changed=nh!==curHash;
-      if (changed) { curHash=nh; allPkgs=Object.freeze(srt); updateStats(srt.length); applyAndRender(!isInit); if (!isInit) showToast([{t:'Repo updated \u2014 '},{t:srt.length+' packages',bold:true},{t:' available'}],'fa-sync-alt','#818cf8'); }
+      
+      if (changed) { 
+        curHash=nh; 
+        allPkgs=Object.freeze(srt); 
+        updateStats(srt.length); 
+        applyAndRender(!isInit); 
+        if (!isInit) showToast([{t:'Repo updated — '},{t:srt.length+' packages',bold:true},{t:' available'}],'fa-sync-alt','#818cf8'); 
+      }
       setSyncState(changed&&!isInit?'updated':'active', srt.length);
       if (isInit && urlPkg) { const p=srt.find(x=>x.name===urlPkg); if (p) openModal(p); }
     } catch(err) {
@@ -1342,7 +1390,7 @@
       if (isInit) {
         grid.innerHTML='';
         const w=document.createElement('div'); w.className='col-span-full text-center py-24 glass glass-blur rounded-3xl'; w.style.borderStyle='dashed'; w.setAttribute('role','status');
-        w.innerHTML='<i class="fas fa-satellite-dish text-5xl block mb-5 opacity-25" style="color:#f87171" aria-hidden="true"></i><h3 class="text-xl font-display font-bold mb-2" style="color:var(--text1)">Sync Error</h3><p class="text-sm mb-5" style="color:var(--text2)">Could not load package data.</p>';
+        w.innerHTML='<i class="fas fa-satellite-dish text-5xl block mb-5 opacity-25" style="color:#f87171" aria-hidden="true"></i><h3 class="text-xl font-display font-bold mb-2" style="color:var(--text1)">Sync Error</h3><p class="text-sm mb-5" style="color:var(--text2)">Could not connect to GitHub API.</p>';
         const rb=document.createElement('button'); rb.className='glass glass-blur-sm ripple-host inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:border-indigo-400/50'; rb.style.color='var(--text2)'; rb.innerHTML='<i class="fas fa-rotate-right text-xs" aria-hidden="true"></i><span>Retry</span>';
         rb.addEventListener('click',()=>{w.remove();showSkels(6);fetchPkgs(true);});
         w.appendChild(rb); grid.appendChild(w);
