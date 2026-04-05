@@ -33,7 +33,6 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          # ADDED zstd HERE SO TAR CAN DECOMPRESS .XBPS ARCHIVES
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli zstd
           git config --global --add safe.directory '*'
 
@@ -47,6 +46,24 @@ jobs:
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
           rm -f common/hooks/pre-pkg/99-pkglint.sh
+
+      - name: Inject Real-Time Shlibs Hook
+        run: |
+          # This script runs inside the chroot AFTER every package builds.
+          # It extracts the shlibs from the newly built package and adds them to common/shlibs instantly.
+          mkdir -p common/hooks/post-pkg
+          cat << 'EOF' > common/hooks/post-pkg/99-shlibs-inject.sh
+          hook() {
+            local pkg_file="${PKGDESTDIR%/*}/binpkgs/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
+            if [ -f "$pkg_file" ]; then
+               local new_shlibs=$(tar --zstd -xOf "$pkg_file" props.plist 2>/dev/null | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
+               for so in $new_shlibs; do
+                 echo "$so ${pkgname}-${version}_${revision}" >> $XBPS_DISTDIR/common/shlibs
+               done
+            fi
+          }
+          EOF
+          chmod +x common/hooks/post-pkg/99-shlibs-inject.sh
 
       - name: Checkout custom templates
         uses: actions/checkout@v4
@@ -96,19 +113,15 @@ jobs:
             for file in hostdir/binpkgs/*.xbps; do
               [ -e "$file" ] || continue
               
-              # Extract pure package name & version (e.g. hyprutils-0.12.0_1)
               fname=$(basename "$file")
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
               
-              # Bypass xbps key prompts entirely: Unpack the plist directly using tar + zstd
-              # We try both ./props.plist and props.plist just to be perfectly safe
               PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
               
               SHLIBS=$(echo "$PLIST" | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
               
               for so in $SHLIBS; do
                 echo "$so $PKGVER" >> "$TMP_SHLIBS"
-                echo "✅ Extracted shlib: $so -> $PKGVER"
               done
             done
           fi
@@ -117,8 +130,6 @@ jobs:
             cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
             mv /tmp/merged_shlibs common/shlibs
             echo "Successfully injected new shlibs! Total entries now: $(wc -l < common/shlibs)"
-          else
-            echo "No custom shlibs found to inject."
           fi
           rm -f "$TMP_SHLIBS"
 
