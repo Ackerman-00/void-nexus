@@ -68,62 +68,29 @@ jobs:
             cp -r "$pkg_dir" srcpkgs/
           done
 
-      - name: Restore existing repository
+      - name: Restore Repository & Setup Dependency Cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/rolling"
-          mkdir -p public/x86_64
-          if curl -sfL "${RELEASE_URL}/x86_64-repodata" -o public/x86_64/x86_64-repodata; then
-            REPO_DIR="$PWD/public/x86_64"
-            set +o pipefail || true
-            xbps-query --repository="$REPO_DIR" -l 2>/dev/null | awk '{print $2}' > /tmp/pkgs.txt || true
-            while IFS= read -r pkg; do
-              [ -z "$pkg" ] && continue
-              fname=$(xbps-query --repository="$REPO_DIR" -p filename "$pkg" 2>/dev/null) || continue
-              [ -z "$fname" ] && continue
-              curl -sfL "${RELEASE_URL}/${fname}" -o "public/x86_64/${fname}" || true
-              curl -sfL "${RELEASE_URL}/${fname}.sig2" -o "public/x86_64/${fname}.sig2" || true
-            done < /tmp/pkgs.txt
-            set -o pipefail || true
+          # 1. We create the official binpkgs folder
+          mkdir -p hostdir/binpkgs
+          
+          # 2. FIX FOR THE BROKEN INDEX:
+          # Instead of reading the broken repodata, we force download ALL .xbps and .sig2 files 
+          # directly from the GitHub Release. This recovers all "missing" packages.
+          gh release download rolling -p "*.xbps" -p "*.sig2" -p "*-repodata" --repo ${{ github.repository }} --dir hostdir/binpkgs || true
+          
+          # 3. FIX FOR SHLIBS ERROR:
+          # We index the downloaded packages locally so xbps-src treats them as a real repo.
+          # When hyprlang builds, xbps-src will auto-discover libhyprutils.so.11 from this folder.
+          if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
+            cd hostdir/binpkgs
+            xbps-rindex -a *.xbps || true
+            cd ../..
           fi
-
-      - name: Build self-healing shlibs map
-        run: |
-          # Ensure directories exist
-          mkdir -p common
-          touch common/shlibs
-          mkdir -p /usr/lib/xbps/shlibs.d
-          TMP_SHLIBS=$(mktemp)
           
-          # Scan restored repo and any newly built packages in hostdir
-          # We use -R to treat directories as repositories for query
-          for folder in public/x86_64 hostdir/binpkgs; do
-            [ ! -d "$folder" ] && continue
-            for file in $folder/*.xbps; do
-              [ -e "$file" ] || continue
-              pkg_full=$(basename "$file" | sed -E 's/\.[^.]+\.xbps$//')
-              PKGVER=$(xbps-query -R "$folder" -p pkgver "$pkg_full" 2>/dev/null || echo "")
-              [ -z "$PKGVER" ] && continue
-              SHLIBS=$(xbps-query -R "$folder" -p shlib-provides "$pkg_full" 2>/dev/null || echo "")
-              for so in $SHLIBS; do
-                echo "$so $PKGVER" >> "$TMP_SHLIBS"
-              done
-            done
-          done
-          
-          # 1. Update the local repo shlibs
-          cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged
-          mv /tmp/merged common/shlibs
-          
-          # 2. Update the system-wide shlibs inside the builder container
-          # This is what xbps-src uses to resolve dependencies
-          cp common/shlibs /usr/lib/xbps/shlibs.d/void-nexus.shlibs
-          
-          # 3. Also inject it into the masterdir which xbps-src actually chroots into
-          mkdir -p masterdir/usr/lib/xbps/shlibs.d
-          cp common/shlibs masterdir/usr/lib/xbps/shlibs.d/void-nexus.shlibs
-          
-          echo "Shlibs injected into system and masterdir."
-          rm -f "$TMP_SHLIBS"
+          # Tell xbps-src to use this cache as an official repository
+          echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
       - name: Check if Binary Already Exists (Zero-Compile)
         id: check_bin
@@ -134,11 +101,9 @@ jobs:
             VER=$(grep '^version=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
             REV=$(grep '^revision=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
-            if [ -f "public/x86_64/${EXPECTED_PKG}" ]; then
-              echo "Binary found in repo. Skipping build."
+            if [ -f "hostdir/binpkgs/${EXPECTED_PKG}" ]; then
+              echo "Binary ${EXPECTED_PKG} found in cache. Skipping build."
               echo "skip_build=true" >> $GITHUB_OUTPUT
-              mkdir -p hostdir/binpkgs
-              cp "public/x86_64/${EXPECTED_PKG}" hostdir/binpkgs/
             else
               echo "skip_build=false" >> $GITHUB_OUTPUT
             fi
@@ -150,28 +115,36 @@ jobs:
         if: steps.check_bin.outputs.skip_build != 'true'
         run: ./xbps-src pkg "${{ env.TARGET_PKG }}"
 
-      - name: Sign and index repository
+      - name: Sign and Index New Repository
         run: |
           set -e
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
-          mkdir -p public/clean_x86_64
+          mkdir -p public/x86_64
           
+          # Filter: Only copy binaries from hostdir/binpkgs into public/x86_64 
+          # if they match the current template versions. This prevents old versions from piling up.
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
-            find hostdir/binpkgs public/x86_64 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/clean_x86_64/ \; 2>/dev/null || true
+            
+            find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/x86_64/ \; 2>/dev/null || true
+            find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps.sig2" -exec cp {} public/x86_64/ \; 2>/dev/null || true
           done
-          
-          rm -rf public/x86_64 && mv public/clean_x86_64 public/x86_64
+
+          # Rebuild the master index from scratch
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
-            xbps-rindex --privkey /tmp/private.pem --sign-pkg *.xbps || true
+            for pkg in *.xbps; do
+              if [ ! -f "${pkg}.sig2" ]; then
+                xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
+              fi
+            done
             xbps-rindex -f -a *.xbps || true
-            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot" --sign . || true
+            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
           fi
           rm -f /tmp/private.pem
 
@@ -190,17 +163,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: void-repo
           path: repo/
+          
       - name: Deploy to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
           find repo/ -type f -exec gh release upload rolling {} --clobber \;
+          
       - name: Trigger Next Package in Queue (Relay Race)
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
@@ -209,6 +185,7 @@ jobs:
           read -r -a PKGS <<< "$LIST"
           REMAINING="${PKGS[@]:1}"
           if [ -n "$REMAINING" ]; then
+            echo "Relaying to next packages: $REMAINING"
             gh workflow run "Build and Deploy Custom XBPS" --ref "${GITHUB_REF_NAME}" -f package_list="$REMAINING"
           else
             echo "Queue finished."
