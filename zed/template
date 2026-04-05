@@ -44,11 +44,24 @@ checksum=54b3f92c4f48d033adb4c2f37a946fb173692dd080341563f58b57d2a74951a8
 
 post_install() {
     vlicense ${wrksrc}/LICENSE-AGPL
-    APP_NAME="Zed" DO_STARTUP_NOTIFY="true" APP_ICON="zed" APP_CLI="zed" \
-        envsubst < ${wrksrc}/crates/zed/resources/zed.desktop.in \
-        > ${wrksrc}/crates/zed/resources/dev.zed.Zed.desktop
-    vinstall ${wrksrc}/crates/zed/resources/dev.zed.Zed.desktop \
-        644 usr/share/applications/
-    vinstall ${wrksrc}/crates/zed/resources/app-icon.png \
-        644 usr/share/icons/hicolor/512x512/apps/zed.png
+
+    # 1. Drop the icon into the pixmaps folder
+    vinstall ${wrksrc}/crates/zed/resources/app-icon.png 644 usr/share/pixmaps zed.png
+
+    # 2. Inject a hardcoded, unbreakable desktop file
+    vmkdir usr/share/applications
+    cat > "${DESTDIR}/usr/share/applications/zed.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Zed
+GenericName=Text Editor
+Comment=A high-performance, multiplayer code editor.
+Exec=zed %U
+Icon=/usr/share/pixmaps/zed.png
+Terminal=false
+StartupNotify=true
+StartupWMClass=dev.zed.Zed
+Categories=Development;Utility;TextEditor;
+EOF
 }
