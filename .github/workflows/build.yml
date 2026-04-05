@@ -33,7 +33,8 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file
+          # ADDED github-cli HERE SO THE DOWNLOAD STEP ACTUALLY WORKS
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli
           git config --global --add safe.directory '*'
 
       - name: Clone void-packages
@@ -72,24 +73,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 1. We create the official binpkgs folder
           mkdir -p hostdir/binpkgs
           
-          # 2. FIX FOR THE BROKEN INDEX:
-          # Instead of reading the broken repodata, we force download ALL .xbps and .sig2 files 
-          # directly from the GitHub Release. This recovers all "missing" packages.
-          gh release download rolling -p "*.xbps" -p "*.sig2" -p "*-repodata" --repo ${{ github.repository }} --dir hostdir/binpkgs || true
+          echo "Downloading existing packages from rolling release..."
+          # This will now successfully download all your old packages
+          gh release download rolling -p "*.xbps" -p "*.sig2" -p "*-repodata" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
           
-          # 3. FIX FOR SHLIBS ERROR:
-          # We index the downloaded packages locally so xbps-src treats them as a real repo.
-          # When hyprlang builds, xbps-src will auto-discover libhyprutils.so.11 from this folder.
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             cd hostdir/binpkgs
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
           
-          # Tell xbps-src to use this cache as an official repository
           echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
       - name: Check if Binary Already Exists (Zero-Compile)
@@ -122,8 +117,6 @@ jobs:
           chmod 600 /tmp/private.pem
           mkdir -p public/x86_64
           
-          # Filter: Only copy binaries from hostdir/binpkgs into public/x86_64 
-          # if they match the current template versions. This prevents old versions from piling up.
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
@@ -135,7 +128,6 @@ jobs:
             find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps.sig2" -exec cp {} public/x86_64/ \; 2>/dev/null || true
           done
 
-          # Rebuild the master index from scratch
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
             for pkg in *.xbps; do
@@ -143,6 +135,9 @@ jobs:
                 xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
               fi
             done
+            
+            # This generates the master index containing ALL packages!
+            echo "Generating index for $(ls *.xbps | wc -l) packages..."
             xbps-rindex -f -a *.xbps || true
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
           fi
