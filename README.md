@@ -99,7 +99,7 @@ Want a package added, or spotted something broken?
 Verify <code>/etc/xbps.d/10-nexus.conf</code> contains exactly:
 
 ```
-repository=https://ackerman-00.github.io/void-nexus/x86_64
+repository=https://github.com/Ackerman-00/void-nexus/releases/download/rolling
 ```
 </details>
 
