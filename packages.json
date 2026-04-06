@@ -27,13 +27,13 @@
   {"name": "noctalia-qs", "version": "0.0.12_1"},
   {"name": "noctalia-shell", "version": "4.7.5_1"},
   {"name": "protonplus", "version": "0.5.17_1"},
-  {"name": "quickshell-git", "version": "20260405_1"},
+  {"name": "quickshell-git", "version": "20260406_1"},
   {"name": "rootapp", "version": "0.9.109_1"},
   {"name": "sdbus-cpp", "version": "2.2.1_1"},
   {"name": "tomlplusplus", "version": "3.4.0_2"},
   {"name": "vesktop", "version": "1.6.5_1"},
   {"name": "xdg-desktop-portal-hyprland", "version": "1.3.11_1"},
   {"name": "xwayland-satellite-git", "version": "20260321_1"},
-  {"name": "zed", "version": "0.230.1_4"},
+  {"name": "zed", "version": "0.230.2_1"},
   {"name": "zen-browser", "version": "1.19.6b_1"}
 ]
