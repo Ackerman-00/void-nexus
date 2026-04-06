@@ -1,7 +1,7 @@
 # Template file for 'hyprgraphics'
 pkgname=hyprgraphics
 version=0.5.1
-revision=3
+revision=2
 build_style=cmake
 configure_args+=" -DCMAKE_BUILD_TYPE:STRING=Release"
 configure_args+=" -DCMAKE_INSTALL_PREFIX:PATH=/usr"
@@ -13,14 +13,19 @@ makedepends="
   cairo-devel
   file-devel
   hyprutils
+  libdrm-devel
   libglvnd-devel
   libjpeg-turbo-devel
   libjxl-devel
+  libpng-devel
   libspng
   libwebp-devel
   pango-devel
   librsvg-devel
   pixman-devel
+"
+checkdepends="
+  dejavu-fonts-ttf
 "
 short_desc="hyprland graphics resources and utilities"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
