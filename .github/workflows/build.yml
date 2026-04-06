@@ -92,10 +92,13 @@ jobs:
         run: |
           mkdir -p hostdir/binpkgs
           echo "Downloading existing packages from rolling release..."
-          gh release download rolling -p "*.xbps" -p "*.sig2" -p "*-repodata" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
+          
+          # THE FIX: ONLY download .xbps files. Downloading signed repodata causes xbps to prompt for keys and hang!
+          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
           
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             cd hostdir/binpkgs
+            # Generate a fresh, UNSIGNED index so xbps-src accepts it locally without prompts
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
@@ -161,12 +164,13 @@ jobs:
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            # ONLY copy .xbps files. DO NOT copy old .sig2 files.
             find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/x86_64/ \; 2>/dev/null || true
           done
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
-            echo "Deleting old signatures and generating fresh ones..."
+            echo "Generating fresh RSA signatures for all packages..."
             rm -f *.sig2
             for pkg in *.xbps; do
               xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
