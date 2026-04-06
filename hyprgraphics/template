@@ -15,7 +15,7 @@ makedepends="
   hyprutils
   libjpeg-turbo-devel
   libjxl-devel
-  libspng-devel
+  libspng
   libwebp-devel
   pango-devel
   librsvg-devel
