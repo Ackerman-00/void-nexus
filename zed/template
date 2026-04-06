@@ -1,7 +1,7 @@
 # Template file for 'zed'
 pkgname=zed
-version=0.230.1
-revision=4
+version=0.230.2
+revision=1
 archs="x86_64* aarch64*"
 build_style=cargo
 make_cmd="env -u LIBGIT2_NO_VENDOR cargo"
@@ -37,7 +37,7 @@ license="GPL-3.0-or-later, Apache-2.0, AGPL-3.0-or-later"
 homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
-checksum=54b3f92c4f48d033adb4c2f37a946fb173692dd080341563f58b57d2a74951a8
+checksum=b4be9f02fa1621e8bf18a628ac0a8c7e220272ec1060ce184ff7e6b80cf1eae4
 
 pre_build() {
     export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
