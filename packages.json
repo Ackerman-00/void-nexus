@@ -23,6 +23,7 @@
   {"name": "hyprwayland-scanner", "version": "0.4.5_1"},
   {"name": "hyprwire", "version": "0.3.0_1"},
   {"name": "libspng", "version": "0.7.4_1"},
+  {"name": "niri-git", "version": "20260407_1"},
   {"name": "noctalia-qs", "version": "0.0.12_1"},
   {"name": "noctalia-shell", "version": "4.7.5_1"},
   {"name": "protonplus", "version": "0.5.17_1"},
