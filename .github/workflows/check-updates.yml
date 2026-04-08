@@ -85,7 +85,7 @@ jobs:
                           for chunk in resp.iter_content(65536): f.write(chunk)
                       return True
               except Exception as e: 
-                  print(f"Error fetching {url}: {e}")
+                  pass
               return False
 
           def sha256_file(path):
@@ -160,13 +160,18 @@ jobs:
                   vars_['_' + m.group(1)] = m.group(2)
               return vars_
 
+          def extract_shell_var(var_name, content):
+              pattern = rf'^{var_name}=(?:(".*?")|(\'.*?\')|(\S+))'
+              m = re.search(pattern, content, re.MULTILINE | re.DOTALL)
+              if not m: return None
+              return m.group(1) or m.group(2) or m.group(3)
+
           def extract_distfile_urls(content):
               m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#_]|\Z)', content, re.MULTILINE | re.DOTALL)
               if not m: return []
               return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
 
           def replace_checksums(content, new_hashes):
-              """Forcefully wipes out old checksums (even corrupted ones) and injects the perfect format."""
               if not new_hashes:
                   return content
                   
@@ -176,7 +181,6 @@ jobs:
                   hashes_joined = '\n '.join(new_hashes)
                   new_checksum_str = f'checksum="{hashes_joined}"'
 
-              # The Nuke: Matches standard quotes, single quotes, array brackets [], or raw strings.
               pattern = r'^_?checksum=(?:".*?"|\'.*?\'|\[.*?\]|\S+)'
               return re.sub(pattern, new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
 
@@ -244,6 +248,18 @@ jobs:
               if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: m.group(1) + new_sha, candidate)
               if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: m.group(1) + new_ver, candidate)
 
+              # THE GATEKEEPER: Check if the current checksum line contains the corrupted brackets.
+              curr_checksum_val = extract_shell_var(r'_?checksum', raw)
+              is_corrupted = False
+              if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
+                  is_corrupted = True
+
+              # IF there is no new version, no new commit, AND the syntax isn't broken... 
+              # STOP. Do not download files. Do not calculate hashes. Skip to the next package.
+              if not new_ver and not new_sha and not is_corrupted:
+                  continue
+
+              # If we reach here, it's either a genuine version update OR it's fixing the broken syntax.
               urls = extract_distfile_urls(candidate)
               if not urls: continue
 
@@ -257,7 +273,6 @@ jobs:
 
               if resolved_urls is None: continue
 
-              # Always re-calculate real checksums
               new_checksums = []
               fetch_ok = True
               for url in resolved_urls:
@@ -275,16 +290,12 @@ jobs:
                   print(f"Failed to fetch distfiles for {pkgname}. Skipping.")
                   continue
 
-              # Generate the ideal, perfectly formatted string
               candidate_with_hashes = replace_checksums(candidate, new_checksums)
 
-              # If the file is ALREADY perfectly formatted, has the correct hashes, and no new versions exist, skip it.
               if candidate_with_hashes == raw:
                   continue
-                  
-              print(f"Force healing or updating required for {pkgname}.")
 
-              # If it's a version/sha bump, reset revision to 1. If it's a format heal, bump revision by 1 to trigger rebuild.
+              # Bump revision for the rebuild
               if new_ver or new_sha:
                   candidate_final = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate_with_hashes)
               else:
@@ -292,7 +303,6 @@ jobs:
                       return m.group(1) + str(int(m.group(2)) + 1)
                   candidate_final = re.sub(r'(\brevision=["\']?)(\d+)', bump_rev, candidate_with_hashes)
 
-              # Save the fixed template
               tpath.write_text(candidate_final, encoding='utf-8')
               changed_packages.append(pkgname)
               changed_files.append(str(tpath))
@@ -327,7 +337,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "auto-update: template refresh & healing $(date -u '+%Y-%m-%d')"
+          git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin HEAD:"${GITHUB_REF_NAME}"
 
