@@ -2,7 +2,7 @@
 pkgname=niri-git
 _commit=599db847f857b8a7ff78ce02f15acab5d5d9fee1
 version=20260407
-revision=1
+revision=2
 build_style=cargo
 build_helper="qemu"
 configure_args="--no-default-features --features dbus,xdp-gnome-screencast"
@@ -20,7 +20,7 @@ conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=3dc24192be74967c1d114b7fc9f45d351e4a9d64612f4874093d2b52117e8414
+checksum=['3dc24192be74967c1d114b7fc9f45d351e4a9d64612f4874093d2b52117e8414']
 
 pre_check() {
     export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")

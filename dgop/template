@@ -1,7 +1,7 @@
 # Template file for 'dgop'
 pkgname=dgop
 version=0.2.2
-revision=1
+revision=2
 build_style=go
 go_import_path="github.com/AvengeMedia/dgop"
 go_package="${go_import_path}/cmd/dgop"
@@ -11,7 +11,7 @@ license="MIT"
 homepage="https://github.com/AvengeMedia/dgop"
 
 distfiles="https://github.com/AvengeMedia/dgop/archive/refs/tags/v${version}.tar.gz"
-checksum=2e45d94d2227bb596844681e66f948aeea4a09be3f7ee88dcbbf38938cabec32
+checksum=['2e45d94d2227bb596844681e66f948aeea4a09be3f7ee88dcbbf38938cabec32']
 
 post_install() {
     # Install the sample config if it exists in the root of the source

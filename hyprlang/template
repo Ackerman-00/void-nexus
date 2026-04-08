@@ -1,7 +1,7 @@
 # Template file for 'hyprlang'
 pkgname=hyprlang
 version=0.6.8
-revision=1
+revision=2
 build_style=cmake
 configure_args+=" -DCMAKE_BUILD_TYPE:STRING=Release"
 configure_args+=" -DCMAKE_INSTALL_PREFIX:PATH=/usr"
@@ -18,4 +18,4 @@ license="LGPL-3.0-only"
 homepage="https://hyprland.org/hyprlang/index.html"
 changelog="https://github.com/hyprwm/hyprlang/releases"
 distfiles="https://github.com/hyprwm/hyprlang/archive/refs/tags/v${version}.tar.gz"
-checksum=d10a0778b646e04d83e8b90cc0f764fb96958c01a15c3c0678d95a40fc647ed5
+checksum=['d10a0778b646e04d83e8b90cc0f764fb96958c01a15c3c0678d95a40fc647ed5']

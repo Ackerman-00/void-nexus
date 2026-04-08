@@ -1,7 +1,7 @@
 # Template file for 'hyprpaper'
 pkgname=hyprpaper
 version=0.8.3
-revision=1
+revision=2
 build_style=cmake
 configure_args+=" -DCMAKE_BUILD_TYPE:STRING=Release"
 configure_args+=" -DCMAKE_INSTALL_PREFIX:PATH=/usr"
@@ -35,7 +35,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/hyprpaper"
 distfiles="https://github.com/hyprwm/hyprpaper/archive/refs/tags/v${version}.tar.gz"
-checksum=bfede471179adca93ed6d10e0132838c16dae364d828bd44f67819afc1a15594
+checksum=['bfede471179adca93ed6d10e0132838c16dae364d828bd44f67819afc1a15594']
 
 pre_configure() {
   find ${wrksrc} -name "*.cpp" -exec sed -i \
