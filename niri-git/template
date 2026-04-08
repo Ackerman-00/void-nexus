@@ -20,7 +20,7 @@ conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=['3dc24192be74967c1d114b7fc9f45d351e4a9d64612f4874093d2b52117e8414']
+checksum=3dc24192be74967c1d114b7fc9f45d351e4a9d64612f4874093d2b52117e8414
 
 pre_check() {
     export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")

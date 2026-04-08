@@ -32,7 +32,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
 homepage="https://github.com/hyprwm/hyprgraphics"
 distfiles="https://github.com/hyprwm/hyprgraphics/archive/refs/tags/v${version}.tar.gz"
-checksum=['861ecaad872835922dd5745a612d7a4cc7bfc4babb1d06bc92bc63c2ac013b74']
+checksum=861ecaad872835922dd5745a612d7a4cc7bfc4babb1d06bc92bc63c2ac013b74
 
 post_install() {
   vlicense LICENSE

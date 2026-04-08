@@ -9,7 +9,7 @@ homepage="https://github.com/noctalia-dev/noctalia-shell"
 license="MIT"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/tags/v${version}.tar.gz"
-checksum=['0753481c8993a0124a0afde42d129944a543707641a8c9a39f284a8e3c460e11']
+checksum=0753481c8993a0124a0afde42d129944a543707641a8c9a39f284a8e3c460e11
 
 build() {
     return 0

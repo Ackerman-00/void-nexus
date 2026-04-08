@@ -16,7 +16,7 @@ conflicts="xwayland-satellite>=0"
 provides="xwayland-satellite-${version}_${revision}"
 
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
-checksum=['2649b91546ba7fcac16d03ba44e724652dff4c973cae95f7dd38e60ecbd6c7a7']
+checksum=2649b91546ba7fcac16d03ba44e724652dff4c973cae95f7dd38e60ecbd6c7a7
 
 make_check="no"
 
