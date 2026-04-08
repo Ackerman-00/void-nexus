@@ -10,9 +10,7 @@ license="GPL-3.0-or-later"
 homepage="https://heroicgameslauncher.com"
 
 distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
-checksum=4e9957436bc270318b00a1107910a3c7d30ad72da530af4dee5c2860866a6272
-
-# Dependencies
+checksum=['4e9957436bc270318b00a1107910a3c7d30ad72da530af4dee5c2860866a6272']
 depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm 
  libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
 

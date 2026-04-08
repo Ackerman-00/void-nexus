@@ -1,6 +1,6 @@
 # Template file for 'glaze'
 pkgname=glaze
-version=7.3.1
+version=7.3.2
 revision=1
 build_style=cmake
 configure_args+=" -DBUILD_TESTING:BOOL=OFF"
@@ -16,8 +16,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/stephenberry/glaze"
 distfiles="https://github.com/stephenberry/glaze/archive/refs/tags/v${version}.tar.gz"
-checksum=8b2772645628370facd16adbe3be24ea5e6bd227853e0da6f26bc009b5020931
-
+checksum=['4c8ee3039768eb67cee5335e052deafee4791bab87e3d4a965cce90e5c5c9f55']
 post_install() {
   vlicense LICENSE
 }
