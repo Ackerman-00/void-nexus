@@ -44,6 +44,7 @@ jobs:
           import os, re, requests, subprocess, hashlib, datetime, tempfile, stat
           from packaging import version as pkg_version
           from pathlib import Path
+          
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
               '$GNOME_SITE':          'https://download.gnome.org/sources',
@@ -76,14 +77,15 @@ jobs:
               return url
 
           def fetch_file(url, dest_path):
-              headers = {'User-Agent': 'VoidLinux-BuildBot/1.0'}
+              headers = {'User-Agent': 'VoidNexus-BuildBot/1.0'}
               try:
                   resp = requests.get(url, headers=headers, timeout=120, allow_redirects=True, stream=True)
                   if resp.status_code == 200:
                       with open(dest_path, 'wb') as f:
                           for chunk in resp.iter_content(65536): f.write(chunk)
                       return True
-              except Exception: pass
+              except Exception as e: 
+                  print(f"Error fetching {url}: {e}")
               return False
 
           def sha256_file(path):
@@ -147,7 +149,9 @@ jobs:
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
               if template_vars:
                   for var, val in template_vars.items(): url = url.replace('${' + var + '}', val).replace('$' + var, val)
-              if re.search(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', url): return None
+              
+              # Clean up any unresolved shell variables (crude fallback)
+              url = re.sub(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', '', url)
               return url
 
           def extract_template_vars(content):
@@ -158,20 +162,32 @@ jobs:
               return vars_
 
           def extract_distfile_urls(content):
-              m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#]|\Z)', content, re.MULTILINE | re.DOTALL)
+              # This regex tries to capture multiline strings block assigned to distfiles
+              m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#_]|\Z)', content, re.MULTILINE | re.DOTALL)
               if not m: return []
+              # Extract everything that looks like a URL
               return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
 
           def replace_checksums(content, new_hashes):
-              counter = 0
-              def replacer(m):
-                  nonlocal counter
-                  idx = counter
-                  counter += 1
-                  prefix = '@' if m.group(2).startswith('@') else ''
-                  if idx < len(new_hashes): return f'{m.group(1)}={prefix}{new_hashes[idx]}'
-                  return m.group(0)
-              return re.sub(r'^(_?checksum)=["\']?([a-fA-F0-9@]+)["\']?', replacer, content, flags=re.MULTILINE)
+              """
+              Replaces the checksum line in the template. 
+              Handles single checksums and multi-line checksum strings properly.
+              """
+              if not new_hashes:
+                  return content
+                  
+              # Format the new hashes into a string.
+              # If there's more than one hash, format them with newlines like xbps-src expects.
+              if len(new_hashes) == 1:
+                  new_checksum_str = f"checksum={new_hashes}"
+              else:
+                  # Join with newline and indentation
+                  hashes_joined = '\n '.join(new_hashes)
+                  new_checksum_str = f'checksum="{hashes_joined}"'
+
+              # Replace existing checksum block (handles multiline too)
+              content = re.sub(r'^checksum=.*?(?=\n[A-Za-z_]|\Z)', new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
+              return content
 
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
@@ -250,6 +266,7 @@ jobs:
 
               if resolved_urls is None: continue
 
+              # Always re-calculate checksums for the current/new version
               new_checksums = []
               fetch_ok = True
               for url in resolved_urls:
@@ -263,24 +280,28 @@ jobs:
                       fetch_ok = False
                       break
 
-              if not fetch_ok: continue
+              if not fetch_ok: 
+                  print(f"Failed to fetch distfiles for {pkgname}. Skipping.")
+                  continue
 
-              curr_hashes_plain = [c.lstrip('@') for c in re.findall(r'^_?checksum=["\']?([a-fA-F0-9@]+)["\']?', raw, re.MULTILINE)]
+              # Extract current hashes (handles both single line and multi-line formats)
+              curr_hashes_match = re.search(r'^_?checksum=(.*?)(?=\n[A-Za-z_]|\Z)', raw, re.MULTILINE | re.DOTALL)
+              curr_hashes_plain = []
+              if curr_hashes_match:
+                  # Clean up quotes and whitespace, then split
+                  clean_hashes = re.sub(r'["\']', '', curr_hashes_match.group(1)).strip()
+                  curr_hashes_plain = [h for h in clean_hashes.split() if h]
+
               checksum_changed = (new_checksums != curr_hashes_plain)
 
               if not new_ver and not new_sha and not checksum_changed:
                   continue
-
+                  
+              # If only the checksum changed (no new version detected), it usually means an upstream file modification.
               if checksum_changed and not new_ver and not new_sha:
-                  sniffed_ver = None
-                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp: tmp_path = tmp.name
-                  if fetch_file(resolved_urls, tmp_path): sniffed_ver = get_appimage_version(tmp_path)
-                  try: os.unlink(tmp_path)
-                  except OSError: pass
-                  if sniffed_ver:
-                      new_ver = sniffed_ver
-                      candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: m.group(1) + new_ver, candidate)
+                  print(f"Upstream file changed for {pkgname} without version bump. Updating hashes.")
 
+              # Reset revision to 1 since we are updating the template
               candidate = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate)
               candidate = replace_checksums(candidate, new_checksums)
 
@@ -288,7 +309,7 @@ jobs:
                   tpath.write_text(candidate, encoding='utf-8')
                   changed_packages.append(pkgname)
                   changed_files.append(str(tpath))
-                  print(f"Updated {pkgname}")
+                  print(f"Successfully updated {pkgname}")
 
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
