@@ -150,7 +150,6 @@ jobs:
               if template_vars:
                   for var, val in template_vars.items(): url = url.replace('${' + var + '}', val).replace('$' + var, val)
               
-              # Clean up any unresolved shell variables (crude fallback)
               url = re.sub(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', '', url)
               return url
 
@@ -161,33 +160,33 @@ jobs:
                   vars_['_' + m.group(1)] = m.group(2)
               return vars_
 
+          def extract_shell_var(var_name, content):
+              """Robustly extracts a shell variable whether it is unquoted, single-quoted, or double-quoted spanning multiple lines."""
+              pattern = rf'^{var_name}=(?:(".*?")|(\'.*?\')|(\S+))'
+              m = re.search(pattern, content, re.MULTILINE | re.DOTALL)
+              if not m: return None
+              return m.group(1) or m.group(2) or m.group(3)
+
           def extract_distfile_urls(content):
-              # This regex tries to capture multiline strings block assigned to distfiles
-              m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#_]|\Z)', content, re.MULTILINE | re.DOTALL)
-              if not m: return []
-              # Extract everything that looks like a URL
-              return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
+              val = extract_shell_var('distfiles', content)
+              if not val: return []
+              val = re.sub(r'^["\']|["\']$', '', val)
+              return re.findall(r'(https?://[^\s"\'>\\]+)', val)
 
           def replace_checksums(content, new_hashes):
-              """
-              Replaces the checksum line in the template. 
-              Handles single checksums and multi-line checksum strings properly.
-              """
+              """Safely replaces the checksum block without leaving dangling quotes."""
               if not new_hashes:
                   return content
                   
-              # Format the new hashes into a string.
-              # If there's more than one hash, format them with newlines like xbps-src expects.
               if len(new_hashes) == 1:
                   new_checksum_str = f"checksum={new_hashes}"
               else:
-                  # Join with newline and indentation
                   hashes_joined = '\n '.join(new_hashes)
                   new_checksum_str = f'checksum="{hashes_joined}"'
 
-              # Replace existing checksum block (handles multiline too)
-              content = re.sub(r'^checksum=.*?(?=\n[A-Za-z_]|\Z)', new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
-              return content
+              # Strict quote-matching regex replacement
+              pattern = r'^_?checksum=(?:".*?"|\'.*?\'|\S+)'
+              return re.sub(pattern, new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
 
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
@@ -266,7 +265,6 @@ jobs:
 
               if resolved_urls is None: continue
 
-              # Always re-calculate checksums for the current/new version
               new_checksums = []
               fetch_ok = True
               for url in resolved_urls:
@@ -284,24 +282,21 @@ jobs:
                   print(f"Failed to fetch distfiles for {pkgname}. Skipping.")
                   continue
 
-              # Extract current hashes (handles both single line and multi-line formats)
-              curr_hashes_match = re.search(r'^_?checksum=(.*?)(?=\n[A-Za-z_]|\Z)', raw, re.MULTILINE | re.DOTALL)
+              # Robust extraction of existing checksums
+              curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               curr_hashes_plain = []
-              if curr_hashes_match:
-                  # Clean up quotes and whitespace, then split
-                  clean_hashes = re.sub(r'["\']', '', curr_hashes_match.group(1)).strip()
-                  curr_hashes_plain = [h for h in clean_hashes.split() if h]
+              if curr_checksum_val:
+                  clean_hashes = re.sub(r'["\']', '', curr_checksum_val).strip()
+                  curr_hashes_plain = [h.lstrip('@') for h in clean_hashes.split() if h]
 
               checksum_changed = (new_checksums != curr_hashes_plain)
 
               if not new_ver and not new_sha and not checksum_changed:
                   continue
                   
-              # If only the checksum changed (no new version detected), it usually means an upstream file modification.
               if checksum_changed and not new_ver and not new_sha:
                   print(f"Upstream file changed for {pkgname} without version bump. Updating hashes.")
 
-              # Reset revision to 1 since we are updating the template
               candidate = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate)
               candidate = replace_checksums(candidate, new_checksums)
 
@@ -402,7 +397,6 @@ jobs:
             fi
           done < changed_packages.txt
           
-          # Pass the full array as a single string to start the chain
           LIST="${ORDERED[*]}"
           echo "Starting relay race with: $LIST"
           
