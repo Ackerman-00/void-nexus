@@ -1,8 +1,12 @@
 [
   {"name": "brave-browser", "version": "1.88.138_2"},
+  {"name": "dank-material-shell", "version": "1.4.4_2"},
+  {"name": "dgop", "version": "0.2.2_2"},
   {"name": "glaze", "version": "7.3.2_1"},
   {"name": "heroic-games-launcher", "version": "2.20.1_1"},
   {"name": "niri-git", "version": "20260407_2"},
+  {"name": "protonplus", "version": "0.5.17_2"},
+  {"name": "quickshell-git", "version": "20260408_2"},
   {"name": "rootapp", "version": "0.9.109_1"},
   {"name": "vesktop", "version": "1.6.5_1"},
   {"name": "xwayland-satellite-git", "version": "20260321_2"},
