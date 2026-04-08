@@ -1,6 +1,6 @@
 # Template file for 'glaze'
 pkgname=glaze
-version=7.3.1
+version=7.3.2
 revision=1
 build_style=cmake
 configure_args+=" -DBUILD_TESTING:BOOL=OFF"
