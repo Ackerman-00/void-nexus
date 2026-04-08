@@ -5,6 +5,8 @@
   {"name": "glaze", "version": "7.3.2_1"},
   {"name": "heroic-games-launcher", "version": "2.20.1_1"},
   {"name": "niri-git", "version": "20260407_2"},
+  {"name": "noctalia-qs", "version": "0.0.12_2"},
+  {"name": "noctalia-shell", "version": "4.7.5_2"},
   {"name": "protonplus", "version": "0.5.17_2"},
   {"name": "quickshell-git", "version": "20260408_2"},
   {"name": "rootapp", "version": "0.9.109_1"},
