@@ -13,6 +13,7 @@
   {"name": "hyprland-qtutils", "version": "0.1.5_2"},
   {"name": "hyprlang", "version": "0.6.8_2"},
   {"name": "hyprlock", "version": "0.9.3_2"},
+  {"name": "hyprsunset", "version": "0.3.3_2"},
   {"name": "hyprtoolkit", "version": "0.5.3_2"},
   {"name": "hyprutils", "version": "0.12.0_2"},
   {"name": "hyprwayland-scanner", "version": "0.4.5_2"},
