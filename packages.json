@@ -11,6 +11,7 @@
   {"name": "hyprtoolkit", "version": "0.5.3_2"},
   {"name": "hyprutils", "version": "0.12.0_2"},
   {"name": "hyprwayland-scanner", "version": "0.4.5_2"},
+  {"name": "hyprwire", "version": "0.3.0_2"},
   {"name": "libspng", "version": "0.7.4_2"},
   {"name": "niri-git", "version": "20260407_2"},
   {"name": "noctalia-qs", "version": "0.0.12_2"},
