@@ -133,6 +133,7 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
+              # Gatekeeper: also trigger if old brackets exist
               is_corrupted = bool(re.search(r'checksum=.*\[', raw))
 
               if not new_ver and not new_sha and not is_corrupted:
@@ -148,7 +149,7 @@ jobs:
                   def bump_rev(m): return m.group(1) + str(int(m.group(2)) + 1)
                   candidate = re.sub(r'(\brevision=["\']?)(\d+)', bump_rev, candidate)
 
-              # Wipe the checksum line so Void's native xgensum can cleanly recreate it
+              # Wipe the checksum line so Void's native xgensum can cleanly recreate it later
               candidate = re.sub(r'^_?checksum=.*?\n', 'checksum=\n', candidate, flags=re.MULTILINE)
 
               if candidate != raw:
@@ -196,7 +197,7 @@ jobs:
           EOF
           chmod +x manifest_script.sh
           
-          # Boot a native Void Linux container just like your Gentoo stage3 step
+          # Boot a native Void Linux container
           docker run --rm -v "${{ github.workspace }}:/workspace" ghcr.io/void-linux/void-glibc-full:latest bash /workspace/manifest_script.sh
 
       - name: Phase 3 - Commit and Push Updates
