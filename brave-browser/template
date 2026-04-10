@@ -9,7 +9,7 @@ hostmakedepends="tar xz" # need gtk+3!
 license="Mozilla Public License Version 2.0"
 homepage="https://brave.com"
 distfiles="https://github.com/brave/brave-browser/releases/download/v${version}/brave-browser_${version}_amd64.deb"
-checksum=e0cd0582b0b8edccc7c8f84a304068af4828f140737d9428375d7fd13645d795
+checksum=fd29b34528265cce7aec3d5841d0ff21f0da21edd13cbb6024c62f70e0b0bd9a
 nostrip=yes
 
 do_extract() {
