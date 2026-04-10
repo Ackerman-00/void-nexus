@@ -174,7 +174,12 @@ jobs:
           export XBPS_YES=1
           echo ">>> Installing container dependencies..."
           xbps-install -Syu || true
-          xbps-install -y bash git curl tar coreutils findutils
+          
+          # Added 'shadow' package to provide the 'su' command
+          xbps-install -y bash git curl tar coreutils findutils shadow
+          
+          echo ">>> Creating unprivileged user to bypass xbps-src root restriction..."
+          useradd -m builder
           
           echo ">>> Cloning void-packages to utilize native xgensum..."
           git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
@@ -187,22 +192,28 @@ jobs:
             cp -r "$pkg_dir" /tmp/void-packages/srcpkgs/ 2>/dev/null || true
           done
 
+          # Give our temporary builder user full ownership of the void-packages directory
+          chown -R builder:builder /tmp/void-packages
+
           cd /tmp/void-packages
-          ./xbps-src binary-bootstrap >/dev/null
+          echo ">>> Bootstrapping xbps-src..."
+          # Run the bootstrap command as the 'builder' user
+          su builder -c "cd /tmp/void-packages && ./xbps-src binary-bootstrap >/dev/null"
           
           echo ">>> Executing native checksum generation..."
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             echo "Generating native hashes for $pkg..."
-            ./xbps-src xgensum -f -i "$pkg" || true
+            # Run xgensum as the 'builder' user
+            su builder -c "cd /tmp/void-packages && ./xbps-src xgensum -f -i '$pkg'" || true
             
             # Copy the perfectly formatted template back to your repo
-            cp srcpkgs/$pkg/template /workspace/$pkg/template
+            cp /tmp/void-packages/srcpkgs/$pkg/template /workspace/$pkg/template
           done < /workspace/changed_packages.txt
           EOF
           chmod +x manifest_script.sh
           
-          # THE FIX: Boot using 'sh' instead of 'bash', run the script to install 'bash' and 'git'
+          # Boot a native Void Linux container
           docker run --rm -v "${{ github.workspace }}:/workspace" ghcr.io/void-linux/void-glibc-full:latest sh /workspace/manifest_script.sh
 
       - name: Phase 3 - Commit and Push Updates
