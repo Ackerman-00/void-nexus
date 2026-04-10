@@ -77,7 +77,6 @@ jobs:
               return url
 
           def fetch_file(url, dest_path):
-              # Raw curl to perfectly match xbps-src download behavior
               try:
                   proc = subprocess.run(['curl', '-sSL', '-A', 'VoidNexus-BuildBot/1.0', '-o', dest_path, url], timeout=120)
                   return proc.returncode == 0
@@ -172,15 +171,16 @@ jobs:
               if not new_hashes:
                   return content
                   
-              if len(new_hashes) == 1:
-                  # THE FINAL FIX: new_hashes extracts the clean string from the list
-                  new_checksum_str = f"checksum={new_hashes}"
+              # BRUTE FORCE STRIP: Absolutely ensures no brackets or quotes survive
+              clean_hashes = [str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip() for h in new_hashes]
+
+              if len(clean_hashes) == 1:
+                  new_checksum_str = f"checksum={clean_hashes}"
               else:
-                  hashes_joined = '\n '.join(new_hashes)
+                  hashes_joined = '\n '.join(clean_hashes)
                   new_checksum_str = f'checksum="{hashes_joined}"'
 
-              # Strict regex to overwrite arrays, quotes, and strings cleanly
-              pattern = r'^_?checksum=(?:".*?"|\'.*?\'|\[.*?\]|\S+)'
+              pattern = r'^_?checksum\s*=\s*(?:\[.*?\]|".*?"|\'.*?\'|\S+)'
               return re.sub(pattern, new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
 
           git_user = "github-actions[bot]"
@@ -247,18 +247,14 @@ jobs:
               if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: m.group(1) + new_sha, candidate)
               if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: m.group(1) + new_ver, candidate)
 
-              # THE GATEKEEPER: Check if the current checksum line contains the corrupted brackets.
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
                   is_corrupted = True
 
-              # IF there is no new version, no new commit, AND the syntax isn't broken... 
-              # STOP. Do not download files. Do not calculate hashes. Skip to the next package.
               if not new_ver and not new_sha and not is_corrupted:
                   continue
 
-              # If we reach here, it's either a genuine version update OR it's fixing the broken syntax.
               urls = extract_distfile_urls(candidate)
               if not urls: continue
 
@@ -294,7 +290,6 @@ jobs:
               if candidate_with_hashes == raw:
                   continue
 
-              # Bump revision for the rebuild
               if new_ver or new_sha:
                   candidate_final = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate_with_hashes)
               else:
