@@ -77,16 +77,13 @@ jobs:
               return url
 
           def fetch_file(url, dest_path):
-              headers = {'User-Agent': 'VoidNexus-BuildBot/1.0'}
+              # Raw curl to perfectly match xbps-src download behavior
               try:
-                  resp = requests.get(url, headers=headers, timeout=120, allow_redirects=True, stream=True)
-                  if resp.status_code == 200:
-                      with open(dest_path, 'wb') as f:
-                          for chunk in resp.iter_content(65536): f.write(chunk)
-                      return True
+                  proc = subprocess.run(['curl', '-sSL', '-A', 'VoidNexus-BuildBot/1.0', '-o', dest_path, url], timeout=120)
+                  return proc.returncode == 0
               except Exception as e: 
-                  pass
-              return False
+                  print(f"Error fetching {url}: {e}")
+                  return False
 
           def sha256_file(path):
               h = hashlib.sha256()
@@ -176,11 +173,13 @@ jobs:
                   return content
                   
               if len(new_hashes) == 1:
+                  # THE FINAL FIX: new_hashes extracts the clean string from the list
                   new_checksum_str = f"checksum={new_hashes}"
               else:
                   hashes_joined = '\n '.join(new_hashes)
                   new_checksum_str = f'checksum="{hashes_joined}"'
 
+              # Strict regex to overwrite arrays, quotes, and strings cleanly
               pattern = r'^_?checksum=(?:".*?"|\'.*?\'|\[.*?\]|\S+)'
               return re.sub(pattern, new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
 
