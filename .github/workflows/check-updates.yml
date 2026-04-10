@@ -213,8 +213,8 @@ jobs:
           EOF
           chmod +x manifest_script.sh
           
-          # Boot a native Void Linux container
-          docker run --rm -v "${{ github.workspace }}:/workspace" ghcr.io/void-linux/void-glibc-full:latest sh /workspace/manifest_script.sh
+          # THE FIX: Added --privileged to allow xbps-src to create isolated namespaces!
+          docker run --rm --privileged -v "${{ github.workspace }}:/workspace" ghcr.io/void-linux/void-glibc-full:latest sh /workspace/manifest_script.sh
 
       - name: Phase 3 - Commit and Push Updates
         if: steps.scan.outputs.updates_found == 'true'
