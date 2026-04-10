@@ -174,7 +174,9 @@ jobs:
           export XBPS_YES=1
           echo ">>> Installing container dependencies..."
           xbps-install -Syu || true
-          xbps-install -y bash git curl tar coreutils findutils
+          
+          # THE FIX 1: Added 'xtools' which contains the xgensum command
+          xbps-install -y bash git curl tar coreutils findutils xtools
           
           echo ">>> Cloning void-packages to utilize native xgensum..."
           git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
@@ -185,7 +187,6 @@ jobs:
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
           
-          # THE FIX: Bring back binary-bootstrap! xbps-src physically cannot run xgensum without it.
           echo ">>> Bootstrapping masterdir (REQUIRED for xbps-src)..."
           ./xbps-src binary-bootstrap >/dev/null
           
@@ -201,8 +202,9 @@ jobs:
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             echo "Generating native hashes for $pkg..."
-            # Removed '|| true' so if it fails, it will stop and show us the exact error!
-            ./xbps-src xgensum -f -i "$pkg"
+            
+            # THE FIX 2: Run xgensum directly, not as an xbps-src target!
+            xgensum -f -i "$pkg"
             
             # Copy the perfectly formatted template back to your repo
             cp srcpkgs/$pkg/template /workspace/$pkg/template
