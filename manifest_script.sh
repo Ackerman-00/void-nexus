@@ -4,14 +4,17 @@ set -eu
 export XBPS_YES=1
 echo ">>> Installing container dependencies..."
 xbps-install -Syu || true
-xbps-install -y bash git curl tar coreutils findutils
+xbps-install -y bash git curl tar coreutils findutils xtools
 
 echo ">>> Cloning void-packages to utilize native xgensum..."
 git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
 
 cd /tmp/void-packages
 
-# THE FIX: Apply your exact bypass configuration from build.yml so xbps-src can run as root safely!
+# THE FIX: Apply your exact bypass from build.yml (Zero-Bootstrap!)
+echo ">>> Injecting Nexus Masterdir Bypass..."
+ln -s / masterdir
+echo "x86_64" > /.xbps_chroot_init
 echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
 echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
 
@@ -27,7 +30,7 @@ echo ">>> Executing native checksum generation..."
 while IFS= read -r pkg; do
   [ -z "$pkg" ] && continue
   echo "Generating native hashes for $pkg..."
-  ./xbps-src xgensum -f -i "$pkg" || true
+  xgensum -f -i "$pkg"
   
   # Copy the perfectly formatted template back to your repo
   cp srcpkgs/$pkg/template /workspace/$pkg/template
