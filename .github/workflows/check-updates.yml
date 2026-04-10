@@ -176,11 +176,9 @@ jobs:
               if not new_hashes:
                   return content
                   
-              # BRUTE FORCE STRIP: Absolutely ensures no brackets or quotes survive
               clean_hashes = [str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip() for h in new_hashes]
 
               if len(clean_hashes) == 1:
-                  # THIS IS WHAT WAS MISSING THAT CAUSED ALL THE BRACKETS
                   new_checksum_str = f"checksum={clean_hashes}"
               else:
                   hashes_joined = '\n '.join(clean_hashes)
@@ -335,7 +333,10 @@ jobs:
           fi
 
           git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
+          
+          # THE FIX: Added --autostash to safely hide the text files while rebasing!
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          
           git push origin HEAD:"${GITHUB_REF_NAME}"
 
       - name: Trigger Relay Race (Strict Sequential)
