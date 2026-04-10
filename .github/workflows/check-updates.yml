@@ -181,9 +181,13 @@ jobs:
           
           cd /tmp/void-packages
           
-          # THE FIX: Apply your exact bypass configuration from build.yml so xbps-src can run as root safely!
+          # Configure root bypass BEFORE bootstrapping
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
+          
+          # THE FIX: Bring back binary-bootstrap! xbps-src physically cannot run xgensum without it.
+          echo ">>> Bootstrapping masterdir (REQUIRED for xbps-src)..."
+          ./xbps-src binary-bootstrap >/dev/null
           
           # Copy our templates over into the build chroot
           find /workspace -maxdepth 2 -name "template" | while read -r tmpl; do
@@ -197,7 +201,8 @@ jobs:
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             echo "Generating native hashes for $pkg..."
-            ./xbps-src xgensum -f -i "$pkg" || true
+            # Removed '|| true' so if it fails, it will stop and show us the exact error!
+            ./xbps-src xgensum -f -i "$pkg"
             
             # Copy the perfectly formatted template back to your repo
             cp srcpkgs/$pkg/template /workspace/$pkg/template
