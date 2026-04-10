@@ -168,8 +168,13 @@ jobs:
         run: |
           set -e
           cat > manifest_script.sh << 'EOF'
-          #!/bin/bash
-          set -euo pipefail
+          #!/bin/sh
+          set -eu
+          
+          export XBPS_YES=1
+          echo ">>> Installing container dependencies..."
+          xbps-install -Syu || true
+          xbps-install -y bash git curl tar coreutils findutils
           
           echo ">>> Cloning void-packages to utilize native xgensum..."
           git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
@@ -197,8 +202,8 @@ jobs:
           EOF
           chmod +x manifest_script.sh
           
-          # Boot a native Void Linux container
-          docker run --rm -v "${{ github.workspace }}:/workspace" ghcr.io/void-linux/void-glibc-full:latest bash /workspace/manifest_script.sh
+          # THE FIX: Boot using 'sh' instead of 'bash', run the script to install 'bash' and 'git'
+          docker run --rm -v "${{ github.workspace }}:/workspace" ghcr.io/void-linux/void-glibc-full:latest sh /workspace/manifest_script.sh
 
       - name: Phase 3 - Commit and Push Updates
         if: steps.scan.outputs.updates_found == 'true'
