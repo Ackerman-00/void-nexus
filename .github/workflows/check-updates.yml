@@ -133,7 +133,6 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # Gatekeeper: also trigger if old brackets exist
               is_corrupted = bool(re.search(r'checksum=.*\[', raw))
 
               if not new_ver and not new_sha and not is_corrupted:
@@ -174,8 +173,6 @@ jobs:
           export XBPS_YES=1
           echo ">>> Installing container dependencies..."
           xbps-install -Syu || true
-          
-          # THE FIX 1: Added 'xtools' which contains the xgensum command
           xbps-install -y bash git curl tar coreutils findutils xtools
           
           echo ">>> Cloning void-packages to utilize native xgensum..."
@@ -183,12 +180,12 @@ jobs:
           
           cd /tmp/void-packages
           
-          # Configure root bypass BEFORE bootstrapping
+          # THE FIX: Apply your exact bypass from build.yml (Zero-Bootstrap!)
+          echo ">>> Injecting Nexus Masterdir Bypass..."
+          ln -s / masterdir
+          echo "x86_64" > /.xbps_chroot_init
           echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
-          
-          echo ">>> Bootstrapping masterdir (REQUIRED for xbps-src)..."
-          ./xbps-src binary-bootstrap >/dev/null
           
           # Copy our templates over into the build chroot
           find /workspace -maxdepth 2 -name "template" | while read -r tmpl; do
@@ -202,8 +199,6 @@ jobs:
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             echo "Generating native hashes for $pkg..."
-            
-            # THE FIX 2: Run xgensum directly, not as an xbps-src target!
             xgensum -f -i "$pkg"
             
             # Copy the perfectly formatted template back to your repo
