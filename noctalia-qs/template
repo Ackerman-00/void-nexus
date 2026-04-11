@@ -1,15 +1,15 @@
 # Template file for 'noctalia-qs'
 pkgname=noctalia-qs
 version=0.0.12
-revision=2
+revision=3
 build_style=cmake
 configure_args="
  -GNinja
  -DCMAKE_BUILD_TYPE=Release
  -DDISTRIBUTOR='Void Linux (Quietcraft)'
- -DINSTALL_QML_PREFIX='lib/qt6/qml'
+ -DINSTALL_QML_PREFIX='lib/qt6/qml/quickshell'
  -DUSE_JEMALLOC=ON
- -DCRASH_HANDLER=OFF
+ -DCRASH_REPORTER=OFF
  -DNO_PCH=ON
  -DWAYLAND=ON
  -DWAYLAND_WLR_LAYERSHELL=ON
@@ -26,9 +26,9 @@ hostmakedepends="pkg-config ninja cmake qt6-base-devel qt6-declarative-devel
 makedepends="qt6-base-devel qt6-declarative-devel qt6-declarative-private-devel qt6-wayland-devel 
  qt6-svg-devel qt6-shadertools-devel libdrm-devel cli11 jemalloc-devel wayland-devel 
  wayland-protocols libgbm-devel Vulkan-Headers libxcb-devel 
- pipewire-devel pam-devel polkit-devel glib-devel"
+ pipewire-devel pam-devel polkit-devel glib-devel kf6-qqc2-desktop-style-devel"
 
-depends="qt6-declarative qt6-wayland qt6-svg"
+depends="qt6-declarative qt6-wayland qt6-svg kf6-qqc2-desktop-style"
 
 short_desc="Custom high-performance Quickshell fork for Noctalia Shell"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"

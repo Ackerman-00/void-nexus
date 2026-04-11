@@ -1,0 +1,971 @@
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -23,6 +23,7 @@ qt_add_library(quickshell-core STATIC
+ 	model.cpp
+ 	elapsedtimer.cpp
+ 	desktopentry.cpp
++	desktopentrymonitor.cpp
+ 	objectrepeater.cpp
+ 	platformmenu.cpp
+ 	qsmenu.cpp
+--- a/src/core/desktopentry.cpp
++++ b/src/core/desktopentry.cpp
+@@ -1,22 +1,21 @@
+ #include "desktopentry.hpp"
+ #include <algorithm>
++#include <utility>
+ 
+ #include <qcontainerfwd.h>
+ #include <qdebug.h>
+ #include <qdir.h>
++#include <qfile.h>
+ #include <qfileinfo.h>
+-#include <qhash.h>
+-#include <qlist.h>
+-#include <qlogging.h>
+ #include <qloggingcategory.h>
++#include <qmetaobject.h>
+ #include <qnamespace.h>
+-#include <qobject.h>
+-#include <qpair.h>
+-#include <qstringview.h>
+-#include <qtenvironmentvariables.h>
++#include <qscopeguard.h>
++#include <qthreadpool.h>
+ #include <ranges>
+ 
+ #include "../io/processcore.hpp"
++#include "desktopentrymonitor.hpp"
+ #include "logcat.hpp"
+ #include "model.hpp"
+ #include "qmlglobal.hpp"
+@@ -87,64 +86,68 @@ struct Locale {
+ QDebug operator<<(QDebug debug, const Locale& locale) {
+ 	auto saver = QDebugStateSaver(debug);
+ 	debug.nospace() << "Locale(language=" << locale.language << ", territory=" << locale.territory
+-	                << ", modifier" << locale.modifier << ')';
++	                << ", modifier=" << locale.modifier << ')';
+ 
+ 	return debug;
+ }
+ 
+-void DesktopEntry::parseEntry(const QString& text) {
++ParsedDesktopEntryData DesktopEntry::parseText(const QString& id, const QString& text) {
++	ParsedDesktopEntryData data;
++	data.id = id;
+ 	const auto& system = Locale::system();
+ 
+ 	auto groupName = QString();
+ 	auto entries = QHash<QString, QPair<Locale, QString>>();
+ 
+-	auto finishCategory = [this, &groupName, &entries]() {
++	auto finishCategory = [&data, &groupName, &entries]() {
+ 		if (groupName == "Desktop Entry") {
+-			if (entries["Type"].second != "Application") return;
+-			if (entries.contains("Hidden") && entries["Hidden"].second == "true") return;
++			if (entries.value("Type").second != "Application") return;
++
++			if (entries.value("Hidden").second == "true") return;
+ 
+ 			for (const auto& [key, pair]: entries.asKeyValueRange()) {
+ 				auto& [_, value] = pair;
+-				this->mEntries.insert(key, value);
+-
+-				if (key == "Name") this->mName = value;
+-				else if (key == "GenericName") this->mGenericName = value;
+-				else if (key == "StartupWMClass") this->mStartupClass = value;
+-				else if (key == "NoDisplay") this->mNoDisplay = value == "true";
+-				else if (key == "Comment") this->mComment = value;
+-				else if (key == "Icon") this->mIcon = value;
++				data.entries.insert(key, value);
++
++				if (key == "Name") data.name = value;
++				else if (key == "GenericName") data.genericName = value;
++				else if (key == "StartupWMClass") data.startupClass = value;
++				else if (key == "NoDisplay") data.noDisplay = value == "true";
++				else if (key == "Comment") data.comment = value;
++				else if (key == "Icon") data.icon = value;
+ 				else if (key == "Exec") {
+-					this->mExecString = value;
+-					this->mCommand = DesktopEntry::parseExecString(value);
+-				} else if (key == "Path") this->mWorkingDirectory = value;
+-				else if (key == "Terminal") this->mTerminal = value == "true";
+-				else if (key == "Categories") this->mCategories = value.split(u';', Qt::SkipEmptyParts);
+-				else if (key == "Keywords") this->mKeywords = value.split(u';', Qt::SkipEmptyParts);
++					data.execString = value;
++					data.command = DesktopEntry::parseExecString(value);
++				} else if (key == "Path") data.workingDirectory = value;
++				else if (key == "Terminal") data.terminal = value == "true";
++				else if (key == "Categories") data.categories = value.split(u';', Qt::SkipEmptyParts);
++				else if (key == "Keywords") data.keywords = value.split(u';', Qt::SkipEmptyParts);
+ 			}
+ 		} else if (groupName.startsWith("Desktop Action ")) {
+ 			auto actionName = groupName.sliced(16);
+-			auto* action = new DesktopAction(actionName, this);
++			DesktopActionData action;
++			action.id = actionName;
+ 
+ 			for (const auto& [key, pair]: entries.asKeyValueRange()) {
+ 				const auto& [_, value] = pair;
+-				action->mEntries.insert(key, value);
++				action.entries.insert(key, value);
+ 
+-				if (key == "Name") action->mName = value;
+-				else if (key == "Icon") action->mIcon = value;
++				if (key == "Name") action.name = value;
++				else if (key == "Icon") action.icon = value;
+ 				else if (key == "Exec") {
+-					action->mExecString = value;
+-					action->mCommand = DesktopEntry::parseExecString(value);
++					action.execString = value;
++					action.command = DesktopEntry::parseExecString(value);
+ 				}
+ 			}
+ 
+-			this->mActions.insert(actionName, action);
++			data.actions.insert(actionName, action);
+ 		}
+ 
+ 		entries.clear();
+ 	};
+ 
+-	for (auto& line: text.split(u'\n', Qt::SkipEmptyParts)) {
+-		if (line.startsWith(u'#')) continue;
++	for (auto& line: text.split(u'\n')) {
++		if (line.isEmpty() || line.startsWith(u'#')) continue;
+ 
+ 		if (line.startsWith(u'[') && line.endsWith(u']')) {
+ 			finishCategory();
+@@ -183,14 +186,63 @@ void DesktopEntry::parseEntry(const QString& text) {
+ 	}
+ 
+ 	finishCategory();
++	return data;
++}
++
++void DesktopEntry::updateState(const ParsedDesktopEntryData& newState) {
++	Qt::beginPropertyUpdateGroup();
++	this->bName = newState.name;
++	this->bGenericName = newState.genericName;
++	this->bStartupClass = newState.startupClass;
++	this->bNoDisplay = newState.noDisplay;
++	this->bComment = newState.comment;
++	this->bIcon = newState.icon;
++	this->bExecString = newState.execString;
++	this->bCommand = newState.command;
++	this->bWorkingDirectory = newState.workingDirectory;
++	this->bRunInTerminal = newState.terminal;
++	this->bCategories = newState.categories;
++	this->bKeywords = newState.keywords;
++	Qt::endPropertyUpdateGroup();
++
++	this->state = newState;
++	this->updateActions(newState.actions);
++}
++
++void DesktopEntry::updateActions(const QHash<QString, DesktopActionData>& newActions) {
++	auto old = this->mActions;
++
++	for (const auto& [key, d]: newActions.asKeyValueRange()) {
++
++		DesktopAction* act = nullptr;
++		if (auto found = old.find(key); found != old.end()) {
++			act = found.value();
++			old.erase(found);
++		} else {
++			act = new DesktopAction(d.id, this);
++			this->mActions.insert(key, act);
++		}
++
++		Qt::beginPropertyUpdateGroup();
++		act->bName = d.name;
++		act->bIcon = d.icon;
++		act->bExecString = d.execString;
++		act->bCommand = d.command;
++		Qt::endPropertyUpdateGroup();
++
++		act->mEntries = d.entries;
++	}
++
++	for (auto* leftover: old) {
++		leftover->deleteLater();
++	}
+ }
+ 
+ void DesktopEntry::execute() const {
+-	DesktopEntry::doExec(this->mCommand, this->mWorkingDirectory);
++	DesktopEntry::doExec(this->bCommand.value(), this->bWorkingDirectory.value());
+ }
+ 
+-bool DesktopEntry::isValid() const { return !this->mName.isEmpty(); }
+-bool DesktopEntry::noDisplay() const { return this->mNoDisplay; }
++bool DesktopEntry::isValid() const { return !this->bName.value().isEmpty(); }
+ 
+ QVector<DesktopAction*> DesktopEntry::actions() const { return this->mActions.values(); }
+ 
+@@ -259,66 +311,52 @@ QVector<QString> DesktopEntry::parseExecString(const QString& execString) {
+ }
+ 
+ void DesktopEntry::doExec(const QList<QString>& execString, const QString& workingDirectory) {
+-	qs::io::process::ProcessContext ctx;
++	auto ctx = qs::io::process::ProcessContext();
+ 	ctx.setCommand(execString);
+ 	ctx.setWorkingDirectory(workingDirectory);
+ 	QuickshellGlobal::execDetached(ctx);
+ }
+ 
+ void DesktopAction::execute() const {
+-	DesktopEntry::doExec(this->mCommand, this->entry->mWorkingDirectory);
++	DesktopEntry::doExec(this->bCommand.value(), this->entry->bWorkingDirectory.value());
+ }
+ 
+-DesktopEntryManager::DesktopEntryManager() {
+-	this->scanDesktopEntries();
+-	this->populateApplications();
++DesktopEntryScanner::DesktopEntryScanner(DesktopEntryManager* manager): manager(manager) {
++	this->setAutoDelete(true);
+ }
+ 
+-void DesktopEntryManager::scanDesktopEntries() {
+-	QList<QString> dataPaths;
++void DesktopEntryScanner::run() {
++	auto desktopPaths = DesktopEntryManager::desktopPaths();
++	auto scanResults = QList<ParsedDesktopEntryData>();
+ 
+-	if (qEnvironmentVariableIsSet("XDG_DATA_HOME")) {
+-		dataPaths.push_back(qEnvironmentVariable("XDG_DATA_HOME"));
+-	} else if (qEnvironmentVariableIsSet("HOME")) {
+-		dataPaths.push_back(qEnvironmentVariable("HOME") + "/.local/share");
+-	}
++	for (int i = desktopPaths.size() - 1; i >= 0; --i) {
++		const auto& path = desktopPaths.at(i);
++		auto file = QFileInfo(path);
++		if (!file.isDir()) continue;
+ 
+-	if (qEnvironmentVariableIsSet("XDG_DATA_DIRS")) {
+-		auto var = qEnvironmentVariable("XDG_DATA_DIRS");
+-		dataPaths += var.split(u':', Qt::SkipEmptyParts);
+-	} else {
+-		dataPaths.push_back("/usr/local/share");
+-		dataPaths.push_back("/usr/share");
++		this->scanDirectory(QDir(path), QString(), scanResults);
+ 	}
+ 
+-	qCDebug(logDesktopEntry) << "Creating desktop entry scanners";
+-
+-	for (auto& path: std::ranges::reverse_view(dataPaths)) {
+-		auto p = QDir(path).filePath("applications");
+-		auto file = QFileInfo(p);
+-
+-		if (!file.isDir()) {
+-			qCDebug(logDesktopEntry) << "Not scanning path" << p << "as it is not a directory";
+-			continue;
+-		}
+-
+-		qCDebug(logDesktopEntry) << "Scanning path" << p;
+-		this->scanPath(p);
+-	}
+-}
+-
+-void DesktopEntryManager::populateApplications() {
+-	for (auto& entry: this->desktopEntries.values()) {
+-		if (!entry->noDisplay()) this->mApplications.insertObject(entry);
+-	}
++	QMetaObject::invokeMethod(
++	    this->manager,
++	    &DesktopEntryManager::onScanCompleted,
++	    Qt::QueuedConnection,
++	    scanResults
++	);
+ }
+ 
+-void DesktopEntryManager::scanPath(const QDir& dir, const QString& prefix) {
+-	auto entries = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+-
+-	for (auto& entry: entries) {
+-		if (entry.isDir()) this->scanPath(entry.absoluteFilePath(), prefix + dir.dirName() + "-");
+-		else if (entry.isFile()) {
++void DesktopEntryScanner::scanDirectory(
++    const QDir& dir,
++    const QString& idPrefix,
++    QList<ParsedDesktopEntryData>& entries
++) {
++	auto dirEntries = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
++
++	for (auto& entry: dirEntries) {
++		if (entry.isDir()) {
++			auto subdirPrefix = idPrefix.isEmpty() ? entry.fileName() : idPrefix + '-' + entry.fileName();
++			this->scanDirectory(QDir(entry.absoluteFilePath()), subdirPrefix, entries);
++		} else if (entry.isFile()) {
+ 			auto path = entry.filePath();
+ 			if (!path.endsWith(".desktop")) {
+ 				qCDebug(logDesktopEntry) << "Skipping file" << path << "as it has no .desktop extension";
+@@ -331,44 +369,39 @@ void DesktopEntryManager::scanPath(const QDir& dir, const QString& prefix) {
+ 				continue;
+ 			}
+ 
+-			auto id = prefix + entry.fileName().sliced(0, entry.fileName().length() - 8);
+-			auto lowerId = id.toLower();
+-
+-			auto text = QString::fromUtf8(file.readAll());
+-			auto* dentry = new DesktopEntry(id, this);
+-			dentry->parseEntry(text);
+-
+-			if (!dentry->isValid()) {
+-				qCDebug(logDesktopEntry) << "Skipping desktop entry" << path;
+-				delete dentry;
+-				continue;
+-			}
++			auto basename = QFileInfo(entry.fileName()).completeBaseName();
++			auto id = idPrefix.isEmpty() ? basename : idPrefix + '-' + basename;
++			auto content = QString::fromUtf8(file.readAll());
+ 
+-			qCDebug(logDesktopEntry) << "Found desktop entry" << id << "at" << path;
+-
+-			auto conflictingId = this->desktopEntries.contains(id);
+-
+-			if (conflictingId) {
+-				qCDebug(logDesktopEntry) << "Replacing old entry for" << id;
+-				delete this->desktopEntries.value(id);
+-				this->desktopEntries.remove(id);
+-				this->lowercaseDesktopEntries.remove(lowerId);
+-			}
++			auto data = DesktopEntry::parseText(id, content);
++			entries.append(std::move(data));
++		}
++	}
++}
+ 
+-			this->desktopEntries.insert(id, dentry);
++DesktopEntryManager::DesktopEntryManager() {
++	this->monitor = new DesktopEntryMonitor(this);
++	connect(
++	    this->monitor,
++	    &DesktopEntryMonitor::desktopEntriesChanged,
++	    this,
++	    &DesktopEntryManager::handleFileChanges
++	);
+ 
+-			if (this->lowercaseDesktopEntries.contains(lowerId)) {
+-				qCInfo(logDesktopEntry).nospace()
+-				    << "Multiple desktop entries have the same lowercased id " << lowerId
+-				    << ". This can cause ambiguity when byId requests are not made with the correct case "
+-				       "already.";
++	this->scanDesktopEntries();
++}
+ 
+-				this->lowercaseDesktopEntries.remove(lowerId);
+-			}
++void DesktopEntryManager::scanDesktopEntries() {
++	qCDebug(logDesktopEntry) << "Starting desktop entry scan";
+ 
+-			this->lowercaseDesktopEntries.insert(lowerId, dentry);
+-		}
++	if (this->scanInProgress) {
++		qCDebug(logDesktopEntry) << "Scan already in progress, skipping";
++		return;
+ 	}
++
++	this->scanInProgress = true;
++	auto* scanner = new DesktopEntryScanner(this);
++	QThreadPool::globalInstance()->start(scanner);
+ }
+ 
+ DesktopEntryManager* DesktopEntryManager::instance() {
+@@ -391,14 +424,14 @@ DesktopEntry* DesktopEntryManager::heuristicLookup(const QString& name) {
+ 
+ 	auto list = this->desktopEntries.values();
+ 
+-	auto iter = std::ranges::find_if(list, [&](const DesktopEntry* entry) {
+-		return name == entry->mStartupClass;
++	auto iter = std::ranges::find_if(list, [&](DesktopEntry* entry) {
++		return name == entry->bStartupClass.value();
+ 	});
+ 
+ 	if (iter != list.end()) return *iter;
+ 
+-	iter = std::ranges::find_if(list, [&](const DesktopEntry* entry) {
+-		return name.toLower() == entry->mStartupClass.toLower();
++	iter = std::ranges::find_if(list, [&](DesktopEntry* entry) {
++		return name.toLower() == entry->bStartupClass.value().toLower();
+ 	});
+ 
+ 	if (iter != list.end()) return *iter;
+@@ -407,7 +440,115 @@ DesktopEntry* DesktopEntryManager::heuristicLookup(const QString& name) {
+ 
+ ObjectModel<DesktopEntry>* DesktopEntryManager::applications() { return &this->mApplications; }
+ 
+-DesktopEntries::DesktopEntries() { DesktopEntryManager::instance(); }
++void DesktopEntryManager::handleFileChanges() {
++	qCDebug(logDesktopEntry) << "Directory change detected, performing full rescan";
++
++	if (this->scanInProgress) {
++		qCDebug(logDesktopEntry) << "Scan already in progress, skipping";
++		return;
++	}
++
++	this->scanInProgress = true;
++	auto* scanner = new DesktopEntryScanner(this);
++	QThreadPool::globalInstance()->start(scanner);
++}
++
++const QStringList& DesktopEntryManager::desktopPaths() {
++	static const auto paths = []() {
++		auto dataPaths = QStringList();
++
++		auto dataHome = qEnvironmentVariable("XDG_DATA_HOME");
++		if (dataHome.isEmpty() && qEnvironmentVariableIsSet("HOME"))
++			dataHome = qEnvironmentVariable("HOME") + "/.local/share";
++		if (!dataHome.isEmpty()) dataPaths.append(dataHome + "/applications");
++
++		auto dataDirs = qEnvironmentVariable("XDG_DATA_DIRS");
++		if (dataDirs.isEmpty()) dataDirs = "/usr/local/share:/usr/share";
++
++		for (const auto& dir: dataDirs.split(':', Qt::SkipEmptyParts)) {
++			dataPaths.append(dir + "/applications");
++		}
++
++		return dataPaths;
++	}();
++
++	return paths;
++}
++
++void DesktopEntryManager::onScanCompleted(const QList<ParsedDesktopEntryData>& scanResults) {
++	auto guard = qScopeGuard([this] { this->scanInProgress = false; });
++
++	auto oldEntries = this->desktopEntries;
++	auto newEntries = QHash<QString, DesktopEntry*>();
++	auto newLowercaseEntries = QHash<QString, DesktopEntry*>();
++
++	for (const auto& data: scanResults) {
++		DesktopEntry* dentry = nullptr;
++
++		if (auto it = oldEntries.find(data.id); it != oldEntries.end()) {
++			dentry = it.value();
++			oldEntries.erase(it);
++			dentry->updateState(data);
++		} else {
++			dentry = new DesktopEntry(data.id, this);
++			dentry->updateState(data);
++		}
++
++		if (!dentry->isValid()) {
++			qCDebug(logDesktopEntry) << "Skipping desktop entry" << data.id;
++			if (!oldEntries.contains(data.id)) {
++				dentry->deleteLater();
++			}
++			continue;
++		}
++
++		qCDebug(logDesktopEntry) << "Found desktop entry" << data.id;
++
++		auto lowerId = data.id.toLower();
++		auto conflictingId = newEntries.contains(data.id);
++
++		if (conflictingId) {
++			qCDebug(logDesktopEntry) << "Replacing old entry for" << data.id;
++			if (auto* victim = newEntries.take(data.id)) victim->deleteLater();
++			newLowercaseEntries.remove(lowerId);
++		}
++
++		newEntries.insert(data.id, dentry);
++
++		if (newLowercaseEntries.contains(lowerId)) {
++			qCInfo(logDesktopEntry).nospace()
++			    << "Multiple desktop entries have the same lowercased id " << lowerId
++			    << ". This can cause ambiguity when byId requests are not made with the correct case "
++			       "already.";
++
++			newLowercaseEntries.remove(lowerId);
++		}
++
++		newLowercaseEntries.insert(lowerId, dentry);
++	}
++
++	this->desktopEntries = newEntries;
++	this->lowercaseDesktopEntries = newLowercaseEntries;
++
++	auto newApplications = QVector<DesktopEntry*>();
++	for (auto* entry: this->desktopEntries.values())
++		if (!entry->bNoDisplay) newApplications.append(entry);
++
++	this->mApplications.diffUpdate(newApplications);
++
++	for (auto* e: oldEntries) e->deleteLater();
++
++	emit applicationsChanged();
++}
++
++DesktopEntries::DesktopEntries() {
++	QObject::connect(
++	    DesktopEntryManager::instance(),
++	    &DesktopEntryManager::applicationsChanged,
++	    this,
++	    &DesktopEntries::applicationsChanged
++	);
++}
+ 
+ DesktopEntry* DesktopEntries::byId(const QString& id) {
+ 	return DesktopEntryManager::instance()->byId(id);
+--- a/src/core/desktopentry.hpp
++++ b/src/core/desktopentry.hpp
+@@ -6,35 +6,67 @@
+ #include <qdir.h>
+ #include <qhash.h>
+ #include <qobject.h>
++#include <qproperty.h>
+ #include <qqmlintegration.h>
++#include <qrunnable.h>
+ #include <qtmetamacros.h>
+ 
++#include "desktopentrymonitor.hpp"
+ #include "doc.hpp"
+ #include "model.hpp"
+ 
+ class DesktopAction;
++class DesktopEntryMonitor;
++
++struct DesktopActionData {
++	QString id;
++	QString name;
++	QString icon;
++	QString execString;
++	QVector<QString> command;
++	QHash<QString, QString> entries;
++};
++
++struct ParsedDesktopEntryData {
++	QString id;
++	QString name;
++	QString genericName;
++	QString startupClass;
++	bool noDisplay = false;
++	QString comment;
++	QString icon;
++	QString execString;
++	QVector<QString> command;
++	QString workingDirectory;
++	bool terminal = false;
++	QVector<QString> categories;
++	QVector<QString> keywords;
++	QHash<QString, QString> entries;
++	QHash<QString, DesktopActionData> actions;
++};
+ 
+ /// A desktop entry. See @@DesktopEntries for details.
+ class DesktopEntry: public QObject {
+ 	Q_OBJECT;
+ 	Q_PROPERTY(QString id MEMBER mId CONSTANT);
+ 	/// Name of the specific application, such as "Firefox".
+-	Q_PROPERTY(QString name MEMBER mName CONSTANT);
++	// clang-format off
++	Q_PROPERTY(QString name READ default WRITE default NOTIFY nameChanged BINDABLE bindableName);
+ 	/// Short description of the application, such as "Web Browser". May be empty.
+-	Q_PROPERTY(QString genericName MEMBER mGenericName CONSTANT);
++	Q_PROPERTY(QString genericName READ default WRITE default NOTIFY genericNameChanged BINDABLE bindableGenericName);
+ 	/// Initial class or app id the app intends to use. May be useful for matching running apps
+ 	/// to desktop entries.
+-	Q_PROPERTY(QString startupClass MEMBER mStartupClass CONSTANT);
++	Q_PROPERTY(QString startupClass READ default WRITE default NOTIFY startupClassChanged BINDABLE bindableStartupClass);
+ 	/// If true, this application should not be displayed in menus and launchers.
+-	Q_PROPERTY(bool noDisplay MEMBER mNoDisplay CONSTANT);
++	Q_PROPERTY(bool noDisplay READ default WRITE default NOTIFY noDisplayChanged BINDABLE bindableNoDisplay);
+ 	/// Long description of the application, such as "View websites on the internet". May be empty.
+-	Q_PROPERTY(QString comment MEMBER mComment CONSTANT);
++	Q_PROPERTY(QString comment READ default WRITE default NOTIFY commentChanged BINDABLE bindableComment);
+ 	/// Name of the icon associated with this application. May be empty.
+-	Q_PROPERTY(QString icon MEMBER mIcon CONSTANT);
++	Q_PROPERTY(QString icon READ default WRITE default NOTIFY iconChanged BINDABLE bindableIcon);
+ 	/// The raw `Exec` string from the desktop entry.
+ 	///
+ 	/// > [!WARNING] This cannot be reliably run as a command. See @@command for one you can run.
+-	Q_PROPERTY(QString execString MEMBER mExecString CONSTANT);
++	Q_PROPERTY(QString execString READ default WRITE default NOTIFY execStringChanged BINDABLE bindableExecString);
+ 	/// The parsed `Exec` command in the desktop entry.
+ 	///
+ 	/// The entry can be run with @@execute(), or by using this command in
+@@ -43,13 +75,14 @@ class DesktopEntry: public QObject {
+ 	/// the invoked process. See @@execute() for details.
+ 	///
+ 	/// > [!NOTE]	The provided command does not invoke a terminal even if @@runInTerminal is true.
+-	Q_PROPERTY(QVector<QString> command MEMBER mCommand CONSTANT);
++	Q_PROPERTY(QVector<QString> command READ default WRITE default NOTIFY commandChanged BINDABLE bindableCommand);
+ 	/// The working directory to execute from.
+-	Q_PROPERTY(QString workingDirectory MEMBER mWorkingDirectory CONSTANT);
++	Q_PROPERTY(QString workingDirectory READ default WRITE default NOTIFY workingDirectoryChanged BINDABLE bindableWorkingDirectory);
+ 	/// If the application should run in a terminal.
+-	Q_PROPERTY(bool runInTerminal MEMBER mTerminal CONSTANT);
+-	Q_PROPERTY(QVector<QString> categories MEMBER mCategories CONSTANT);
+-	Q_PROPERTY(QVector<QString> keywords MEMBER mKeywords CONSTANT);
++	Q_PROPERTY(bool runInTerminal READ default WRITE default NOTIFY runInTerminalChanged BINDABLE bindableRunInTerminal);
++	Q_PROPERTY(QVector<QString> categories READ default WRITE default NOTIFY categoriesChanged BINDABLE bindableCategories);
++	Q_PROPERTY(QVector<QString> keywords READ default WRITE default NOTIFY keywordsChanged BINDABLE bindableKeywords);
++	// clang-format on
+ 	Q_PROPERTY(QVector<DesktopAction*> actions READ actions CONSTANT);
+ 	QML_ELEMENT;
+ 	QML_UNCREATABLE("DesktopEntry instances must be retrieved from DesktopEntries");
+@@ -57,7 +90,8 @@ class DesktopEntry: public QObject {
+ public:
+ 	explicit DesktopEntry(QString id, QObject* parent): QObject(parent), mId(std::move(id)) {}
+ 
+-	void parseEntry(const QString& text);
++	static ParsedDesktopEntryData parseText(const QString& id, const QString& text);
++	void updateState(const ParsedDesktopEntryData& newState);
+ 
+ 	/// Run the application. Currently ignores @@runInTerminal and field codes.
+ 	///
+@@ -73,30 +107,65 @@ public:
+ 	Q_INVOKABLE void execute() const;
+ 
+ 	[[nodiscard]] bool isValid() const;
+-	[[nodiscard]] bool noDisplay() const;
+ 	[[nodiscard]] QVector<DesktopAction*> actions() const;
+ 
++	[[nodiscard]] QBindable<QString> bindableName() const { return &this->bName; }
++	[[nodiscard]] QBindable<QString> bindableGenericName() const { return &this->bGenericName; }
++	[[nodiscard]] QBindable<QString> bindableStartupClass() const { return &this->bStartupClass; }
++	[[nodiscard]] QBindable<bool> bindableNoDisplay() const { return &this->bNoDisplay; }
++	[[nodiscard]] QBindable<QString> bindableComment() const { return &this->bComment; }
++	[[nodiscard]] QBindable<QString> bindableIcon() const { return &this->bIcon; }
++	[[nodiscard]] QBindable<QString> bindableExecString() const { return &this->bExecString; }
++	[[nodiscard]] QBindable<QVector<QString>> bindableCommand() const { return &this->bCommand; }
++	[[nodiscard]] QBindable<QString> bindableWorkingDirectory() const {
++		return &this->bWorkingDirectory;
++	}
++	[[nodiscard]] QBindable<bool> bindableRunInTerminal() const { return &this->bRunInTerminal; }
++	[[nodiscard]] QBindable<QVector<QString>> bindableCategories() const {
++		return &this->bCategories;
++	}
++	[[nodiscard]] QBindable<QVector<QString>> bindableKeywords() const { return &this->bKeywords; }
++
+ 	// currently ignores all field codes.
+ 	static QVector<QString> parseExecString(const QString& execString);
+ 	static void doExec(const QList<QString>& execString, const QString& workingDirectory);
+ 
++signals:
++	void nameChanged();
++	void genericNameChanged();
++	void startupClassChanged();
++	void noDisplayChanged();
++	void commentChanged();
++	void iconChanged();
++	void execStringChanged();
++	void commandChanged();
++	void workingDirectoryChanged();
++	void runInTerminalChanged();
++	void categoriesChanged();
++	void keywordsChanged();
++
+ public:
+ 	QString mId;
+-	QString mName;
+-	QString mGenericName;
+-	QString mStartupClass;
+-	bool mNoDisplay = false;
+-	QString mComment;
+-	QString mIcon;
+-	QString mExecString;
+-	QVector<QString> mCommand;
+-	QString mWorkingDirectory;
+-	bool mTerminal = false;
+-	QVector<QString> mCategories;
+-	QVector<QString> mKeywords;
++
++	// clang-format off
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bName, &DesktopEntry::nameChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bGenericName, &DesktopEntry::genericNameChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bStartupClass, &DesktopEntry::startupClassChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, bool, bNoDisplay, &DesktopEntry::noDisplayChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bComment, &DesktopEntry::commentChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bIcon, &DesktopEntry::iconChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bExecString, &DesktopEntry::execStringChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QVector<QString>, bCommand, &DesktopEntry::commandChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QString, bWorkingDirectory, &DesktopEntry::workingDirectoryChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, bool, bRunInTerminal, &DesktopEntry::runInTerminalChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QVector<QString>, bCategories, &DesktopEntry::categoriesChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopEntry, QVector<QString>, bKeywords, &DesktopEntry::keywordsChanged);
++	// clang-format on
+ 
+ private:
+-	QHash<QString, QString> mEntries;
++	void updateActions(const QHash<QString, DesktopActionData>& newActions);
++
++	ParsedDesktopEntryData state;
+ 	QHash<QString, DesktopAction*> mActions;
+ 
+ 	friend class DesktopAction;
+@@ -106,12 +175,13 @@ private:
+ class DesktopAction: public QObject {
+ 	Q_OBJECT;
+ 	Q_PROPERTY(QString id MEMBER mId CONSTANT);
+-	Q_PROPERTY(QString name MEMBER mName CONSTANT);
+-	Q_PROPERTY(QString icon MEMBER mIcon CONSTANT);
++	// clang-format off
++	Q_PROPERTY(QString name READ default WRITE default NOTIFY nameChanged BINDABLE bindableName);
++	Q_PROPERTY(QString icon READ default WRITE default NOTIFY iconChanged BINDABLE bindableIcon);
+ 	/// The raw `Exec` string from the action.
+ 	///
+ 	/// > [!WARNING] This cannot be reliably run as a command. See @@command for one you can run.
+-	Q_PROPERTY(QString execString MEMBER mExecString CONSTANT);
++	Q_PROPERTY(QString execString READ default WRITE default NOTIFY execStringChanged BINDABLE bindableExecString);
+ 	/// The parsed `Exec` command in the action.
+ 	///
+ 	/// The entry can be run with @@execute(), or by using this command in
+@@ -120,7 +190,8 @@ class DesktopAction: public QObject {
+ 	/// the invoked process.
+ 	///
+ 	/// > [!NOTE]	The provided command does not invoke a terminal even if @@runInTerminal is true.
+-	Q_PROPERTY(QVector<QString> command MEMBER mCommand CONSTANT);
++	Q_PROPERTY(QVector<QString> command READ default WRITE default NOTIFY commandChanged BINDABLE bindableCommand);
++	// clang-format on
+ 	QML_ELEMENT;
+ 	QML_UNCREATABLE("DesktopAction instances must be retrieved from a DesktopEntry");
+ 
+@@ -136,18 +207,47 @@ public:
+ 	/// and @@DesktopEntry.workingDirectory.
+ 	Q_INVOKABLE void execute() const;
+ 
++	[[nodiscard]] QBindable<QString> bindableName() const { return &this->bName; }
++	[[nodiscard]] QBindable<QString> bindableIcon() const { return &this->bIcon; }
++	[[nodiscard]] QBindable<QString> bindableExecString() const { return &this->bExecString; }
++	[[nodiscard]] QBindable<QVector<QString>> bindableCommand() const { return &this->bCommand; }
++
++signals:
++	void nameChanged();
++	void iconChanged();
++	void execStringChanged();
++	void commandChanged();
++
+ private:
+ 	DesktopEntry* entry;
+ 	QString mId;
+-	QString mName;
+-	QString mIcon;
+-	QString mExecString;
+-	QVector<QString> mCommand;
+ 	QHash<QString, QString> mEntries;
+ 
++	// clang-format off
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopAction, QString, bName, &DesktopAction::nameChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopAction, QString, bIcon, &DesktopAction::iconChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopAction, QString, bExecString, &DesktopAction::execStringChanged);
++	Q_OBJECT_BINDABLE_PROPERTY(DesktopAction, QVector<QString>, bCommand, &DesktopAction::commandChanged);
++	// clang-format on
++
+ 	friend class DesktopEntry;
+ };
+ 
++class DesktopEntryManager;
++
++class DesktopEntryScanner: public QRunnable {
++public:
++	explicit DesktopEntryScanner(DesktopEntryManager* manager);
++
++	void run() override;
++	// clang-format off
++	void scanDirectory(const QDir& dir, const QString& idPrefix, QList<ParsedDesktopEntryData>& entries);
++	// clang-format on
++
++private:
++	DesktopEntryManager* manager;
++};
++
+ class DesktopEntryManager: public QObject {
+ 	Q_OBJECT;
+ 
+@@ -161,15 +261,25 @@ public:
+ 
+ 	static DesktopEntryManager* instance();
+ 
++	static const QStringList& desktopPaths();
++
++signals:
++	void applicationsChanged();
++
++private slots:
++	void handleFileChanges();
++	void onScanCompleted(const QList<ParsedDesktopEntryData>& scanResults);
++
+ private:
+ 	explicit DesktopEntryManager();
+ 
+-	void populateApplications();
+-	void scanPath(const QDir& dir, const QString& prefix = QString());
+-
+ 	QHash<QString, DesktopEntry*> desktopEntries;
+ 	QHash<QString, DesktopEntry*> lowercaseDesktopEntries;
+ 	ObjectModel<DesktopEntry> mApplications {this};
++	DesktopEntryMonitor* monitor = nullptr;
++	bool scanInProgress = false;
++
++	friend class DesktopEntryScanner;
+ };
+ 
+ ///! Desktop entry index.
+@@ -201,4 +311,7 @@ public:
+ 	Q_INVOKABLE [[nodiscard]] static DesktopEntry* heuristicLookup(const QString& name);
+ 
+ 	[[nodiscard]] static ObjectModel<DesktopEntry>* applications();
++
++signals:
++	void applicationsChanged();
+ };
+--- /dev/null
++++ b/src/core/desktopentrymonitor.cpp
+@@ -0,0 +1,57 @@
++#include "desktopentrymonitor.hpp"
++
++#include <qdir.h>
++#include <qdiriterator.h>
++#include <qfileinfo.h>
++#include <qloggingcategory.h>
++
++#include "desktopentry.hpp"
++
++static void addPathAndParents(QFileSystemWatcher& watcher, const QString& path) {
++	watcher.addPath(path);
++
++	auto p = QFileInfo(path).absolutePath();
++	while (!p.isEmpty()) {
++		watcher.addPath(p);
++		const auto parent = QFileInfo(p).dir().absolutePath();
++		if (parent == p) break;
++		p = parent;
++	}
++}
++
++DesktopEntryMonitor::DesktopEntryMonitor(QObject* parent): QObject(parent) {
++	this->debounceTimer.setSingleShot(true);
++	this->debounceTimer.setInterval(100);
++
++	connect(
++	    &this->watcher,
++	    &QFileSystemWatcher::directoryChanged,
++	    this,
++	    &DesktopEntryMonitor::onDirectoryChanged
++	);
++	connect(&this->debounceTimer, &QTimer::timeout, this, &DesktopEntryMonitor::processChanges);
++
++	this->startMonitoring();
++}
++
++void DesktopEntryMonitor::startMonitoring() {
++	for (const auto& path: DesktopEntryManager::desktopPaths()) {
++		if (!QDir(path).exists()) continue;
++		addPathAndParents(this->watcher, path);
++		this->scanAndWatch(path);
++	}
++}
++
++void DesktopEntryMonitor::scanAndWatch(const QString& dirPath) {
++	auto dir = QDir(dirPath);
++	if (!dir.exists()) return;
++
++	this->watcher.addPath(dirPath);
++
++	auto subdirs = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
++	for (const auto& subdir: subdirs) this->watcher.addPath(subdir.absoluteFilePath());
++}
++
++void DesktopEntryMonitor::onDirectoryChanged(const QString&) { this->debounceTimer.start(); }
++
++void DesktopEntryMonitor::processChanges() { emit desktopEntriesChanged(); }
+--- /dev/null
++++ b/src/core/desktopentrymonitor.hpp
+@@ -0,0 +1,28 @@
++#pragma once
++
++#include <qfilesystemwatcher.h>
++#include <qobject.h>
++#include <qstringlist.h>
++#include <qtimer.h>
++
++class DesktopEntryMonitor: public QObject {
++	Q_OBJECT
++
++public:
++	explicit DesktopEntryMonitor(QObject* parent = nullptr);
++	~DesktopEntryMonitor() = default;
++
++signals:
++	void desktopEntriesChanged();
++
++private slots:
++	void onDirectoryChanged(const QString& path);
++	void processChanges();
++
++private:
++	void startMonitoring();
++	void scanAndWatch(const QString& dirPath);
++
++	QFileSystemWatcher watcher;
++	QTimer debounceTimer;
++};
+--- /dev/null
++++ b/src/core/desktoputils.cpp
+@@ -0,0 +1,34 @@
++#include "desktoputils.hpp"
++
++#include <qdir.h>
++#include <qtenvironmentvariables.h>
++
++QList<QString> DesktopUtils::getDesktopDirectories() {
++	auto dataPaths = QList<QString> {};
++
++	// XDG_DATA_HOME
++	auto dataHome = qEnvironmentVariable("XDG_DATA_HOME");
++	if (dataHome.isEmpty()) {
++		if (qEnvironmentVariableIsSet("HOME")) {
++			dataHome = qEnvironmentVariable("HOME") + "/.local/share";
++		}
++	}
++	if (!dataHome.isEmpty()) {
++		dataPaths.append(dataHome + "/applications");
++	}
++
++	// XDG_DATA_DIRS
++	auto dataDirs = qEnvironmentVariable("XDG_DATA_DIRS");
++	if (dataDirs.isEmpty()) {
++		dataDirs = "/usr/local/share:/usr/share";
++	}
++
++	for (const QString& dir: dataDirs.split(':', Qt::SkipEmptyParts)) {
++		if (!dir.isEmpty()) {
++			// Reduce the amount of files we scan and watch since we only care about .desktop files
++			dataPaths.append(dir + "/applications");
++		}
++	}
++
++	return dataPaths;
++}
+--- /dev/null
++++ b/src/core/desktoputils.hpp
+@@ -0,0 +1,7 @@
++#pragma once
++
++#include <qstringlist.h>
++
++namespace DesktopUtils {
++QList<QString> getDesktopDirectories();
++}
+--- a/src/services/notifications/notification.cpp
++++ b/src/services/notifications/notification.cpp
+@@ -127,7 +127,7 @@ void Notification::updateProperties(
+ 
+ 	if (appIcon.isEmpty() && !this->bDesktopEntry.value().isEmpty()) {
+ 		if (auto* entry = DesktopEntryManager::instance()->byId(this->bDesktopEntry.value())) {
+-			appIcon = entry->mIcon;
++			appIcon = entry->bIcon.value();
+ 		}
+ 	}
+ 
+--- a/src/services/pipewire/metadata.hpp
++++ b/src/services/pipewire/metadata.hpp
+@@ -1,5 +1,6 @@
+ #pragma once
+ 
++#include <spa/utils/hook.h>
+ #include <pipewire/extensions/metadata.h>
+ #include <pipewire/type.h>
+ #include <qobject.h>

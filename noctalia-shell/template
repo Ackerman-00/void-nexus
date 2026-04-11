@@ -1,9 +1,15 @@
+# Template file for 'noctalia-shell'
 pkgname=noctalia-shell
 version=4.7.5
-revision=2
+revision=3
 hostmakedepends=""
 maintainer="Ackerman <https://github.com/Ackerman-00>"
-depends="noctalia-qs matugen qt6-plugin-tls-openssl power-profiles-daemon font-inter brightnessctl ddcutil"
+
+# Dependency List
+depends="noctalia-qs matugen qt6-plugin-tls-openssl power-profiles-daemon upower 
+ roboto-fonts brightnessctl ddcutil cliphist wl-clipboard playerctl libnotify 
+ qt6-5compat qt6-multimedia qt6-svg qt6-wayland qt6-tools libxcb"
+
 short_desc="A sleek and minimal desktop shell thoughtfully crafted for Wayland, built with Quickshell."
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 license="MIT"
@@ -16,6 +22,20 @@ build() {
 }
 
 do_install() {
+    # Install globally into standard xdg system path
     mkdir -p "${DESTDIR}/etc/xdg/quickshell/noctalia-shell"
-    cp -r "${wrksrc}/." "${DESTDIR}/etc/xdg/quickshell/noctalia-shell/"
+    cp -r "${wrksrc}/"* "${DESTDIR}/etc/xdg/quickshell/noctalia-shell/"
+
+    # Provide it in /usr/share per standard packaging guidelines
+    mkdir -p "${DESTDIR}/usr/share/noctalia-shell"
+    cp -r "${wrksrc}/"* "${DESTDIR}/usr/share/noctalia-shell/"
+}
+
+post_install() {
+    echo "========================================================================="
+    echo "Noctalia Shell installed successfully!"
+    echo "To use it, copy the config to your user directory:"
+    echo "  mkdir -p ~/.config/quickshell"
+    echo "  cp -r /usr/share/noctalia-shell/* ~/.config/quickshell/"
+    echo "========================================================================="
 }
