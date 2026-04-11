@@ -7,7 +7,7 @@ maintainer="Ackerman <https://github.com/Ackerman-00>"
 
 # Dependency List
 depends="noctalia-qs matugen qt6-plugin-tls-openssl power-profiles-daemon upower 
- roboto-fonts brightnessctl ddcutil cliphist wl-clipboard playerctl libnotify 
+ fonts-roboto-ttf brightnessctl ddcutil cliphist wl-clipboard playerctl libnotify 
  qt6-5compat qt6-multimedia qt6-svg qt6-wayland qt6-tools libxcb"
 
 short_desc="A sleek and minimal desktop shell thoughtfully crafted for Wayland, built with Quickshell."
