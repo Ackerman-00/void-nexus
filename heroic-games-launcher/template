@@ -1,7 +1,7 @@
 # Template file for 'heroic-games-launcher'
 pkgname=heroic-games-launcher
 version=2.20.1
-revision=2
+revision=3
 archs="x86_64"
 build_style=fetch
 short_desc="Open source launcher for GOG, Epic, and Amazon Games"
@@ -12,9 +12,9 @@ homepage="https://heroicgameslauncher.com"
 distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
 checksum=4e9957436bc270318b00a1107910a3c7d30ad72da530af4dee5c2860866a6272
 
-# Added gamescope as it pairs perfectly with the new desktop entry
-depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm 
- libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb gamescope"
+# Pure dependencies
+depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm \
+ libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
 
 hostmakedepends="bsdtar"
 
@@ -45,7 +45,7 @@ do_install() {
     cp -a usr/share/applications ${DESTDIR}/usr/share/
     cp -a usr/share/icons ${DESTDIR}/usr/share/
 
-    # 3. Create a Native Wayland Wrapper Script
+    # 3. Create the Native Wayland Wrapper Script
     vmkdir usr/bin
     cat <<-'EOF' > ${DESTDIR}/usr/bin/heroic
 	#!/bin/sh
@@ -57,15 +57,10 @@ do_install() {
 	EOF
     chmod 755 ${DESTDIR}/usr/bin/heroic
 
-    # 4. Gamescope Integration
-    cp ${DESTDIR}/usr/share/applications/heroic.desktop ${DESTDIR}/usr/share/applications/heroic-gamescope.desktop
-    sed -i 's/^Name=.*/Name=Heroic Games Launcher (Gamescope)/' ${DESTDIR}/usr/share/applications/heroic-gamescope.desktop
-    sed -i 's|^Exec=.*|Exec=gamescope -f -R --RT --force-grab-cursor --prefer-vk-device --adaptive-sync --nested-unfocused-refresh 30 -- heroic %U|' ${DESTDIR}/usr/share/applications/heroic-gamescope.desktop
-
-    # 5. Optimization: Strip useless static libraries bundled by upstream
+    # 4. Optimization: Strip useless static libraries bundled by upstream
     find ${DESTDIR}/opt/Heroic -type f -name "*.a" -delete
 
-    # 6. Strict Permissions
+    # 5. Strict Permissions
     chmod 755 ${DESTDIR}/opt/Heroic/heroic
     if [ -f ${DESTDIR}/opt/Heroic/chrome-sandbox ]; then
         chmod 4755 ${DESTDIR}/opt/Heroic/chrome-sandbox
