@@ -15,7 +15,7 @@ homepage="https://github.com/noctalia-dev/noctalia-shell"
 license="MIT"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/tags/v${version}.tar.gz"
-checksum=['0b53aa9f2d20034be2e34fc412cdfb0e67a0bb79fe068076183404991a3709d1']
+checksum=0b53aa9f2d20034be2e34fc412cdfb0e67a0bb79fe068076183404991a3709d1
 
 build() {
     return 0
