@@ -9,8 +9,6 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/build.yml?style=for-the-badge&label=BUILD&logo=githubactions&logoColor=white)](https://github.com/Ackerman-00/void-nexus/actions)
 &nbsp;
 [![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/check-updates.yml?style=for-the-badge&label=AUTO-UPDATE&logo=github&logoColor=white)](https://github.com/Ackerman-00/void-nexus/actions)
-&nbsp;
-[![Website](https://img.shields.io/badge/BROWSE_PACKAGES-%E2%86%92-478061?style=for-the-badge)](https://ackerman-00.github.io/void-nexus/)
 
 <p><sup>Packages built nightly · Signed & indexed automatically · Drop-in native xbps repo</sup></p>
 
@@ -46,10 +44,6 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <div align="center">
-
-<a href="https://ackerman-00.github.io/void-nexus/">
-  <img src="https://img.shields.io/badge/🌐_View_All_Packages-ackerman--00.github.io%2Fvoid--nexus-478061?style=for-the-badge&logoColor=white" alt="Browse Packages" />
-</a>
 
 <sub>Full package list with versions, descriptions, and changelogs.</sub>
 
