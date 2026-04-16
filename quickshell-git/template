@@ -27,4 +27,4 @@ conflicts="quickshell>=0"
 provides="quickshell-${version}_${revision}"
 
 distfiles="https://git.outfoxxed.me/quickshell/quickshell/archive/${_commit}.tar.gz"
-checksum=['7dc262aba5d19aa0c8ec4c65481ad0e7847773319059f660e27b6f9bc9fb701b']
+checksum=7dc262aba5d19aa0c8ec4c65481ad0e7847773319059f660e27b6f9bc9fb701b
