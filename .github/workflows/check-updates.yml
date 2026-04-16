@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
@@ -89,18 +89,6 @@ jobs:
               with open(path, 'rb') as f:
                   for chunk in iter(lambda: f.read(65536), b''): h.update(chunk)
               return h.hexdigest()
-
-          def get_appimage_version(filepath):
-              try:
-                  os.chmod(filepath, stat.S_IRWXU)
-                  res = subprocess.run([filepath, '--appimage-version'], capture_output=True, text=True, timeout=10)
-                  m = re.search(r'(\d+\.\d+[\.\d]*)', res.stdout + res.stderr)
-                  if m: return m.group(1)
-                  out = subprocess.run(['strings', filepath], capture_output=True, text=True, timeout=10).stdout
-                  m = re.search(r'(\d+\.\d+\.\d+)', out)
-                  if m: return m.group(1)
-              except Exception: pass
-              return None
 
           def get_latest_commit(repo_url):
               try:
@@ -173,21 +161,19 @@ jobs:
               return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
 
           def replace_checksums(content, new_hashes):
-              if not new_hashes:
-                  return content
-                  
-              # Strips away any lingering brackets/quotes from memory
-              clean_hashes = [str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip() for h in new_hashes if str(h).strip()]
-
-              if len(clean_hashes) == 1:
-                  new_checksum_str = f"checksum={clean_hashes}"
+              if not new_hashes: return content
+              # Ruthlessly strips any brackets or quotes from memory
+              clean = [str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip() for h in new_hashes]
+              clean = [h for h in clean if h]
+              if not clean: return content
+              
+              if len(clean) == 1:
+                  repl = f"checksum={clean}"
               else:
-                  hashes_joined = '\n '.join(clean_hashes)
-                  new_checksum_str = f'checksum="{hashes_joined}"'
-
-              # THE FIX: This ruthless regex targets `checksum=` and nukes everything after it until the end of the declaration, replacing it purely with the string above.
-              pattern = r'^_?checksum\s*=\s*(?:\[.*?\]|".*?"|\'.*?\'|\S+)'
-              return re.sub(pattern, new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
+                  repl = f'checksum="{"\\n ".join(clean)}"'
+              
+              # Pure, un-breakable regex that fully replaces the checksum line regardless of corruption
+              return re.sub(r'^_?checksum\s*=\s*(?:\[.*?\]|".*?"|\'.*?\'|\S+)', repl, content, flags=re.MULTILINE | re.DOTALL)
 
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
@@ -245,7 +231,7 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # Gatekeeper: Force a fix if the brackets are in the file from a previous bad run
+              # Gatekeeper: Force a fix if the brackets are in the file from my previous bad script
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
@@ -313,41 +299,32 @@ jobs:
       - name: Phase 2 - Commit and Push Updates
         if: steps.scan.outputs.updates_found == 'true'
         run: |
-          set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # THE FIX: Automatically stage only tracked files that were modified (your templates)
-          # This ignores the .txt files entirely, preventing Git from crashing!
+          # Only stages tracked templates that were explicitly modified. 
+          # No stash traps, no untracked file crashes.
           git add -u
           
-          if git diff --cached --quiet; then
+          if ! git diff --cached --quiet; then
+            git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          else
             echo "No changes staged. Skipping commit."
-            exit 0
           fi
-          
-          git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
-          
-          # Safely hide the untracked .txt files so rebase doesn't panic
-          git stash --include-untracked
-          
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push origin HEAD:"${GITHUB_REF_NAME}"
-          
-          # Bring the .txt files back for the Relay Race
-          git stash pop || true
 
       - name: Phase 3 - Trigger Relay Race
         if: steps.scan.outputs.updates_found == 'true'
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
-          set -e
-          WORKFLOW_NAME="Build and Deploy Custom XBPS"
-
-          if [ ! -s changed_packages.txt ]; then
+          if [ ! -f changed_packages.txt ]; then
+            echo "Relay race skipped: No packages changed."
             exit 0
           fi
+
+          WORKFLOW_NAME="Build and Deploy Custom XBPS"
 
           PRIORITY_ORDER=(
             "hyprutils" "hyprlang" "hyprwayland-scanner" "hyprcursor"
@@ -382,5 +359,5 @@ jobs:
           echo "Starting relay race with: $LIST"
           
           gh workflow run "${WORKFLOW_NAME}" \
-            --ref "${GITHUB_REF_NAME}" \
+            --ref "${{ github.ref_name }}" \
             -f package_list="$LIST"
