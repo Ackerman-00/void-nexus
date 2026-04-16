@@ -44,7 +44,7 @@ jobs:
           import os, re, requests, subprocess, hashlib, datetime, tempfile, stat
           from packaging import version as pkg_version
           from pathlib import Path
-          
+
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
               '$GNOME_SITE':          'https://download.gnome.org/sources',
@@ -80,7 +80,7 @@ jobs:
               try:
                   proc = subprocess.run(['curl', '-sSL', '-A', 'VoidNexus-BuildBot/1.0', '-o', dest_path, url], timeout=120)
                   return proc.returncode == 0
-              except Exception as e: 
+              except Exception as e:
                   print(f"Error fetching {url}: {e}")
                   return False
 
@@ -138,7 +138,6 @@ jobs:
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
               if template_vars:
                   for var, val in template_vars.items(): url = url.replace('${' + var + '}', val).replace('$' + var, val)
-              
               url = re.sub(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', '', url)
               return url
 
@@ -162,25 +161,32 @@ jobs:
 
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
-              
-              # Ruthlessly strip all python syntax, brackets, and quotes
-              clean = [str(h).translate(str.maketrans('', '', '[]\'"')).strip() for h in new_hashes]
-              clean = [h for h in clean if h]
+
+              # Strip any Python list/quote artifacts from each hash
+              clean = []
+              for h in new_hashes:
+                  s = str(h).translate(str.maketrans('', '', '[]\'"')).strip()
+                  if s:
+                      clean.append(s)
               if not clean: return content
-              
-              # Build the clean string
+
+              # Hard-fail if anything other than a 64-char hex string is present
+              for s in clean:
+                  assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
+
+              # Single distfile  -> bare unquoted hash:   checksum=abcd1234...
+              # Multiple distfiles -> quoted newline block
               if len(clean) == 1:
-                  repl = f"checksum={clean}"
+                  repl = "checksum=" + clean[0]    # clean[0] extracts the string, NOT the list
               else:
-                  joined = '\\n '.join(clean)
-                  repl = f'checksum="{joined}"'
-              
-              # SLEDGEHAMMER FIX:
-              # Step 1: Delete any existing checksum line (and any multiline strings attached to it)
+                  joined = '\n '.join(clean)
+                  repl = 'checksum="' + joined + '"'
+
+              # Delete existing checksum line (handles multiline too)
               content = re.sub(r'^_?checksum=.*(?:\n\s+.*)*\n?', '', content, flags=re.MULTILINE)
-              # Step 2: Inject the clean checksum directly below the distfiles line
+              # Inject directly below distfiles line
               content = re.sub(r'^(distfiles=.*(?:\n\s+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
-              
+
               return content
 
           git_user = "github-actions[bot]"
@@ -239,7 +245,7 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # Gatekeeper logic to force an update if brackets exist in the file
+              # Force re-process if file is currently corrupted with brackets
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
@@ -278,7 +284,7 @@ jobs:
                       fetch_ok = False
                       break
 
-              if not fetch_ok: 
+              if not fetch_ok:
                   print(f"Failed to fetch distfiles for {pkgname}. Skipping.")
                   continue
 
@@ -299,7 +305,7 @@ jobs:
 
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
-          
+
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
           EOF
@@ -309,9 +315,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git add -u
-          
+
           if ! git diff --cached --quiet; then
             git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
             git pull --rebase origin ${{ github.ref_name }}
@@ -360,10 +366,10 @@ jobs:
               ORDERED+=("$pkg")
             fi
           done < changed_packages.txt
-          
+
           LIST="${ORDERED[*]}"
           echo "Starting relay race with: $LIST"
-          
+
           gh workflow run "${WORKFLOW_NAME}" \
             --ref "${{ github.ref_name }}" \
             -f package_list="$LIST"
