@@ -11,4 +11,4 @@ license="GPL-3.0-or-later"
 homepage="https://github.com/Vysp3r/ProtonPlus"
 
 distfiles="https://github.com/Vysp3r/ProtonPlus/archive/refs/tags/v${version}.tar.gz"
-checksum=['46d196aa0fc59dffd29dd1391ae4f7a308a57d9690e0d0df7d68102bc505789c']
+checksum=46d196aa0fc59dffd29dd1391ae4f7a308a57d9690e0d0df7d68102bc505789c
