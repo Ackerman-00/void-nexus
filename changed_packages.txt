@@ -1,6 +1,1 @@
 protonplus
-noctalia-shell
-hyprlock
-niri-git
-zed
-glaze
