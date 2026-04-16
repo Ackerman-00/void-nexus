@@ -21,7 +21,6 @@ provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
 checksum=99781b11ef25023924a28c9fa868610c9be879a5463fa875d33df885ccfea7c4
-}
 
 do_check() {
     if [ "$XBPS_TARGET_LIBC" != "musl" ]; then
