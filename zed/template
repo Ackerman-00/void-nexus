@@ -38,8 +38,16 @@ homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
 checksum=5c1f4c89a6a5954c528a670002f1cab77d188e863b958cb193913f43cef6076c
+
 pre_build() {
     export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
+    
+    # 1. Force 'mold' linker
+    export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=mold"
+    
+    # 2. Cargo to aggressively strip debug symbols to save gigabytes of disk space
+    export CARGO_PROFILE_RELEASE_DEBUG=0
+    export CARGO_PROFILE_RELEASE_STRIP="symbols"
 }
 
 post_install() {
