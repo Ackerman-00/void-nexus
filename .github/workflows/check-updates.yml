@@ -176,10 +176,8 @@ jobs:
               if not new_hashes:
                   return content
                   
-              clean_hashes = []
-              for h in new_hashes:
-                  h_clean = str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
-                  if h_clean: clean_hashes.append(h_clean)
+              # Strips away any lingering brackets/quotes from memory
+              clean_hashes = [str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip() for h in new_hashes if str(h).strip()]
 
               if len(clean_hashes) == 1:
                   new_checksum_str = f"checksum={clean_hashes}"
@@ -187,7 +185,9 @@ jobs:
                   hashes_joined = '\n '.join(clean_hashes)
                   new_checksum_str = f'checksum="{hashes_joined}"'
 
-              return re.sub(r'^_?checksum=.*', new_checksum_str, content, flags=re.MULTILINE)
+              # THE FIX: This ruthless regex targets `checksum=` and nukes everything after it until the end of the declaration, replacing it purely with the string above.
+              pattern = r'^_?checksum\s*=\s*(?:\[.*?\]|".*?"|\'.*?\'|\S+)'
+              return re.sub(pattern, new_checksum_str, content, flags=re.MULTILINE | re.DOTALL)
 
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
@@ -245,6 +245,7 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
+              # Gatekeeper: Force a fix if the brackets are in the file from a previous bad run
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
@@ -327,7 +328,7 @@ jobs:
           
           git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
           
-          # Safely hide the untracked .txt files
+          # Safely hide the untracked .txt files so rebase doesn't panic
           git stash --include-untracked
           
           git pull --rebase origin "${GITHUB_REF_NAME}"
