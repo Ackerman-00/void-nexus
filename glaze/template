@@ -16,7 +16,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/stephenberry/glaze"
 distfiles="https://github.com/stephenberry/glaze/archive/refs/tags/v${version}.tar.gz"
-checksum=['41c8184a4fc4ab4df92b9bdde9ff85c9c47ef8f7a0fe3972db369574ac130d3a']
+checksum=41c8184a4fc4ab4df92b9bdde9ff85c9c47ef8f7a0fe3972db369574ac130d3a
 post_install() {
   vlicense LICENSE
 }
