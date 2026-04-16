@@ -37,7 +37,7 @@ license="GPL-3.0-or-later, Apache-2.0, AGPL-3.0-or-later"
 homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
-checksum=['5c1f4c89a6a5954c528a670002f1cab77d188e863b958cb193913f43cef6076c']
+checksum=5c1f4c89a6a5954c528a670002f1cab77d188e863b958cb193913f43cef6076c
 pre_build() {
     export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
 }
