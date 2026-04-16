@@ -162,17 +162,26 @@ jobs:
 
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
-              clean = [str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip() for h in new_hashes]
+              
+              # Ruthlessly strip all python syntax, brackets, and quotes
+              clean = [str(h).translate(str.maketrans('', '', '[]\'"')).strip() for h in new_hashes]
               clean = [h for h in clean if h]
               if not clean: return content
               
+              # Build the clean string
               if len(clean) == 1:
                   repl = f"checksum={clean}"
               else:
-                  joined_hashes = '\n '.join(clean)
-                  repl = f'checksum="{joined_hashes}"'
+                  joined = '\\n '.join(clean)
+                  repl = f'checksum="{joined}"'
               
-              return re.sub(r'^_?checksum\s*=\s*(?:\[.*?\]|".*?"|\'.*?\'|\S+)', repl, content, flags=re.MULTILINE | re.DOTALL)
+              # SLEDGEHAMMER FIX:
+              # Step 1: Delete any existing checksum line (and any multiline strings attached to it)
+              content = re.sub(r'^_?checksum=.*(?:\n\s+.*)*\n?', '', content, flags=re.MULTILINE)
+              # Step 2: Inject the clean checksum directly below the distfiles line
+              content = re.sub(r'^(distfiles=.*(?:\n\s+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
+              
+              return content
 
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
@@ -230,6 +239,7 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
+              # Gatekeeper logic to force an update if brackets exist in the file
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
