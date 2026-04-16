@@ -176,7 +176,6 @@ jobs:
               if not new_hashes:
                   return content
                   
-              # Flawless extraction: Guaranteed to be bracket-free
               clean_hashes = []
               for h in new_hashes:
                   h_clean = str(h).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
@@ -188,7 +187,6 @@ jobs:
                   hashes_joined = '\n '.join(clean_hashes)
                   new_checksum_str = f'checksum="{hashes_joined}"'
 
-              # Completely wipe out the old checksum line and replace it
               return re.sub(r'^_?checksum=.*', new_checksum_str, content, flags=re.MULTILINE)
 
           git_user = "github-actions[bot]"
@@ -247,7 +245,6 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # Gatekeeper: Force a fix if the brackets are in the file
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
@@ -319,19 +316,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Only stage actual template files, ignoring the temp texts
-          git add */template srcpkgs/*/template 2>/dev/null || true
+          # THE FIX: Automatically stage only tracked files that were modified (your templates)
+          # This ignores the .txt files entirely, preventing Git from crashing!
+          git add -u
           
           if git diff --cached --quiet; then
+            echo "No changes staged. Skipping commit."
             exit 0
           fi
           
           git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
           
-          # Safely hide untracked temp files, pull rebase, then restore them
+          # Safely hide the untracked .txt files
           git stash --include-untracked
+          
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin HEAD:"${GITHUB_REF_NAME}"
+          
+          # Bring the .txt files back for the Relay Race
           git stash pop || true
 
       - name: Phase 3 - Trigger Relay Race
