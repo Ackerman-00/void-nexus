@@ -1,7 +1,7 @@
 # Template file for 'niri-git'
 pkgname=niri-git
-_commit=82d4c7569e731379284e0653dcdadb8f17cceec7
-version=20260416
+_commit=c814c656c53ea9d69f5afb45c88f4dc4d25338cd
+version=20260417
 revision=1
 build_style=cargo
 build_helper="qemu"
@@ -20,7 +20,7 @@ conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=d776209af0fd3287e3bdb2b41b852d7c7e8d061dbdb93f0415ca880620ee0017
+checksum=2f03ab7d12b7cd7be8d0b4e4e46619e06fd1bbcf3db4cf965fa4bd2b67aaf81e
 }
 
 post_install() {
