@@ -183,9 +183,9 @@ jobs:
                   repl = 'checksum="' + joined + '"'
 
               # Delete existing checksum line (handles multiline too)
-              content = re.sub(r'^_?checksum=.*(?:\n\s+.*)*\n?', '', content, flags=re.MULTILINE)
+              content = re.sub(r'^_?checksum=.*(?:\n[ \t]+.*)*\n?', '', content, flags=re.MULTILINE)
               # Inject directly below distfiles line
-              content = re.sub(r'^(distfiles=.*(?:\n\s+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
+              content = re.sub(r'^(distfiles=.*(?:\n[ \t]+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
 
               return content
 
