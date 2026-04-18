@@ -1,2 +1,1 @@
-hyprlock
-niri-git
+protonplus
