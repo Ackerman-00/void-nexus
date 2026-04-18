@@ -36,5 +36,4 @@ homepage="https://github.com/hyprwm/hyprlock"
 changelog="https://github.com/hyprwm/${pkgname}/releases"
 distfiles="https://github.com/hyprwm/${pkgname}/archive/refs/tags/v${version}.tar.gz"
 checksum=cbc49fc5553c550131e1a15089847501de42579944814229bfa9f8ea18519f89
-}
 
