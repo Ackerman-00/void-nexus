@@ -21,7 +21,6 @@ provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
 checksum=8806de5bff671ab580fd77fac915011cf9a2ff8f2fd2077127e33ecb79664fff
-}
 
 post_install() {
     local sh
