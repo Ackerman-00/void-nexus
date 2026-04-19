@@ -6,7 +6,7 @@ build_style=meson
 hostmakedepends="meson pkg-config gettext glib-devel"
 depends="python3 python3-gobject python3-requests python3-Pillow
  python3-vdf python3-psutil python3-pygame libcanberra ImageMagick
- icoextract libayatana-appindicator"
+ python3-icoextract libayatana-appindicator"
 short_desc="Simple and lightweight app for running Windows games using UMU-Launcher"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"

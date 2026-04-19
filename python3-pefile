@@ -1,0 +1,17 @@
+# Template file for 'python3-pefile'
+pkgname=python3-pefile
+version=2024.8.26
+revision=1
+build_style=python3-pep517
+hostmakedepends="python3-setuptools python3-wheel"
+depends="python3"
+short_desc="Python module to read and work with PE (Portable Executable) files"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="MIT"
+homepage="https://github.com/erocarrera/pefile"
+distfiles="${PYPI_SITE}/p/pefile/pefile-${version}.tar.gz"
+checksum=0000000000000000000000000000000000000000000000000000000000000000
+
+post_install() {
+    vlicense LICENSE
+}
