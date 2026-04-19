@@ -1,0 +1,110 @@
+# Template file for 'helium-browser-bin'
+pkgname=helium-browser-bin
+version=0.11.3.2
+revision=1
+archs="x86_64 aarch64"
+depends="gtk+3 nss alsa-lib xdg-utils libXScrnSaver cups libgcrypt
+ liberation-fonts-ttf dbus libpulseaudio pciutils libva libffi
+ desktop-file-utils hicolor-icon-theme ca-certificates vulkan-loader"
+short_desc="Private, fast, and honest web browser based on Chromium"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="GPL-3.0-only, BSD-3-Clause"
+homepage="https://github.com/imputnet/helium-linux"
+
+# Automatically pull the correct tarball and set the extraction folder based on architecture
+case "$XBPS_TARGET_MACHINE" in
+    x86_64)
+        distfiles="https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz"
+        checksum=0cc832d4d1f6fa1bb30c6c92942a8da608fb2672ede0eb6051e0a3c4c096bc5b
+        wrksrc="helium-${version}-x86_64_linux"
+        ;;
+    aarch64)
+        distfiles="https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-arm64_linux.tar.xz"
+        checksum=a7dc22b9a2ad4001c02f8c43152a6e878de67f9fb4cb8a64596e6daca14cb1dc
+        wrksrc="helium-${version}-arm64_linux"
+        ;;
+esac
+
+do_install() {
+    # 1. Create the destination directory and copy the prebuilt binaries
+    vmkdir opt/helium-browser
+    cp -a * ${DESTDIR}/opt/helium-browser/
+
+    # Remove the useless AppImage wrapper
+    rm -f ${DESTDIR}/opt/helium-browser/helium-wrapper-appimage.sh
+
+    # 2. Rebuild the wrapper
+    # This enables support for ~/.config/helium-browser-flags.conf
+    cat << 'EOF' > ${DESTDIR}/opt/helium-browser/helium-wrapper
+#!/usr/bin/env bash
+export CHROME_VERSION_EXTRA="Void Linux"
+
+CHROME_WRAPPER="$(readlink -f "$0")"
+HERE="$(dirname "$CHROME_WRAPPER")"
+
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-"$HOME/.config"}"
+SYS_CONF="/etc/helium-browser-flags.conf"
+USR_CONF="${XDG_CONFIG_HOME}/helium-browser-flags.conf"
+
+FLAGS=()
+
+append_flags_file() {
+  local file="$1"
+  [ -r "$file" ] || return 0
+  local line safe_line
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+    case "$line" in
+      *\$\(*|*\`*)
+        echo "Warning: ignoring unsafe line in $file: $line" >&2
+        continue
+        ;;
+    esac
+    set -f
+    safe_line=${line//$/\\$}
+    safe_line=${safe_line//~/\\~}
+    eval "set -- $safe_line"
+    set +f
+    for token in "$@"; do
+      FLAGS+=("$token")
+    done
+  done < "$file"
+}
+
+append_flags_file "$SYS_CONF"
+append_flags_file "$USR_CONF"
+
+if [[ -n "${HELIUM_USER_FLAGS:-}" ]]; then
+  read -r -a ENV_FLAGS <<< "$HELIUM_USER_FLAGS"
+  FLAGS+=("${ENV_FLAGS[@]}")
+fi
+
+export CHROME_WRAPPER
+export LD_LIBRARY_PATH="$HERE:$HERE/lib:$HERE/lib.target${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+# Sanitize I/O for untrusted child processes
+exec < /dev/null
+exec > >(exec cat)
+exec 2> >(exec cat >&2)
+
+exec "$HERE/helium" "${FLAGS[@]}" "$@"
+EOF
+    
+    chmod 755 ${DESTDIR}/opt/helium-browser/helium-wrapper
+
+    # 3. Create the symlink in /usr/bin
+    vmkdir usr/bin
+    ln -sf /opt/helium-browser/helium-wrapper ${DESTDIR}/usr/bin/helium-browser
+
+    # 4. Hot-patch the desktop file to perfectly align with the wrapper
+    vsed -i 's/^Name=Helium$/Name=Helium Browser/' helium.desktop
+    vsed -i 's/^Exec=helium/Exec=helium-browser/' helium.desktop
+    vsed -i 's/^Icon=helium/Icon=helium-browser/' helium.desktop
+    
+    # 5. Install system integrations
+    vinstall helium.desktop 644 usr/share/applications helium-browser.desktop
+    vinstall product_logo_256.png 644 usr/share/pixmaps helium-browser.png
+    vinstall product_logo_256.png 644 usr/share/icons/hicolor/256x256/apps helium-browser.png
+    
+    vlicense LICENSE
+}
