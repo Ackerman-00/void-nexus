@@ -1,7 +1,7 @@
 # Template file for 'zed'
 pkgname=zed
 version=0.232.2
-revision=1
+revision=2
 archs="x86_64* aarch64*"
 build_style=cargo
 make_cmd="env -u LIBGIT2_NO_VENDOR cargo"
@@ -39,15 +39,20 @@ changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
 checksum=5c1f4c89a6a5954c528a670002f1cab77d188e863b958cb193913f43cef6076c
 
+# 1. Stability check
+_zed_env="ZED_UPDATE_EXPLANATION=\"Updates are handled by Void Nexus\" RELEASE_VERSION=${version} CARGO_PROFILE_RELEASE_DEBUG=0 CARGO_PROFILE_RELEASE_STRIP=symbols"
+make_build_env="${_zed_env}"
+make_install_env="${_zed_env}"
+make_check_env="${_zed_env}"
+
 pre_build() {
-    export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
-    
-    # 1. Force 'mold' linker
+    # Force the mold linker for speed and memory efficiency
     export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=mold"
-    
-    # 2. Cargo to aggressively strip debug symbols to save gigabytes of disk space
-    export CARGO_PROFILE_RELEASE_DEBUG=0
-    export CARGO_PROFILE_RELEASE_STRIP="symbols"
+}
+
+pre_install() {
+    # Ensure RUSTFLAGS persist to the install phase so Cargo doesn't recompile everything sigh
+    export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=mold"
 }
 
 post_install() {
@@ -56,7 +61,7 @@ post_install() {
     # 1. Drop the icon into the universal pixmaps folder
     vinstall ${wrksrc}/crates/zed/resources/app-icon.png 644 usr/share/pixmaps zed.png
 
-    # 2. Inject a hardcoded, unbreakable desktop file
+    # 2. Desktop file
     vmkdir usr/share/applications
     cat > "${DESTDIR}/usr/share/applications/zed.desktop" <<EOF
 [Desktop Entry]
