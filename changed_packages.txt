@@ -1,1 +1,2 @@
+quickshell-git
 niri-git

@@ -1,6 +1,6 @@
 # Template file for 'niri-git'
 pkgname=niri-git
-_commit=6fc50a1fb82a8f5925e297e47dcb935db9c5eeef
+_commit=04c422e43f018cab681d52b199dc779c5fa90a52
 version=20260419
 revision=1
 build_style=cargo
@@ -20,5 +20,5 @@ conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=c59850553c8cf48c050b0d3169d72e7ac3d59b3603c85ba28d2236affad8b2d2
+checksum=9a0305576ae06081663508ca6b21df3bb72db16cf5d97d2d9765b9c0c936b81d
 }
