@@ -26,6 +26,7 @@
   {"name": "niri-git", "version": "20260419_1"},
   {"name": "noctalia-qs", "version": "0.0.12_3"},
   {"name": "noctalia-shell", "version": "4.7.6_1"},
+  {"name": "protonplus", "version": "0.5.20_1"},
   {"name": "quickshell-git", "version": "20260419_1"},
   {"name": "rootapp", "version": "0.9.110_1"},
   {"name": "sdbus-cpp", "version": "2.2.1_2"},
