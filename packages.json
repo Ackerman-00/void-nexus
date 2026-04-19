@@ -15,6 +15,7 @@
   {"name": "hyprland-qt-support", "version": "0.1.0_2"},
   {"name": "hyprland-qtutils", "version": "0.1.5_2"},
   {"name": "hyprlang", "version": "0.6.8_2"},
+  {"name": "hyprlock", "version": "0.9.5_1"},
   {"name": "hyprpaper", "version": "0.8.3_2"},
   {"name": "hyprpolkitagent", "version": "0.1.3_2"},
   {"name": "hyprsunset", "version": "0.3.3_2"},
