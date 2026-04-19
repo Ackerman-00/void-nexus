@@ -11,14 +11,14 @@ git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-pa
 
 cd /tmp/void-packages
 
-# THE FIX: Apply your exact bypass from build.yml (Zero-Bootstrap!)
+# Apply bypass from build.yml
 echo ">>> Injecting Nexus Masterdir Bypass..."
 ln -s / masterdir
 echo "x86_64" > /.xbps_chroot_init
 echo "XBPS_CHROOT_CMD=ethereal" >> etc/conf
 echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
 
-# Copy our templates over into the build chroot
+# Copy templates over into the build chroot
 find /workspace -maxdepth 2 -name "template" | while read -r tmpl; do
   pkg_dir=$(dirname "$tmpl")
   pkg_name=$(basename "$pkg_dir")
@@ -32,6 +32,6 @@ while IFS= read -r pkg; do
   echo "Generating native hashes for $pkg..."
   xgensum -f -i "$pkg"
   
-  # Copy the perfectly formatted template back to your repo
+  # Copy the perfectly formatted template back to the repo
   cp srcpkgs/$pkg/template /workspace/$pkg/template
 done < /workspace/changed_packages.txt
