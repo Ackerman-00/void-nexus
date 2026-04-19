@@ -22,6 +22,7 @@
   {"name": "hyprwayland-scanner", "version": "0.4.5_2"},
   {"name": "hyprwire", "version": "0.3.0_2"},
   {"name": "libspng", "version": "0.7.4_2"},
+  {"name": "niri-git", "version": "20260419_1"},
   {"name": "noctalia-qs", "version": "0.0.12_3"},
   {"name": "noctalia-shell", "version": "4.7.6_1"},
   {"name": "quickshell-git", "version": "20260419_1"},
