@@ -21,4 +21,20 @@ provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
 checksum=9a0305576ae06081663508ca6b21df3bb72db16cf5d97d2d9765b9c0c936b81d
+
+do_check() {
+    if [ "$XBPS_TARGET_LIBC" != "musl" ]; then
+        cargo test --target ${RUST_TARGET} --workspace --locked -- --skip=::egl
+    fi
+}
+
+post_install() {
+    local sh
+    vinstall resources/niri.desktop 644 usr/share/wayland-sessions
+    vinstall resources/niri-portals.conf 644 usr/share/xdg-desktop-portal
+
+    for sh in bash fish zsh; do
+        vtargetrun "${DESTDIR}/usr/bin/niri" completions "${sh}" > "niri.${sh}"
+        vcompletion "niri.${sh}" "${sh}"
+    done
 }
