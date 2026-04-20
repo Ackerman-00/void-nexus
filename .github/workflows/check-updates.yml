@@ -136,7 +136,8 @@ jobs:
                       return None
 
                   versions.sort(key=pkg_version.parse, reverse=True)
-                  return versions
+                  # FIX 1 of 3: Return the FIRST element as a STRING.
+                  return versions[0]
               except Exception:
                   return None
 
@@ -155,24 +156,32 @@ jobs:
           def version_is_newer(latest, current):
               if not latest or latest == current: return False
               if is_date_version(current) and is_semver(latest): return True
-              try: return pkg_version.parse(latest) > pkg_version.parse(current)
+              try: return pkg_version.parse(str(latest)) > pkg_version.parse(str(current))
               except Exception: return latest != current
 
           def resolve_url(url_template, pkgname, ver, sha, curr_ver=None, curr_sha=None, template_vars=None):
               url = resolve_site_vars(url_template)
               url = url.replace('${pkgname}', pkgname).replace('$pkgname', pkgname)
+              
+              # FIX 2 of 3: Defensive string casting to prevent "replace() argument 2 must be str" crashes.
               use_ver = ver if ver else curr_ver
-              if use_ver:
+              if use_ver is not None:
+                  use_ver = str(use_ver)
                   url = url.replace('${version}', use_ver).replace('$version', use_ver)
-                  short_ver = '.'.join(use_ver.split('.')[:-1]) if '.' in use_ver else use_ver
-                  url = url.replace('${version%.*}', short_ver)
+                  if '.' in use_ver:
+                      short_ver = '.'.join(use_ver.split('.')[:-1])
+                      url = url.replace('${version%.*}', short_ver)
               use_sha = sha if sha else curr_sha
-              if use_sha: url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
+              if use_sha is not None:
+                  use_sha = str(use_sha)
+                  url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
+                  
               for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE', '${XBPS_TARGET_MACHINE}', '${_machine}']:
                   url = url.replace(arch_var, 'x86_64')
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
               if template_vars:
-                  for var, val in template_vars.items(): url = url.replace('${' + var + '}', val).replace('$' + var, val)
+                  for var, val in template_vars.items(): 
+                      url = url.replace('${' + var + '}', str(val)).replace('$' + var, str(val))
               url = re.sub(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', '', url)
               return url
 
@@ -208,14 +217,13 @@ jobs:
                   assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
 
               if len(clean) == 1:
-                  repl = f"checksum={clean}"
+                  repl = f"checksum={clean[0]}"
               else:
                   joined = '\n '.join(clean)
                   repl = f'checksum="{joined}"'
 
               content = re.sub(r'^_?checksum=.*(?:\n[ \t]+.*)*\n?', '', content, flags=re.MULTILINE)
               content = re.sub(r'^(distfiles=.*(?:\n[ \t]+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
-
               return content
 
           git_user = "github-actions[bot]"
@@ -279,6 +287,14 @@ jobs:
                   if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
+
+              # FIX 3 of 3: Defensive check to ensure we never pass a list forward.
+              if isinstance(new_ver, list):
+                  print(f"ERROR: {pkgname} received a list instead of string. This should not happen. Skipping.")
+                  continue
+              if isinstance(new_sha, list):
+                  print(f"ERROR: {pkgname} received a list instead of string for SHA. Skipping.")
+                  continue
 
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
