@@ -1,6 +1,6 @@
 # Template file for 'mesa-latest'
 pkgname=mesa-latest
-version=26.1.0
+version=26.0.4
 revision=1
 build_style=meson
 build_helper="qemu"
@@ -36,12 +36,11 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT, LGPL-2.1-or-later, BSD-3-Clause, SGI-B-2.0"
 homepage="https://www.mesa3d.org/"
 
-# Point directly to the official Freedesktop GitLab
-distfiles="https://gitlab.freedesktop.org/mesa/mesa/-/archive/mesa-${version}/mesa-mesa-${version}.tar.gz"
-checksum=6b70dd2f6c347d448c2d6140fdb70429d17135e6713ea6c095df1b34e4010e6a
-
-# GitLab extracts archives as project-tag
-wrksrc="mesa-mesa-${version}"
+# Use the official stable archive, not GitLab
+distfiles="https://archive.mesa3d.org/mesa-${version}.tar.xz"
+checksum=00000000000000000000000000000000000000000
+# Stable tarballs extract to mesa-${version}
+wrksrc="mesa-${version}"
 
 # The Void python script uses them to inject Rust crates!
 # BEGIN GENERATED
@@ -63,8 +62,8 @@ configure_args+=" -Dvideo-codecs=all -Dgallium-va=enabled -Dgallium-rusticl=true
 configure_args+=" -Dvulkan-layers=device-select,overlay,screenshot,vram-report-limit,anti-lag,intel-nullhw"
 
 post_extract() {
-    # Generate the missing VERSION file required by Meson for GitLab raw archives
-    echo "${version}" > VERSION
+    # VERSION file is already included in stable tarballs
+    :
 }
 
 post_configure() {

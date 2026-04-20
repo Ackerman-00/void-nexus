@@ -33,7 +33,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests packaging
+        run: pip install requests packaging beautifulsoup4
 
       - name: Phase 1 - Scan APIs & Update Versions
         id: scan
@@ -45,6 +45,7 @@ jobs:
           from packaging import version as pkg_version
           from packaging.version import InvalidVersion
           from pathlib import Path
+          from bs4 import BeautifulSoup
 
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
@@ -136,7 +137,6 @@ jobs:
                       return None
 
                   versions.sort(key=pkg_version.parse, reverse=True)
-                  # FIX 1 of 3: Return the FIRST element as a STRING.
                   return versions[0]
               except Exception:
                   return None
@@ -163,7 +163,6 @@ jobs:
               url = resolve_site_vars(url_template)
               url = url.replace('${pkgname}', pkgname).replace('$pkgname', pkgname)
               
-              # FIX 2 of 3: Defensive string casting to prevent "replace() argument 2 must be str" crashes.
               use_ver = ver if ver else curr_ver
               if use_ver is not None:
                   use_ver = str(use_ver)
@@ -261,6 +260,37 @@ jobs:
               print(f"Scanning {pkgname}...")
               new_ver, new_sha = None, None
 
+              # --- Custom scraper for mesa-latest ---
+              if pkgname == "mesa-latest":
+                  try:
+                      print("  → Scraping stable Mesa releases from archive.mesa3d.org...")
+                      resp = requests.get("https://archive.mesa3d.org/", timeout=30)
+                      resp.raise_for_status()
+                      soup = BeautifulSoup(resp.text, 'html.parser')
+                      
+                      versions = []
+                      for link in soup.find_all('a'):
+                          href = link.get('href')
+                          if href and href.startswith('mesa-') and href.endswith('.tar.xz'):
+                              # Extract version and filter out RC, alpha, beta
+                              match = re.search(r'mesa-(\d+\.\d+\.\d+)\.tar\.xz', href)
+                              if match:
+                                  ver_str = match.group(1)
+                                  if 'rc' not in href.lower() and 'alpha' not in href.lower() and 'beta' not in href.lower():
+                                      versions.append(ver_str)
+                      
+                      if versions:
+                          versions.sort(key=pkg_version.parse, reverse=True)
+                          latest_stable = versions[0]
+                          print(f"  → Latest stable Mesa: {latest_stable}")
+                          if version_is_newer(latest_stable, curr_ver):
+                              new_ver = latest_stable
+                      else:
+                          print("  → No stable Mesa versions found.")
+                  except Exception as e:
+                      print(f"  → Failed to scrape Mesa archive: {e}")
+
+              # Existing GitLab/GitHub/PyPI logic for all other packages
               if curr_sha is not None:
                   repo_m = re.search(r'_gitrepo=["\']?([^"\'\n\s]+)', raw)
                   repo_url = repo_m.group(1) if repo_m else None
@@ -288,7 +318,7 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # FIX 3 of 3: Defensive check to ensure we never pass a list forward.
+              # Defensive check to ensure we never pass a list forward.
               if isinstance(new_ver, list):
                   print(f"ERROR: {pkgname} received a list instead of string. This should not happen. Skipping.")
                   continue
@@ -307,6 +337,23 @@ jobs:
               candidate = raw
               if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate)
               if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate)
+
+              # For mesa-latest, ensure the distfiles line is updated to the archive URL
+              if pkgname == "mesa-latest" and new_ver:
+                  # Replace GitLab URL with archive.mesa3d.org URL
+                  candidate = re.sub(
+                      r'^distfiles="https://gitlab\.freedesktop\.org/mesa/mesa/-/archive/.*?\.tar\.gz"',
+                      f'distfiles="https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"',
+                      candidate,
+                      flags=re.MULTILINE
+                  )
+                  # Ensure wrksrc is correct
+                  candidate = re.sub(
+                      r'^wrksrc="mesa-mesa-\${version}"',
+                      f'wrksrc="mesa-{new_ver}"',
+                      candidate,
+                      flags=re.MULTILINE
+                  )
 
               urls = extract_distfile_urls(candidate)
               if not urls: continue
