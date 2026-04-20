@@ -1,7 +1,7 @@
 # Template file for 'zed'
 pkgname=zed
 version=0.232.2
-revision=2
+revision=3
 archs="x86_64* aarch64*"
 build_style=cargo
 make_cmd="env -u LIBGIT2_NO_VENDOR cargo"
@@ -39,19 +39,26 @@ changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
 checksum=5c1f4c89a6a5954c528a670002f1cab77d188e863b958cb193913f43cef6076c
 
-# 1. Stability check
-_zed_env="ZED_UPDATE_EXPLANATION=\"Updates are handled by Void Nexus\" RELEASE_VERSION=${version} CARGO_PROFILE_RELEASE_DEBUG=0 CARGO_PROFILE_RELEASE_STRIP=symbols"
-make_build_env="${_zed_env}"
-make_install_env="${_zed_env}"
-make_check_env="${_zed_env}"
-
 pre_build() {
-    # Force the mold linker for speed and memory efficiency
+    # 1. Tell the extension registry and credential manager this is a stable build
+    # Without this, Zed cannot authenticate or download extensions.
+    printf "stable" > crates/zed/RELEASE_CHANNEL
+
+    # 2. Stable check
+    export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
+    export RELEASE_VERSION="${version}"
+    export CARGO_PROFILE_RELEASE_DEBUG=0
+    export CARGO_PROFILE_RELEASE_STRIP="symbols"
+
+    # Force the mold linker
     export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=mold"
 }
 
 pre_install() {
-    # Ensure RUSTFLAGS persist to the install phase so Cargo doesn't recompile everything sigh
+    export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
+    export RELEASE_VERSION="${version}"
+    export CARGO_PROFILE_RELEASE_DEBUG=0
+    export CARGO_PROFILE_RELEASE_STRIP="symbols"
     export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=mold"
 }
 
