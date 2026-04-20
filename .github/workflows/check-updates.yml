@@ -41,7 +41,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 << 'EOF'
-          import os, re, requests, subprocess, hashlib, datetime, tempfile, stat
+          import os, re, requests, subprocess, hashlib, datetime, tempfile, stat, urllib.parse
           from packaging import version as pkg_version
           from pathlib import Path
 
@@ -105,6 +105,22 @@ jobs:
               except Exception: pass
               return None
 
+          def get_latest_gitlab_tag(host, project_path):
+              try:
+                  encoded_path = urllib.parse.quote(project_path, safe='')
+                  resp = requests.get(f'https://{host}/api/v4/projects/{encoded_path}/repository/tags', timeout=20).json()
+                  if isinstance(resp, list) and len(resp) > 0:
+                      versions = []
+                      for tag in resp:
+                          tname = tag.get('name', '')
+                          m = re.search(r'(\d+\.\d+\.\d+)', tname)
+                          if m: versions.append(m.group(1))
+                      if versions:
+                          versions.sort(key=pkg_version.parse, reverse=True)
+                          return versions
+              except Exception: pass
+              return None
+
           def get_pypi_latest(pkgname):
               try:
                   names = [pkgname, pkgname[8:] if pkgname.startswith('python3-') else pkgname, pkgname[7:] if pkgname.startswith('python-') else pkgname]
@@ -162,7 +178,6 @@ jobs:
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
 
-              # Strip any Python list/quote artifacts from each hash
               clean = []
               for h in new_hashes:
                   s = str(h).translate(str.maketrans('', '', '[]\'"')).strip()
@@ -170,21 +185,16 @@ jobs:
                       clean.append(s)
               if not clean: return content
 
-              # Hard-fail if anything other than a 64-char hex string is present
               for s in clean:
                   assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
 
-              # Single distfile  -> bare unquoted hash:   checksum=abcd1234...
-              # Multiple distfiles -> quoted newline block
               if len(clean) == 1:
-                  repl = "checksum=" + clean[0]    # clean[0] extracts the string, NOT the list
+                  repl = "checksum=" + clean
               else:
                   joined = '\n '.join(clean)
                   repl = 'checksum="' + joined + '"'
 
-              # Delete existing checksum line (handles multiline too)
               content = re.sub(r'^_?checksum=.*(?:\n[ \t]+.*)*\n?', '', content, flags=re.MULTILINE)
-              # Inject directly below distfiles line
               content = re.sub(r'^(distfiles=.*(?:\n[ \t]+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
 
               return content
@@ -236,16 +246,21 @@ jobs:
                           new_sha, new_ver = found_sha, found_date
               else:
                   gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
+                  gl_m = re.search(r'https://(gitlab[A-Za-z0-9_.-]*\.[a-z]+)/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
+                  
                   if gh_m:
                       owner, repo = gh_m.group(1), gh_m.group(2)
                       latest = get_latest_github_release(owner, repo, gh_headers)
+                      if version_is_newer(latest, curr_ver): new_ver = latest
+                  elif gl_m:
+                      host, project_path = gl_m.group(1), gl_m.group(2)
+                      latest = get_latest_gitlab_tag(host, project_path)
                       if version_is_newer(latest, curr_ver): new_ver = latest
 
                   if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # Force re-process if file is currently corrupted with brackets
               curr_checksum_val = extract_shell_var(r'_?checksum', raw)
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
