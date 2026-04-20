@@ -53,6 +53,7 @@ sudo xbps-install <package-name>
 
 | Package | Description | Type |
 |---------|-------------|:----:|
+| `mesa-latest` |  Open-source implementation of graphics standards like OpenGL, Vulkan, and OpenCL | stable(no musl) |
 | `zen-browser` | Privacy-focused Firefox-based browser | Stable |
 | `vesktop` | Vencord-bundled Discord client | Stable |
 | `rootapp` | Discord alternative for gaming communities | Stable |
