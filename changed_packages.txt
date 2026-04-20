@@ -1,2 +1,2 @@
-zed
-glaze
+mesa-latest
+niri-git
