@@ -1,7 +1,7 @@
 # Template file for 'helium-browser-bin'
 pkgname=helium-browser-bin
 version=0.11.3.2
-revision=1
+revision=2
 archs="x86_64"
 depends="gtk+3 nss alsa-lib xdg-utils libXScrnSaver cups libgcrypt
  liberation-fonts-ttf dbus libpulseaudio pciutils libva libffi
@@ -16,31 +16,26 @@ distfiles="https://github.com/imputnet/helium-linux/releases/download/${version}
 checksum=0cc832d4d1f6fa1bb30c6c92942a8da608fb2672ede0eb6051e0a3c4c096bc5b
 
 do_install() {
-    # 1. Copy the prebuilt binaries straight to /opt
-    vmkdir opt/helium-browser
-    cp -a * ${DESTDIR}/opt/helium-browser/
+    # 1. Copy the prebuilt binaries straight to /opt/helium 
+    vmkdir opt/helium
+    cp -a * ${DESTDIR}/opt/helium/
 
     # Clean up useless appimage junk
-    rm -f ${DESTDIR}/opt/helium-browser/helium-wrapper-appimage.sh
+    rm -f ${DESTDIR}/opt/helium/helium-wrapper-appimage.sh
 
-    # 2. Keep the original wrapper, just patch the name natively
-    vsed -i 's/CHROME_VERSION_EXTRA="custom"/CHROME_VERSION_EXTRA="Void Linux"/' ${DESTDIR}/opt/helium-browser/helium-wrapper
+    # 2. Patch the variable
+    vsed -i 's/CHROME_VERSION_EXTRA="custom"/CHROME_VERSION_EXTRA="Void Linux"/' ${DESTDIR}/opt/helium/helium-wrapper
 
-    # 3. Create the symlink
+    # 3. Create the symlink "helium" in /usr/bin
     vmkdir usr/bin
-    ln -sf /opt/helium-browser/helium-wrapper ${DESTDIR}/usr/bin/helium-browser
+    ln -sf /opt/helium/helium-wrapper ${DESTDIR}/usr/bin/helium
 
-    # 4. Patch the desktop file inline
-    vsed -i 's/^Name=Helium$/Name=Helium Browser/' helium.desktop
-    vsed -i 's/^Exec=helium/Exec=helium-browser/' helium.desktop
-    vsed -i 's/^Icon=helium/Icon=helium-browser/' helium.desktop
+    # 4. Install system integrations
+    vinstall helium.desktop 644 usr/share/applications
+    vinstall product_logo_256.png 644 usr/share/pixmaps helium.png
+    vinstall product_logo_256.png 644 usr/share/icons/hicolor/256x256/apps helium.png
     
-    # 5. Install system integrations
-    vinstall helium.desktop 644 usr/share/applications helium-browser.desktop
-    vinstall product_logo_256.png 644 usr/share/pixmaps helium-browser.png
-    vinstall product_logo_256.png 644 usr/share/icons/hicolor/256x256/apps helium-browser.png
-    
-    # 6. Generate the text file
+    # 5. Generate the text file to satisfy license check
     echo "License: GPL-3.0-only, BSD-3-Clause" > LICENSE
     vlicense LICENSE
 }
