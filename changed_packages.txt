@@ -1,1 +1,2 @@
-helium-browser-bin
+zed
+glaze
