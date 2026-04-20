@@ -136,7 +136,7 @@ jobs:
                       return None
 
                   versions.sort(key=pkg_version.parse, reverse=True)
-                  return versions[0]
+                  return versions
               except Exception:
                   return None
 
