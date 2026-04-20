@@ -4,7 +4,6 @@
   {"name": "dank-material-shell", "version": "1.4.4_2"},
   {"name": "dgop", "version": "0.2.2_2"},
   {"name": "faugus-launcher", "version": "1.18.3_1"},
-  {"name": "glaze", "version": "7.3.3_1"},
   {"name": "helium-browser-bin", "version": "0.11.3.2_2"},
   {"name": "heroic-games-launcher", "version": "2.20.1_3"},
   {"name": "hyprcursor", "version": "0.1.13_2"},
@@ -36,5 +35,6 @@
   {"name": "vesktop", "version": "1.6.5_1"},
   {"name": "xdg-desktop-portal-hyprland", "version": "1.3.11_2"},
   {"name": "xwayland-satellite-git", "version": "20260321_2"},
+  {"name": "zed", "version": "0.232.3_1"},
   {"name": "zen-browser", "version": "1.19.8b_1"}
 ]
