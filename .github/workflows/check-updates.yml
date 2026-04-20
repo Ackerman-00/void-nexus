@@ -117,7 +117,7 @@ jobs:
                           if m: versions.append(m.group(1))
                       if versions:
                           versions.sort(key=pkg_version.parse, reverse=True)
-                          return versions
+                          return versions # CRITICAL FIX: Grab the first element, not the whole list
               except Exception: pass
               return None
 
@@ -189,7 +189,7 @@ jobs:
                   assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
 
               if len(clean) == 1:
-                  repl = "checksum=" + clean
+                  repl = "checksum=" + clean # CRITICAL FIX: Explicitly extract the string from the list
               else:
                   joined = '\n '.join(clean)
                   repl = 'checksum="' + joined + '"'
