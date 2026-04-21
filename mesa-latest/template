@@ -1,6 +1,6 @@
 # Template file for 'mesa-latest'
 pkgname=mesa-latest
-version=26.0.5
+version=26.0.4
 revision=1
 build_style=meson
 build_helper="qemu"
@@ -27,10 +27,6 @@ makedepends="elfutils-devel expat-devel libXdamage-devel
 
 depends="libglvnd"
 
-# Tells Void that mesa-latest replaces the official mesa packages locally
--provides="mesa-${version}_${revision}"
--conflicts="mesa>=0"
-
 short_desc="Bleeding-edge open source implementation of OpenGL and Vulkan"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT, LGPL-2.1-or-later, BSD-3-Clause, SGI-B-2.0"
@@ -38,7 +34,7 @@ homepage="https://www.mesa3d.org/"
 
 # Use the official stable archive, not GitLab
 distfiles="https://archive.mesa3d.org/mesa-${version}.tar.xz"
-checksum=d229c9937d9a25ca0a8958c59f425174563d300ec42acbea2dbe84a055023368
+checksum=00000000000000000000000000000000000000000000000
 # Stable tarballs extract to mesa-${version}
 wrksrc="mesa-${version}"
 
