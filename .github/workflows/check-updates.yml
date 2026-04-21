@@ -33,7 +33,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests packaging beautifulsoup4
+        run: pip install requests packaging
 
       - name: Phase 1 - Scan APIs & Update Versions
         id: scan
@@ -41,134 +41,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 << 'EOF'
-          import os, re, requests, subprocess, hashlib, datetime, tempfile, stat, urllib.parse, tarfile
+          import os, re, requests, subprocess, hashlib, datetime, tempfile, urllib.parse
           from packaging import version as pkg_version
           from packaging.version import InvalidVersion
           from pathlib import Path
-          from bs4 import BeautifulSoup
-          from configparser import ConfigParser
-          from dataclasses import dataclass
-          from abc import ABC, abstractmethod
 
-          # =========================================================================
-          # Wrap file parser (gen-wrap-distfiles.py logic embedded)
-          # =========================================================================
-          @dataclass
-          class Wrap(ABC):
-              src_path: Path
-              directory: str | None = None
-              patch_url: str | None = None
-              patch_fallback_url: str | None = None
-              patch_filename: str | None = None
-              patch_hash: str | None = None
-              patch_directory: str | None = None
-              diff_files: str | None = None
-              method: str | None = None
-
-              @property
-              @abstractmethod
-              def distfile(self):
-                  raise NotImplementedError
-
-              @property
-              @abstractmethod
-              def checksum(self):
-                  raise NotImplementedError
-
-              @property
-              @abstractmethod
-              def filename(self):
-                  raise NotImplementedError
-
-          @dataclass
-          class WrapFile(Wrap):
-              source_url: str | None = None
-              source_fallback_url: str | None = None
-              source_filename: str | None = None
-              source_hash: str | None = None
-              lead_directory_missing: str | None = None
-
-              @property
-              def distfile(self):
-                  if self.source_url:
-                      return f"{self.source_url}>{self.filename}"
-                  raise ValueError(f"missing source_url in wrap {self.src_path}")
-
-              @property
-              def checksum(self):
-                  if self.source_hash:
-                      return self.source_hash
-                  raise ValueError(f"missing source_hash in wrap {self.src_path}")
-
-              @property
-              def filename(self):
-                  if self.source_filename:
-                      return self.source_filename
-                  raise ValueError(f"missing source_filename in wrap {self.src_path}")
-
-          def read_wrap(p: Path) -> Wrap:
-              wrap = ConfigParser()
-              with p.open() as f:
-                  wrap.read_file(f)
-
-              for sec in wrap.sections():
-                  if sec.startswith("wrap-"):
-                      break
-              else:
-                  raise ValueError(f"missing 'wrap-*' section in wrap {p}")
-
-              match sec:
-                  case "wrap-file":
-                      cls = WrapFile
-                  case "wrap-git":
-                      raise NotImplementedError
-                  case "wrap-hg":
-                      raise NotImplementedError
-                  case "wrap-svn":
-                      raise NotImplementedError
-                  case _:
-                      raise NotImplementedError
-
-              return cls(src_path=p, **dict(wrap.items(sec)))
-
-          def generate_mesa_crates_block(source_dir: Path):
-              """Generate distfiles, checksum, and skip_extraction blocks from subprojects/*-rs.wrap files."""
-              distfiles = []
-              checksums = []
-              skip_extracts = []
-
-              subprojects_dir = source_dir / "subprojects"
-              if not subprojects_dir.is_dir():
-                  return ""
-
-              for wrap_path in subprojects_dir.glob("*-rs.wrap"):
-                  try:
-                      wrap = read_wrap(wrap_path)
-                      distfiles.append(wrap.distfile)
-                      checksums.append(wrap.checksum)
-                      skip_extracts.append(wrap.filename)
-                  except Exception as e:
-                      print(f"  → Warning: failed to parse {wrap_path}: {e}")
-
-              if not distfiles:
-                  return ""
-
-              lines = []
-              lines.append("distfiles+=\"")
-              lines.extend(f" {url}" for url in distfiles)
-              lines.append("\"")
-              lines.append("checksum+=\"")
-              lines.extend(f" {csum}" for csum in checksums)
-              lines.append("\"")
-              lines.append("skip_extraction+=\"")
-              lines.extend(f" {fname}" for fname in skip_extracts)
-              lines.append("\"")
-
-              return "\n".join(lines)
-
-          # =========================================================================
-          # Existing update script variables and functions
-          # =========================================================================
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
               '$GNOME_SITE':          'https://download.gnome.org/sources',
@@ -382,36 +259,7 @@ jobs:
               print(f"Scanning {pkgname}...")
               new_ver, new_sha = None, None
 
-              # --- Custom scraper for mesa-latest ---
-              if pkgname == "mesa-latest":
-                  try:
-                      print("  → Scraping stable Mesa releases from archive.mesa3d.org...")
-                      resp = requests.get("https://archive.mesa3d.org/", timeout=30)
-                      resp.raise_for_status()
-                      soup = BeautifulSoup(resp.text, 'html.parser')
-                      
-                      versions = []
-                      for link in soup.find_all('a'):
-                          href = link.get('href')
-                          if href and href.startswith('mesa-') and href.endswith('.tar.xz'):
-                              match = re.search(r'mesa-(\d+\.\d+\.\d+)\.tar\.xz', href)
-                              if match:
-                                  ver_str = match.group(1)
-                                  if 'rc' not in href.lower() and 'alpha' not in href.lower() and 'beta' not in href.lower():
-                                      versions.append(ver_str)
-                      
-                      if versions:
-                          versions.sort(key=pkg_version.parse, reverse=True)
-                          latest_stable = versions[0]
-                          print(f"  → Latest stable Mesa: {latest_stable}")
-                          if version_is_newer(latest_stable, curr_ver):
-                              new_ver = latest_stable
-                      else:
-                          print("  → No stable Mesa versions found.")
-                  except Exception as e:
-                      print(f"  → Failed to scrape Mesa archive: {e}")
-
-              # Existing GitLab/GitHub/PyPI logic for all other packages
+              # Existing GitLab/GitHub/PyPI logic for all packages
               if curr_sha is not None:
                   repo_m = re.search(r'_gitrepo=["\']?([^"\'\n\s]+)', raw)
                   repo_url = repo_m.group(1) if repo_m else None
@@ -452,64 +300,11 @@ jobs:
                   is_corrupted = True
 
               if not new_ver and not new_sha and not is_corrupted:
-                  # Even if no version change, we may still need to generate the crate block for mesa-latest
-                  if pkgname == "mesa-latest":
-                      # Check if the generated block is empty
-                      generated_match = re.search(r'# BEGIN GENERATED\s*\n(.*?)\n\s*# END GENERATED', raw, re.DOTALL)
-                      if generated_match:
-                          existing_content = generated_match.group(1).strip()
-                      else:
-                          existing_content = ""
-                      if not existing_content:
-                          print("  → Crate block is empty. Will generate it using current version.")
-                          new_ver = curr_ver  # force download and generation
-                      else:
-                          continue
-                  else:
-                      continue
+                  continue
 
               candidate = raw
               if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate)
               if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate)
-
-              # For mesa-latest, ensure distfiles URL is updated and generate crate block
-              if pkgname == "mesa-latest":
-                  # Update distfiles URL if version changed
-                  if new_ver and new_ver != curr_ver:
-                      candidate = re.sub(
-                          r'^distfiles="https://gitlab\.freedesktop\.org/mesa/mesa/-/archive/.*?\.tar\.gz"',
-                          f'distfiles="https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"',
-                          candidate,
-                          flags=re.MULTILINE
-                      )
-                      candidate = re.sub(
-                          r'^wrksrc="mesa-mesa-\${version}"',
-                          f'wrksrc="mesa-{new_ver}"',
-                          candidate,
-                          flags=re.MULTILINE
-                      )
-                  
-                  # Always (re)generate crate block if version is new OR block is empty
-                  if new_ver:
-                      print(f"  → Downloading Mesa {new_ver} to generate Rust crate list...")
-                      tarball_url = f"https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"
-                      with tempfile.TemporaryDirectory() as tmpdir:
-                          tarball_path = os.path.join(tmpdir, f"mesa-{new_ver}.tar.xz")
-                          if fetch_file(tarball_url, tarball_path):
-                              try:
-                                  with tarfile.open(tarball_path) as tar:
-                                      tar.extractall(tmpdir)
-                                  extracted_dir = Path(tmpdir) / f"mesa-{new_ver}"
-                                  crate_block = generate_mesa_crates_block(extracted_dir)
-                                  if crate_block:
-                                      # Use a more robust pattern that handles any whitespace around BEGIN/END markers
-                                      pattern = r'(# BEGIN GENERATED\s*\n)(.*?)(\n\s*# END GENERATED)'
-                                      candidate = re.sub(pattern, f'\\1{crate_block}\\3', candidate, flags=re.DOTALL)
-                                      print(f"  → Successfully generated Rust crate distfiles ({len(crate_block)} bytes).")
-                                  else:
-                                      print("  → Warning: No crate block generated.")
-                              except Exception as e:
-                                  print(f"  → Error generating crate block: {e}")
 
               urls = extract_distfile_urls(candidate)
               if not urls: continue
