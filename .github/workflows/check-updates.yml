@@ -224,6 +224,55 @@ jobs:
               content = re.sub(r'^(distfiles=.*(?:\n[ \t]+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
               return content
 
+          # ------------------------------------------------------------
+          # Helper: Extract version from an AppImage file
+          # ------------------------------------------------------------
+          def extract_appimage_version(appimage_path):
+              # Method 1: Try the --appimage-version flag
+              try:
+                  subprocess.run(['chmod', '+x', appimage_path], check=True)
+                  result = subprocess.run([appimage_path, '--appimage-version'], 
+                                         capture_output=True, text=True, timeout=30)
+                  if result.returncode == 0 and result.stdout.strip():
+                      return result.stdout.strip()
+              except Exception:
+                  pass
+
+              # Method 2: Fallback to extracting and parsing .desktop file
+              try:
+                  with tempfile.TemporaryDirectory() as tmpdir:
+                      subprocess.run([appimage_path, '--appimage-extract'], 
+                                    cwd=tmpdir, capture_output=True, timeout=120)
+                      extracted_dir = Path(tmpdir) / 'squashfs-root'
+                      if extracted_dir.is_dir():
+                          # Find .desktop file
+                          for desktop_file in extracted_dir.glob('*.desktop'):
+                              content = desktop_file.read_text(encoding='utf-8', errors='ignore')
+                              # Look for X-AppImage-Version=
+                              match = re.search(r'^X-AppImage-Version=(.+)', content, re.MULTILINE)
+                              if match:
+                                  return match.group(1).strip()
+                              # Fallback: standard Version=
+                              match = re.search(r'^Version=(.+)', content, re.MULTILINE)
+                              if match:
+                                  return match.group(1).strip()
+              except Exception:
+                  pass
+
+              return None
+
+          # ------------------------------------------------------------
+          # Helper: Get the checksum for a specific arch from template
+          # ------------------------------------------------------------
+          def get_arch_checksum(template_content, arch):
+              # Look for the arch section and extract its checksum
+              pattern = rf'{arch}.*?\n.*?checksum=([a-f0-9]+)'
+              match = re.search(pattern, template_content, re.DOTALL)
+              return match.group(1) if match else None
+
+          # ------------------------------------------------------------
+          # Main update logic
+          # ------------------------------------------------------------
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
           subprocess.run(['git', 'config', 'user.email', f'{git_user}@users.noreply.github.com'], check=True)
@@ -259,7 +308,64 @@ jobs:
               print(f"Scanning {pkgname}...")
               new_ver, new_sha = None, None
 
-              # Existing GitLab/GitHub/PyPI logic for all packages
+              # ------------------------------------------------------------
+              # SPECIAL CASE: rootapp (AppImage)
+              # ------------------------------------------------------------
+              if pkgname == "rootapp":
+                  print("  → Fetching rootapp AppImages...")
+                  x64_url = "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
+                  arm64_url = "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
+                  
+                  with tempfile.TemporaryDirectory() as tmpdir:
+                      x64_path = os.path.join(tmpdir, "Root_x64.AppImage")
+                      arm64_path = os.path.join(tmpdir, "Root_arm64.AppImage")
+                      
+                      if fetch_file(x64_url, x64_path) and fetch_file(arm64_url, arm64_path):
+                          # Extract version from the AppImage
+                          new_ver = extract_appimage_version(x64_path)
+                          if not new_ver:
+                              print("  → ERROR: Could not extract version from AppImage")
+                              continue
+                          
+                          # Calculate checksums
+                          new_checksum_x64 = sha256_file(x64_path)
+                          new_checksum_arm64 = sha256_file(arm64_path)
+                          
+                          # Get current checksums from template
+                          curr_checksum_x64 = get_arch_checksum(raw, 'x86_64')
+                          curr_checksum_arm64 = get_arch_checksum(raw, 'aarch64')
+                          
+                          print(f"  → Current version: {curr_ver}, New version: {new_ver}")
+                          print(f"  → X64 hash changed: {curr_checksum_x64 != new_checksum_x64}")
+                          print(f"  → ARM64 hash changed: {curr_checksum_arm64 != new_checksum_arm64}")
+                          
+                          # Update if version is newer or checksums changed
+                          if (version_is_newer(new_ver, curr_ver) or 
+                              curr_checksum_x64 != new_checksum_x64 or 
+                              curr_checksum_arm64 != new_checksum_arm64):
+                              
+                              candidate = raw
+                              candidate = re.sub(r'^version=.*', f'version={new_ver}', candidate, flags=re.MULTILINE)
+                              candidate = re.sub(r'^revision=.*', 'revision=1', candidate, flags=re.MULTILINE)
+                              
+                              if curr_checksum_x64:
+                                  candidate = candidate.replace(curr_checksum_x64, new_checksum_x64)
+                              if curr_checksum_arm64:
+                                  candidate = candidate.replace(curr_checksum_arm64, new_checksum_arm64)
+                              
+                              tpath.write_text(candidate, encoding='utf-8')
+                              changed_packages.append(pkgname)
+                              print(f"  → Successfully processed {pkgname}")
+                          else:
+                              print("  → No updates needed for rootapp")
+                      else:
+                          print("  → ERROR: Failed to download one or both AppImages")
+                  
+                  continue  # Skip the rest of the loop for rootapp
+
+              # ------------------------------------------------------------
+              # STANDARD PACKAGES (GitHub/GitLab/PyPI)
+              # ------------------------------------------------------------
               if curr_sha is not None:
                   repo_m = re.search(r'_gitrepo=["\']?([^"\'\n\s]+)', raw)
                   repo_url = repo_m.group(1) if repo_m else None
