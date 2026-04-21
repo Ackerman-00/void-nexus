@@ -1,1 +1,2 @@
-rootapp
+faugus-launcher
+niri-git
