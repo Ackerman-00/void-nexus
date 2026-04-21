@@ -1,6 +1,6 @@
 # Template file for 'mesa-latest'
 pkgname=mesa-latest
-version=26.0.4
+version=26.0.5
 revision=1
 build_style=meson
 build_helper="qemu"
@@ -38,7 +38,7 @@ homepage="https://www.mesa3d.org/"
 
 # Use the official stable archive, not GitLab
 distfiles="https://archive.mesa3d.org/mesa-${version}.tar.xz"
-checksum=0000000000000000000000000000000000000000
+checksum=d229c9937d9a25ca0a8958c59f425174563d300ec42acbea2dbe84a055023368
 # Stable tarballs extract to mesa-${version}
 wrksrc="mesa-${version}"
 
