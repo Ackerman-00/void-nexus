@@ -1,1 +1,2 @@
+quickshell-git
 mesa-latest
