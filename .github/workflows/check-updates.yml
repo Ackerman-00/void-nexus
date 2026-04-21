@@ -455,7 +455,7 @@ jobs:
                   # Even if no version change, we may still need to generate the crate block for mesa-latest
                   if pkgname == "mesa-latest":
                       # Check if the generated block is empty
-                      generated_match = re.search(r'# BEGIN GENERATED\n(.*?)\n# END GENERATED', raw, re.DOTALL)
+                      generated_match = re.search(r'# BEGIN GENERATED\s*\n(.*?)\n\s*# END GENERATED', raw, re.DOTALL)
                       if generated_match:
                           existing_content = generated_match.group(1).strip()
                       else:
@@ -502,9 +502,10 @@ jobs:
                                   extracted_dir = Path(tmpdir) / f"mesa-{new_ver}"
                                   crate_block = generate_mesa_crates_block(extracted_dir)
                                   if crate_block:
-                                      pattern = r'(# BEGIN GENERATED\n).*?(\n# END GENERATED)'
-                                      candidate = re.sub(pattern, f'\\1{crate_block}\\2', candidate, flags=re.DOTALL)
-                                      print("  → Successfully generated Rust crate distfiles.")
+                                      # Use a more robust pattern that handles any whitespace around BEGIN/END markers
+                                      pattern = r'(# BEGIN GENERATED\s*\n)(.*?)(\n\s*# END GENERATED)'
+                                      candidate = re.sub(pattern, f'\\1{crate_block}\\3', candidate, flags=re.DOTALL)
+                                      print(f"  → Successfully generated Rust crate distfiles ({len(crate_block)} bytes).")
                                   else:
                                       print("  → Warning: No crate block generated.")
                               except Exception as e:
