@@ -50,8 +50,9 @@ jobs:
           from dataclasses import dataclass
           from abc import ABC, abstractmethod
 
-          # Wrap file parser
-
+          # =========================================================================
+          # Wrap file parser (gen-wrap-distfiles.py logic embedded)
+          # =========================================================================
           @dataclass
           class Wrap(ABC):
               src_path: Path
@@ -165,9 +166,9 @@ jobs:
 
               return "\n".join(lines)
 
-
+          # =========================================================================
           # Existing update script variables and functions
-
+          # =========================================================================
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
               '$GNOME_SITE':          'https://download.gnome.org/sources',
@@ -451,47 +452,63 @@ jobs:
                   is_corrupted = True
 
               if not new_ver and not new_sha and not is_corrupted:
-                  continue
+                  # Even if no version change, we may still need to generate the crate block for mesa-latest
+                  if pkgname == "mesa-latest":
+                      # Check if the generated block is empty
+                      generated_match = re.search(r'# BEGIN GENERATED\n(.*?)\n# END GENERATED', raw, re.DOTALL)
+                      if generated_match:
+                          existing_content = generated_match.group(1).strip()
+                      else:
+                          existing_content = ""
+                      if not existing_content:
+                          print("  → Crate block is empty. Will generate it using current version.")
+                          new_ver = curr_ver  # force download and generation
+                      else:
+                          continue
+                  else:
+                      continue
 
               candidate = raw
               if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate)
               if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate)
 
               # For mesa-latest, ensure distfiles URL is updated and generate crate block
-              if pkgname == "mesa-latest" and new_ver:
-                  candidate = re.sub(
-                      r'^distfiles="https://gitlab\.freedesktop\.org/mesa/mesa/-/archive/.*?\.tar\.gz"',
-                      f'distfiles="https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"',
-                      candidate,
-                      flags=re.MULTILINE
-                  )
-                  candidate = re.sub(
-                      r'^wrksrc="mesa-mesa-\${version}"',
-                      f'wrksrc="mesa-{new_ver}"',
-                      candidate,
-                      flags=re.MULTILINE
-                  )
+              if pkgname == "mesa-latest":
+                  # Update distfiles URL if version changed
+                  if new_ver and new_ver != curr_ver:
+                      candidate = re.sub(
+                          r'^distfiles="https://gitlab\.freedesktop\.org/mesa/mesa/-/archive/.*?\.tar\.gz"',
+                          f'distfiles="https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"',
+                          candidate,
+                          flags=re.MULTILINE
+                      )
+                      candidate = re.sub(
+                          r'^wrksrc="mesa-mesa-\${version}"',
+                          f'wrksrc="mesa-{new_ver}"',
+                          candidate,
+                          flags=re.MULTILINE
+                      )
                   
-                  # Download and extract the Mesa tarball to generate crate block
-                  print(f"  → Downloading Mesa {new_ver} to generate Rust crate list...")
-                  tarball_url = f"https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"
-                  with tempfile.TemporaryDirectory() as tmpdir:
-                      tarball_path = os.path.join(tmpdir, f"mesa-{new_ver}.tar.xz")
-                      if fetch_file(tarball_url, tarball_path):
-                          try:
-                              with tarfile.open(tarball_path) as tar:
-                                  tar.extractall(tmpdir)
-                              extracted_dir = Path(tmpdir) / f"mesa-{new_ver}"
-                              crate_block = generate_mesa_crates_block(extracted_dir)
-                              if crate_block:
-                                  # Replace the block between BEGIN GENERATED and END GENERATED
-                                  pattern = r'(# BEGIN GENERATED\n).*?(\n# END GENERATED)'
-                                  candidate = re.sub(pattern, f'\\1{crate_block}\\2', candidate, flags=re.DOTALL)
-                                  print("  → Successfully generated Rust crate distfiles.")
-                              else:
-                                  print("  → Warning: No crate block generated.")
-                          except Exception as e:
-                              print(f"  → Error generating crate block: {e}")
+                  # Always (re)generate crate block if version is new OR block is empty
+                  if new_ver:
+                      print(f"  → Downloading Mesa {new_ver} to generate Rust crate list...")
+                      tarball_url = f"https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"
+                      with tempfile.TemporaryDirectory() as tmpdir:
+                          tarball_path = os.path.join(tmpdir, f"mesa-{new_ver}.tar.xz")
+                          if fetch_file(tarball_url, tarball_path):
+                              try:
+                                  with tarfile.open(tarball_path) as tar:
+                                      tar.extractall(tmpdir)
+                                  extracted_dir = Path(tmpdir) / f"mesa-{new_ver}"
+                                  crate_block = generate_mesa_crates_block(extracted_dir)
+                                  if crate_block:
+                                      pattern = r'(# BEGIN GENERATED\n).*?(\n# END GENERATED)'
+                                      candidate = re.sub(pattern, f'\\1{crate_block}\\2', candidate, flags=re.DOTALL)
+                                      print("  → Successfully generated Rust crate distfiles.")
+                                  else:
+                                      print("  → Warning: No crate block generated.")
+                              except Exception as e:
+                                  print(f"  → Error generating crate block: {e}")
 
               urls = extract_distfile_urls(candidate)
               if not urls: continue
