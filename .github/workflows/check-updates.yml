@@ -280,9 +280,9 @@ jobs:
           branch = os.environ.get('GITHUB_REF_NAME', 'main')
           subprocess.run(['git', 'checkout', '-B', branch], check=True)
 
+          # REMOVED the line that skipped rootapp: if d == 'rootapp': continue
           templates = []
           for d in os.listdir('.'):
-              if d == 'rootapp': continue
               tpath = os.path.join(d, 'template')
               if os.path.isdir(d) and os.path.isfile(tpath):
                   templates.append(Path(tpath))
