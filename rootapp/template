@@ -12,7 +12,7 @@ homepage="https://www.rootapp.com"
 case "$XBPS_TARGET_MACHINE" in
 	x86_64*)
 		distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}-x86_64.AppImage"
-		checksum=ac504262c31a5a963ca6907fbe6352d6a7e8f2dbd32e4fbf44ccdcc31ef9fd0f
+		checksum=7bdc524b633bde6ad60482d08659bf849d282b5a0a29f610322cd05024573dda
 		;;
 	aarch64*)
 		distfiles="https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage>Root-${version}-aarch64.AppImage"
