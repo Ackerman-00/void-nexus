@@ -1,1 +1,1 @@
-mesa-latest
+faugus-launcher
