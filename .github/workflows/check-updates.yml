@@ -41,11 +41,132 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 << 'EOF'
-          import os, re, requests, subprocess, hashlib, datetime, tempfile, stat, urllib.parse
+          import os, re, requests, subprocess, hashlib, datetime, tempfile, stat, urllib.parse, tarfile
           from packaging import version as pkg_version
           from packaging.version import InvalidVersion
           from pathlib import Path
           from bs4 import BeautifulSoup
+          from configparser import ConfigParser
+          from dataclasses import dataclass
+          from abc import ABC, abstractmethod
+
+          # Wrap file parser
+
+          @dataclass
+          class Wrap(ABC):
+              src_path: Path
+              directory: str | None = None
+              patch_url: str | None = None
+              patch_fallback_url: str | None = None
+              patch_filename: str | None = None
+              patch_hash: str | None = None
+              patch_directory: str | None = None
+              diff_files: str | None = None
+              method: str | None = None
+
+              @property
+              @abstractmethod
+              def distfile(self):
+                  raise NotImplementedError
+
+              @property
+              @abstractmethod
+              def checksum(self):
+                  raise NotImplementedError
+
+              @property
+              @abstractmethod
+              def filename(self):
+                  raise NotImplementedError
+
+          @dataclass
+          class WrapFile(Wrap):
+              source_url: str | None = None
+              source_fallback_url: str | None = None
+              source_filename: str | None = None
+              source_hash: str | None = None
+              lead_directory_missing: str | None = None
+
+              @property
+              def distfile(self):
+                  if self.source_url:
+                      return f"{self.source_url}>{self.filename}"
+                  raise ValueError(f"missing source_url in wrap {self.src_path}")
+
+              @property
+              def checksum(self):
+                  if self.source_hash:
+                      return self.source_hash
+                  raise ValueError(f"missing source_hash in wrap {self.src_path}")
+
+              @property
+              def filename(self):
+                  if self.source_filename:
+                      return self.source_filename
+                  raise ValueError(f"missing source_filename in wrap {self.src_path}")
+
+          def read_wrap(p: Path) -> Wrap:
+              wrap = ConfigParser()
+              with p.open() as f:
+                  wrap.read_file(f)
+
+              for sec in wrap.sections():
+                  if sec.startswith("wrap-"):
+                      break
+              else:
+                  raise ValueError(f"missing 'wrap-*' section in wrap {p}")
+
+              match sec:
+                  case "wrap-file":
+                      cls = WrapFile
+                  case "wrap-git":
+                      raise NotImplementedError
+                  case "wrap-hg":
+                      raise NotImplementedError
+                  case "wrap-svn":
+                      raise NotImplementedError
+                  case _:
+                      raise NotImplementedError
+
+              return cls(src_path=p, **dict(wrap.items(sec)))
+
+          def generate_mesa_crates_block(source_dir: Path):
+              """Generate distfiles, checksum, and skip_extraction blocks from subprojects/*-rs.wrap files."""
+              distfiles = []
+              checksums = []
+              skip_extracts = []
+
+              subprojects_dir = source_dir / "subprojects"
+              if not subprojects_dir.is_dir():
+                  return ""
+
+              for wrap_path in subprojects_dir.glob("*-rs.wrap"):
+                  try:
+                      wrap = read_wrap(wrap_path)
+                      distfiles.append(wrap.distfile)
+                      checksums.append(wrap.checksum)
+                      skip_extracts.append(wrap.filename)
+                  except Exception as e:
+                      print(f"  → Warning: failed to parse {wrap_path}: {e}")
+
+              if not distfiles:
+                  return ""
+
+              lines = []
+              lines.append("distfiles+=\"")
+              lines.extend(f" {url}" for url in distfiles)
+              lines.append("\"")
+              lines.append("checksum+=\"")
+              lines.extend(f" {csum}" for csum in checksums)
+              lines.append("\"")
+              lines.append("skip_extraction+=\"")
+              lines.extend(f" {fname}" for fname in skip_extracts)
+              lines.append("\"")
+
+              return "\n".join(lines)
+
+
+          # Existing update script variables and functions
 
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
@@ -272,7 +393,6 @@ jobs:
                       for link in soup.find_all('a'):
                           href = link.get('href')
                           if href and href.startswith('mesa-') and href.endswith('.tar.xz'):
-                              # Extract version and filter out RC, alpha, beta
                               match = re.search(r'mesa-(\d+\.\d+\.\d+)\.tar\.xz', href)
                               if match:
                                   ver_str = match.group(1)
@@ -318,9 +438,8 @@ jobs:
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
 
-              # Defensive check to ensure we never pass a list forward.
               if isinstance(new_ver, list):
-                  print(f"ERROR: {pkgname} received a list instead of string. This should not happen. Skipping.")
+                  print(f"ERROR: {pkgname} received a list instead of string. Skipping.")
                   continue
               if isinstance(new_sha, list):
                   print(f"ERROR: {pkgname} received a list instead of string for SHA. Skipping.")
@@ -338,22 +457,41 @@ jobs:
               if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate)
               if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate)
 
-              # For mesa-latest, ensure the distfiles line is updated to the archive URL
+              # For mesa-latest, ensure distfiles URL is updated and generate crate block
               if pkgname == "mesa-latest" and new_ver:
-                  # Replace GitLab URL with archive.mesa3d.org URL
                   candidate = re.sub(
                       r'^distfiles="https://gitlab\.freedesktop\.org/mesa/mesa/-/archive/.*?\.tar\.gz"',
                       f'distfiles="https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"',
                       candidate,
                       flags=re.MULTILINE
                   )
-                  # Ensure wrksrc is correct
                   candidate = re.sub(
                       r'^wrksrc="mesa-mesa-\${version}"',
                       f'wrksrc="mesa-{new_ver}"',
                       candidate,
                       flags=re.MULTILINE
                   )
+                  
+                  # Download and extract the Mesa tarball to generate crate block
+                  print(f"  → Downloading Mesa {new_ver} to generate Rust crate list...")
+                  tarball_url = f"https://archive.mesa3d.org/mesa-{new_ver}.tar.xz"
+                  with tempfile.TemporaryDirectory() as tmpdir:
+                      tarball_path = os.path.join(tmpdir, f"mesa-{new_ver}.tar.xz")
+                      if fetch_file(tarball_url, tarball_path):
+                          try:
+                              with tarfile.open(tarball_path) as tar:
+                                  tar.extractall(tmpdir)
+                              extracted_dir = Path(tmpdir) / f"mesa-{new_ver}"
+                              crate_block = generate_mesa_crates_block(extracted_dir)
+                              if crate_block:
+                                  # Replace the block between BEGIN GENERATED and END GENERATED
+                                  pattern = r'(# BEGIN GENERATED\n).*?(\n# END GENERATED)'
+                                  candidate = re.sub(pattern, f'\\1{crate_block}\\2', candidate, flags=re.DOTALL)
+                                  print("  → Successfully generated Rust crate distfiles.")
+                              else:
+                                  print("  → Warning: No crate block generated.")
+                          except Exception as e:
+                              print(f"  → Error generating crate block: {e}")
 
               urls = extract_distfile_urls(candidate)
               if not urls: continue
