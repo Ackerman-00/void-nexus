@@ -280,7 +280,6 @@ jobs:
           branch = os.environ.get('GITHUB_REF_NAME', 'main')
           subprocess.run(['git', 'checkout', '-B', branch], check=True)
 
-          # REMOVED the line that skipped rootapp: if d == 'rootapp': continue
           templates = []
           for d in os.listdir('.'):
               tpath = os.path.join(d, 'template')
@@ -339,11 +338,8 @@ jobs:
                           print(f"  → X64 hash changed: {curr_checksum_x64 != new_checksum_x64}")
                           print(f"  → ARM64 hash changed: {curr_checksum_arm64 != new_checksum_arm64}")
                           
-                          # Update if version is newer or checksums changed
-                          if (version_is_newer(new_ver, curr_ver) or 
-                              curr_checksum_x64 != new_checksum_x64 or 
-                              curr_checksum_arm64 != new_checksum_arm64):
-                              
+                          # Only update if the version is actually newer
+                          if version_is_newer(new_ver, curr_ver):
                               candidate = raw
                               candidate = re.sub(r'^version=.*', f'version={new_ver}', candidate, flags=re.MULTILINE)
                               candidate = re.sub(r'^revision=.*', 'revision=1', candidate, flags=re.MULTILINE)
@@ -357,7 +353,7 @@ jobs:
                               changed_packages.append(pkgname)
                               print(f"  → Successfully processed {pkgname}")
                           else:
-                              print("  → No updates needed for rootapp")
+                              print("  → No version update available for rootapp")
                       else:
                           print("  → ERROR: Failed to download one or both AppImages")
                   
