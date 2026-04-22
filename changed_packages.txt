@@ -1,1 +1,2 @@
-brave-browser
+quickshell-git
+niri-git
