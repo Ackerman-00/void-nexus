@@ -1,10 +1,11 @@
 # Template file for 'dsearch'
 pkgname=dsearch
 version=0.2.1
-revision=1
+revision=2
 build_style=go
+wrksrc="danksearch-${version}"
 go_import_path=github.com/AvengeMedia/danksearch
-go_package="./cmd/dsearch"
+go_package="${go_import_path}/cmd/dsearch"
 short_desc="Fast configurable filesystem search service"
 maintainer="Tony King <tonyking94@proton.me>"
 license="MIT"
@@ -27,16 +28,12 @@ do_install() {
 }
 
 post_install() {
-	if [ -f "${wrksrc}/LICENSE" ]; then
-		vlicense "${wrksrc}/LICENSE"
-	else
-		msg_error "LICENSE not found in ${wrksrc}"
+	if [ -f LICENSE ]; then
+		vlicense LICENSE
 	fi
 
-	if [ -f "${wrksrc}/config.example.toml" ]; then
-		vinstall "${wrksrc}/config.example.toml" 0644 etc/dsearch config.toml
-	else
-		msg_error "config.example.toml not found in ${wrksrc}"
+	if [ -f config.example.toml ]; then
+		vinstall config.example.toml 0644 etc/dsearch config.toml
 	fi
 
 	vsv dsearch
