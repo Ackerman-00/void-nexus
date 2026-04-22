@@ -1,2 +1,2 @@
-quickshell-git
-niri-git
+zed
+heroic-games-launcher
