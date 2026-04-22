@@ -1,0 +1,3 @@
+#!/bin/sh
+exec 2>&1
+exec chpst -u dsearch:dsearch /usr/bin/dsearch -c /etc/dsearch/config.toml serve
