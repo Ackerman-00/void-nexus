@@ -116,7 +116,7 @@ jobs:
               [ -e "$file" ] || continue
               fname=$(basename "$file")
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
-              PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
+              PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" 2>/dev/null | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" 2>/dev/null | tar xOf - props.plist 2>/dev/null || true)
               SHLIBS=$(echo "$PLIST" | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
               for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
             done
@@ -180,9 +180,10 @@ jobs:
         run: |
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
-            gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
-            gh release upload rolling *.xbps *.sig2 *.xbps.sig2 --clobber
-            gh release upload rolling *-repodata --clobber || true
+            gh release view rolling --repo ${{ github.repository }} || \
+              gh release create rolling --repo ${{ github.repository }} --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
+            gh release upload rolling *.xbps *.sig2 *.xbps.sig2 --repo ${{ github.repository }} --clobber
+            gh release upload rolling *-repodata --repo ${{ github.repository }} --clobber || true
           fi
 
       - name: Generate and commit packages.json
