@@ -183,7 +183,6 @@ jobs:
           set -e
           mkdir -p public/x86_64
           
-          # Copy only packages that match any custom template
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
@@ -192,7 +191,7 @@ jobs:
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             find hostdir/binpkgs -maxdepth 1 -type f \
               -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" \
-              -exec cp {} public/x86_64/ \;    # ← FIXED: added \;
+              -exec cp {} public/x86_64/ \;
           done
 
           cd public/x86_64
@@ -230,11 +229,31 @@ jobs:
                    --prerelease
             
             echo "Uploading XBPS repo files to GitHub Release..."
-            # FIXED: replaced broken find -exec with a simple for loop
-            for file in *.xbps *.sig2 repodata packages.json; do
-              [ -f "$file" ] || continue
-              gh release upload rolling -R "$REPO" "$file" --clobber || true
+            
+            retry_upload() {
+              local file="$1"
+              local max_retries=3
+              for i in $(seq 1 $max_retries); do
+                if gh release upload rolling -R "$REPO" "$file" --clobber 2>&1; then
+                  return 0
+                fi
+                sleep 5
+              done
+              echo "::error::Failed to upload $file after $max_retries attempts"
+              return 1
+            }
+            
+            retry_upload "x86_64-repodata"
+            
+            for pkg in *.xbps; do
+              retry_upload "$pkg"
             done
+            
+            for sig in *.sig2; do
+              [ -f "$sig" ] && retry_upload "$sig"
+            done
+            
+            retry_upload "packages.json"
             
             rm -f /tmp/private.pem
           fi
