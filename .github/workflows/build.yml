@@ -6,6 +6,11 @@ on:
       package_list:
         description: 'Space-separated list of packages to build'
         required: true
+      force_rebuild:
+        description: 'Force recompile even if binary exists in Release'
+        type: boolean
+        required: false
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -55,7 +60,17 @@ jobs:
             local pkg_file="$XBPS_REPOSITORY/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
             if [ -f "$pkg_file" ]; then
                echo "=> ${pkgname}: Dynamically injecting shlibs from ${pkg_file}..."
-               local new_shlibs=$( (tar xOf "$pkg_file" ./props.plist 2>/dev/null || tar xOf "$pkg_file" props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) | awk '/<key>shlib-provides<\\/key>/{flag=1; next} /<\\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\\/string>.*/, ""); print}' || true )
+               local new_shlibs=$( \
+                 (tar xOf "$pkg_file" ./props.plist 2>/dev/null || \
+                  tar xOf "$pkg_file" props.plist 2>/dev/null || \
+                  zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || \
+                  zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) \
+                 | awk -F'[><]' \
+                    '/<key>shlib-provides<\/key>/ { p=1; next } \
+                     /<\/array>/ { p=0; next } \
+                     p && /<string>/ { print $3 }' \
+                 || true \
+               )
                for so in $new_shlibs; do
                  echo "$so ${pkgname}-${version}_${revision}" >> $XBPS_DISTDIR/common/shlibs
                  echo "   -> Successfully Injected: $so"
@@ -78,6 +93,7 @@ jobs:
           TARGET_PKG="${PKGS[0]}"
           echo "TARGET_PKG=$TARGET_PKG" >> $GITHUB_ENV
           echo "PACKAGE_LIST=$LIST" >> $GITHUB_ENV
+          echo "FORCE_REBUILD=${{ github.event.inputs.force_rebuild }}" >> $GITHUB_ENV
 
       - name: Inject custom templates
         run: |
@@ -117,10 +133,16 @@ jobs:
               [ -e "$file" ] || continue
               fname=$(basename "$file")
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
-              PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
-              SHLIBS=$(echo "$PLIST" \
-                | awk '/<key>shlib-provides<\\/key>/{flag=1; next} /<\\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\\/string>.*/, ""); print}' \
-                || true)
+              PLIST=$(tar xOf "$file" "./props.plist" 2>/dev/null || \
+                      tar xOf "$file" "props.plist" 2>/dev/null || \
+                      zstdcat "$file" | tar xOf - "./props.plist" 2>/dev/null || \
+                      zstdcat "$file" | tar xOf - "props.plist" 2>/dev/null || true)
+              SHLIBS=$(echo "$PLIST" | \
+                       awk -F'[><]' \
+                          '/<key>shlib-provides<\/key>/ { p=1; next } \
+                           /<\/array>/ { p=0; next } \
+                           p && /<string>/ { print $3 }' \
+                       || true)
               for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
             done
           fi
@@ -141,7 +163,10 @@ jobs:
             VER=$(grep '^version=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
             REV=$(grep '^revision=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
-            if [ -f "hostdir/binpkgs/${EXPECTED_PKG}" ]; then
+            if [ "${{ env.FORCE_REBUILD }}" == "true" ]; then
+              echo "Force rebuild enabled; not skipping $EXPECTED_PKG even if it exists."
+              echo "skip_build=false" >> "$GITHUB_OUTPUT"
+            elif [ -f "hostdir/binpkgs/${EXPECTED_PKG}" ]; then
               echo "Binary ${EXPECTED_PKG} found in cache. Skipping build."
               echo "skip_build=true" >> "$GITHUB_OUTPUT"
             else
@@ -163,7 +188,7 @@ jobs:
           set -e
           mkdir -p public/x86_64
           
-          # Copy only new packages: those .xbps that match any custom template
+          # Copy only packages that match any custom template
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
@@ -172,7 +197,7 @@ jobs:
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             find hostdir/binpkgs -maxdepth 1 -type f \
               -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" \
-              -exec cp {} public/x86_64/ \\; 2>/dev/null || true
+              -exec cp {} public/x86_64/ \;
           done
 
           cd public/x86_64
@@ -211,12 +236,11 @@ jobs:
                    --prerelease
             
             echo "Uploading XBPS repo files to GitHub Release..."
-            # Upload repodata first so it covers the .xbps
-            find . -type f \( -name "*.xbps" -o -name "*.sig2" -o -name "repodata" -o -name "packages.json" \) \
-              -exec gh release upload rolling -R "$REPO" {} --clobber \; || true
-            
-            rm -f /tmp/private.pem
+            find . -type f \
+              \( -name "*.xbps" -o -name "*.sig2" -o -name "repodata" -o -name "packages.json" \) \
+              -exec gh release upload rolling -R "$REPO" {} --clobber \+
           fi
+          rm -f /tmp/private.pem
 
       - name: Trigger Relay Race (no artifact)
         env:
@@ -224,12 +248,13 @@ jobs:
         run: |
           LIST="${{ env.PACKAGE_LIST }}"
           read -r -a PKGS <<< "$LIST"
-          REMAINING="${PKGS[@]:1}"
+          REMAINING="${PKGS[@]:1]"
           if [ -n "$REMAINING" ]; then
             echo "Relaying to next packages: $REMAINING"
             gh workflow run "Build and Deploy Custom XBPS" \
               --ref "${GITHUB_REF_NAME}" \
-              -f package_list="$REMAINING"
+              -f package_list="$REMAINING" \
+              -f force_rebuild=${{ env.FORCE_REBUILD }}
           else
             echo "Queue finished."
           fi
