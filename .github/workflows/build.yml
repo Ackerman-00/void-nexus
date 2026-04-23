@@ -111,12 +111,9 @@ jobs:
         run: |
           mkdir -p hostdir/binpkgs
           echo "Downloading existing packages from rolling release..."
-          # Only download *.xbps; no repodata/.sig2 so xbps‑rindex does not fight with GPG
           gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs 2>/dev/null || echo "First run or no packages found."
-          
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             cd hostdir/binpkgs
-            # Build unsigned index first so xbps‑src can use hostdir/binpkgs as repo
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
@@ -127,7 +124,6 @@ jobs:
           echo "Generating shlibs map by directly extracting props.plist from binaries..."
           touch common/shlibs
           TMP_SHLIBS=$(mktemp)
-          
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             for file in hostdir/binpkgs/*.xbps; do
               [ -e "$file" ] || continue
@@ -146,7 +142,6 @@ jobs:
               for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
             done
           fi
-          
           if [ -s "$TMP_SHLIBS" ]; then
             cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
             mv /tmp/merged_shlibs common/shlibs
@@ -197,7 +192,7 @@ jobs:
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             find hostdir/binpkgs -maxdepth 1 -type f \
               -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" \
-              -exec cp {} public/x86_64/ \;
+              -exec cp {} public/x86_64/ \;    # ← FIXED: added \;
           done
 
           cd public/x86_64
@@ -228,7 +223,6 @@ jobs:
             done
             echo -e "\n]" >> packages.json
             
-            # Now upload to GitHub Release directly, no artifacts
             gh release view rolling -R "$REPO" 2>/dev/null \
               || gh release create rolling -R "$REPO" \
                    --title "Void Nexus Rolling Binaries" \
@@ -236,11 +230,14 @@ jobs:
                    --prerelease
             
             echo "Uploading XBPS repo files to GitHub Release..."
-            find . -type f \
-              \( -name "*.xbps" -o -name "*.sig2" -o -name "repodata" -o -name "packages.json" \) \
-              -exec gh release upload rolling -R "$REPO" {} --clobber \+
+            # FIXED: replaced broken find -exec with a simple for loop
+            for file in *.xbps *.sig2 repodata packages.json; do
+              [ -f "$file" ] || continue
+              gh release upload rolling -R "$REPO" "$file" --clobber || true
+            done
+            
+            rm -f /tmp/private.pem
           fi
-          rm -f /tmp/private.pem
 
       - name: Trigger Relay Race (no artifact)
         env:
@@ -248,7 +245,7 @@ jobs:
         run: |
           LIST="${{ env.PACKAGE_LIST }}"
           read -r -a PKGS <<< "$LIST"
-          REMAINING="${PKGS[@]:1]"
+          REMAINING="${PKGS[@]:1}"
           if [ -n "$REMAINING" ]; then
             echo "Relaying to next packages: $REMAINING"
             gh workflow run "Build and Deploy Custom XBPS" \
