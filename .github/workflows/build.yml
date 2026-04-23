@@ -1,3 +1,7 @@
+build.yml 
+
+
+
 name: Build and Deploy Custom XBPS
 
 on:
@@ -10,10 +14,6 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   NODE_OPTIONS: '--no-warnings'
-
-permissions:
-  contents: write
-  actions: write
 
 jobs:
   build:
@@ -29,8 +29,6 @@ jobs:
       ARCH: 'x86_64'
       BOOTSTRAP: 'x86_64'
       TEST: '0'
-    outputs:
-      remaining_packages: ${{ steps.parse.outputs.remaining }}
     steps:
       - name: Prepare container
         shell: sh
@@ -60,9 +58,11 @@ jobs:
           hook() {
             local pkg_file="$XBPS_REPOSITORY/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
             if [ -f "$pkg_file" ]; then
+               echo "=> ${pkgname}: Dynamically injecting shlibs from ${pkg_file}..."
                local new_shlibs=$( (tar xOf "$pkg_file" ./props.plist 2>/dev/null || tar xOf "$pkg_file" props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true )
                for so in $new_shlibs; do
                  echo "$so ${pkgname}-${version}_${revision}" >> $XBPS_DISTDIR/common/shlibs
+                 echo "   -> Successfully Injected: $so"
                done
             fi
           }
@@ -75,14 +75,10 @@ jobs:
           path: custom-templates-temp
 
       - name: Parse Package List
-        id: parse
         run: |
           LIST="${{ github.event.inputs.package_list }}"
           read -r -a PKGS <<< "$LIST"
-          echo "TARGET_PKG=${PKGS[0]}" >> $GITHUB_ENV
-          REMAINING="${PKGS[@]:1}"
-          echo "REMAINING_PKGS=$REMAINING" >> $GITHUB_ENV
-          echo "remaining=$REMAINING" >> $GITHUB_OUTPUT
+          echo "TARGET_PKG=${PKGS}" >> $GITHUB_ENV
 
       - name: Inject custom templates
         run: |
@@ -99,9 +95,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p hostdir/binpkgs
-          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs || true
+          echo "Downloading existing packages from rolling release..."
+          
+          # THE FIX: ONLY download .xbps files. Downloading signed repodata causes xbps to prompt for keys and hang!
+          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
+          
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             cd hostdir/binpkgs
+            # Generate a fresh, UNSIGNED index so xbps-src accepts it locally without prompts
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
@@ -109,25 +110,29 @@ jobs:
 
       - name: Build self-healing shlibs map
         run: |
+          echo "Generating shlibs map by directly extracting props.plist from binaries..."
           touch common/shlibs
           TMP_SHLIBS=$(mktemp)
+          
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             for file in hostdir/binpkgs/*.xbps; do
               [ -e "$file" ] || continue
               fname=$(basename "$file")
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
-              PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" 2>/dev/null | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" 2>/dev/null | tar xOf - props.plist 2>/dev/null || true)
+              PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
               SHLIBS=$(echo "$PLIST" | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
               for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
             done
           fi
+          
           if [ -s "$TMP_SHLIBS" ]; then
             cat common/shlibs "$TMP_SHLIBS" | sort -u > /tmp/merged_shlibs
             mv /tmp/merged_shlibs common/shlibs
+            echo "Successfully injected new shlibs! Total entries now: $(wc -l < common/shlibs)"
           fi
           rm -f "$TMP_SHLIBS"
 
-      - name: Check if Binary Already Exists
+      - name: Check if Binary Already Exists (Zero-Compile)
         id: check_bin
         run: |
           TARGET="${{ env.TARGET_PKG }}"
@@ -137,6 +142,7 @@ jobs:
             REV=$(grep '^revision=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
             if [ -f "hostdir/binpkgs/${EXPECTED_PKG}" ]; then
+              echo "Binary ${EXPECTED_PKG} found in cache. Skipping build."
               echo "skip_build=true" >> $GITHUB_OUTPUT
             else
               echo "skip_build=false" >> $GITHUB_OUTPUT
@@ -149,47 +155,36 @@ jobs:
         if: steps.check_bin.outputs.skip_build != 'true'
         run: ./xbps-src pkg "${{ env.TARGET_PKG }}"
 
-      - name: Sign and Prepare Binaries
+      - name: Sign and Index New Repository
         run: |
           set -e
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
           chmod 600 /tmp/private.pem
           mkdir -p public/x86_64
+          
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            # ONLY copy .xbps files. DO NOT copy old .sig2 files.
             find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/x86_64/ \; 2>/dev/null || true
           done
+
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
+            echo "Generating fresh RSA signatures for all packages..."
             rm -f *.sig2
             for pkg in *.xbps; do
               xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
             done
+            
+            echo "Generating repodata index..."
             xbps-rindex -f -a *.xbps || true
             xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
-          fi
-          rm -f /tmp/private.pem
-
-      - name: Upload directly to Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd public/x86_64
-          if ls *.xbps 1>/dev/null 2>&1; then
-            gh release view rolling --repo ${{ github.repository }} || \
-              gh release create rolling --repo ${{ github.repository }} --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
-            gh release upload rolling *.xbps *.sig2 *.xbps.sig2 --repo ${{ github.repository }} --clobber
-            gh release upload rolling *-repodata --repo ${{ github.repository }} --clobber || true
-          fi
-
-      - name: Generate and commit packages.json
-        run: |
-          cd public/x86_64
-          if ls *.xbps 1>/dev/null 2>&1; then
+            
+            echo "Generating packages.json for the website..."
             echo "[" > packages.json
             first=1
             for pkg in *.xbps; do
@@ -203,32 +198,61 @@ jobs:
             done
             echo -e "\n]" >> packages.json
           fi
-          cp public/x86_64/packages.json /__w/void-nexus/void-nexus/packages.json || true
+          rm -f /tmp/private.pem
 
-      - name: Commit packages.json to repository
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          cd /__w/void-nexus/void-nexus
-          git add packages.json
-          git commit -m "chore: update packages data" || true
-          git push || true
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-repo
+          path: public/x86_64/
 
   deploy:
-    name: Relay Trigger
+    name: Deploy and Relay
     needs: build
     runs-on: ubuntu-latest
-    if: always() && needs.build.result != 'failure'
     permissions:
-      actions: write
+      contents: write
     steps:
-      - name: Trigger next build in relay
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REPO_PAT }}
+          
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: void-repo
+          path: repo/
+          
+      - name: Deploy to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
+          # Only upload binary files to the release, keep JSON out
+          find repo/ -type f ! -name "packages.json" -exec gh release upload rolling {} --clobber \;
+          
+      - name: Commit packages.json
+        run: |
+          if [ -f repo/packages.json ]; then
+            cp repo/packages.json ./packages.json
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add packages.json
+            git commit -m "chore: update packages data" || true
+            git push || true
+          fi
+          
+      - name: Trigger Next Package in Queue (Relay Race)
         env:
           GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
-          REMAINING="${{ needs.build.outputs.remaining_packages }}"
+          LIST="${{ github.event.inputs.package_list }}"
+          read -r -a PKGS <<< "$LIST"
+          REMAINING="${PKGS[@]:1}"
           if [ -n "$REMAINING" ]; then
-            gh workflow run "Build and Deploy Custom XBPS" --ref "${{ github.ref_name }}" -f package_list="$REMAINING"
+            echo "Relaying to next packages: $REMAINING"
+            gh workflow run "Build and Deploy Custom XBPS" --ref "${GITHUB_REF_NAME}" -f package_list="$REMAINING"
           else
-            echo "Relay finished. No more packages to build."
+            echo "Queue finished."
           fi
