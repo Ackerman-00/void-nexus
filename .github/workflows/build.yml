@@ -55,7 +55,7 @@ jobs:
             local pkg_file="$XBPS_REPOSITORY/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
             if [ -f "$pkg_file" ]; then
                echo "=> ${pkgname}: Dynamically injecting shlibs from ${pkg_file}..."
-               local new_shlibs=$( (tar xOf "$pkg_file" ./props.plist 2>/dev/null || tar xOf "$pkg_file" props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true )
+               local new_shlibs=$( (tar xOf "$pkg_file" ./props.plist 2>/dev/null || tar xOf "$pkg_file" props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) | awk '/<key>shlib-provides<\\/key>/{flag=1; next} /<\\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\\/string>.*/, ""); print}' || true )
                for so in $new_shlibs; do
                  echo "$so ${pkgname}-${version}_${revision}" >> $XBPS_DISTDIR/common/shlibs
                  echo "   -> Successfully Injected: $so"
@@ -68,13 +68,16 @@ jobs:
       - name: Checkout custom templates
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: custom-templates-temp
 
       - name: Parse Package List
         run: |
           LIST="${{ github.event.inputs.package_list }}"
           read -r -a PKGS <<< "$LIST"
-          echo "TARGET_PKG=${PKGS}" >> $GITHUB_ENV
+          TARGET_PKG="${PKGS[0]}"
+          echo "TARGET_PKG=$TARGET_PKG" >> $GITHUB_ENV
+          echo "PACKAGE_LIST=$LIST" >> $GITHUB_ENV
 
       - name: Inject custom templates
         run: |
@@ -86,25 +89,24 @@ jobs:
             cp -r "$pkg_dir" srcpkgs/
           done
 
-      - name: Restore Repository & Setup Dependency Cache
+      - name: Restore Repository from GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p hostdir/binpkgs
           echo "Downloading existing packages from rolling release..."
-          
-          # THE FIX: ONLY download .xbps files. Downloading signed repodata causes xbps to prompt for keys and hang!
-          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs || echo "First run or no packages found."
+          # Only download *.xbps; no repodata/.sig2 so xbps‑rindex does not fight with GPG
+          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs 2>/dev/null || echo "First run or no packages found."
           
           if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
             cd hostdir/binpkgs
-            # Generate a fresh, UNSIGNED index so xbps-src accepts it locally without prompts
+            # Build unsigned index first so xbps‑src can use hostdir/binpkgs as repo
             xbps-rindex -a *.xbps || true
             cd ../..
           fi
           echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
-      - name: Build self-healing shlibs map
+      - name: Build self‑healing shlibs map
         run: |
           echo "Generating shlibs map by directly extracting props.plist from binaries..."
           touch common/shlibs
@@ -116,7 +118,9 @@ jobs:
               fname=$(basename "$file")
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
               PLIST=$(tar xOf "$file" ./props.plist 2>/dev/null || tar xOf "$file" props.plist 2>/dev/null || zstdcat "$file" | tar xOf - ./props.plist 2>/dev/null || zstdcat "$file" | tar xOf - props.plist 2>/dev/null || true)
-              SHLIBS=$(echo "$PLIST" | awk '/<key>shlib-provides<\/key>/{flag=1; next} /<\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\/string>.*/, ""); print}' || true)
+              SHLIBS=$(echo "$PLIST" \
+                | awk '/<key>shlib-provides<\\/key>/{flag=1; next} /<\\/array>/{flag=0} flag && /<string>/{gsub(/.*<string>|<\\/string>.*/, ""); print}' \
+                || true)
               for so in $SHLIBS; do echo "$so $PKGVER" >> "$TMP_SHLIBS"; done
             done
           fi
@@ -128,7 +132,7 @@ jobs:
           fi
           rm -f "$TMP_SHLIBS"
 
-      - name: Check if Binary Already Exists (Zero-Compile)
+      - name: Check if Binary Already Exists (Zero‑Compile)
         id: check_bin
         run: |
           TARGET="${{ env.TARGET_PKG }}"
@@ -139,39 +143,44 @@ jobs:
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
             if [ -f "hostdir/binpkgs/${EXPECTED_PKG}" ]; then
               echo "Binary ${EXPECTED_PKG} found in cache. Skipping build."
-              echo "skip_build=true" >> $GITHUB_OUTPUT
+              echo "skip_build=true" >> "$GITHUB_OUTPUT"
             else
-              echo "skip_build=false" >> $GITHUB_OUTPUT
+              echo "skip_build=false" >> "$GITHUB_OUTPUT"
             fi
           else
-            echo "skip_build=false" >> $GITHUB_OUTPUT
+            echo "skip_build=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build package
         if: steps.check_bin.outputs.skip_build != 'true'
         run: ./xbps-src pkg "${{ env.TARGET_PKG }}"
 
-      - name: Sign and Index New Repository
+      - name: Build and Upload Signed Repo to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           set -e
-          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
-          chmod 600 /tmp/private.pem
           mkdir -p public/x86_64
           
+          # Copy only new packages: those .xbps that match any custom template
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
-            # ONLY copy .xbps files. DO NOT copy old .sig2 files.
-            find hostdir/binpkgs -maxdepth 1 -type f -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" -exec cp {} public/x86_64/ \; 2>/dev/null || true
+            find hostdir/binpkgs -maxdepth 1 -type f \
+              -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" \
+              -exec cp {} public/x86_64/ \\; 2>/dev/null || true
           done
 
           cd public/x86_64
           if ls *.xbps 1>/dev/null 2>&1; then
             echo "Generating fresh RSA signatures for all packages..."
             rm -f *.sig2
+            echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
+            chmod 600 /tmp/private.pem
             for pkg in *.xbps; do
               xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
             done
@@ -193,62 +202,34 @@ jobs:
               first=0
             done
             echo -e "\n]" >> packages.json
+            
+            # Now upload to GitHub Release directly, no artifacts
+            gh release view rolling -R "$REPO" 2>/dev/null \
+              || gh release create rolling -R "$REPO" \
+                   --title "Void Nexus Rolling Binaries" \
+                   --notes "Automated XBPS Repository" \
+                   --prerelease
+            
+            echo "Uploading XBPS repo files to GitHub Release..."
+            # Upload repodata first so it covers the .xbps
+            find . -type f \( -name "*.xbps" -o -name "*.sig2" -o -name "repodata" -o -name "packages.json" \) \
+              -exec gh release upload rolling -R "$REPO" {} --clobber \; || true
+            
+            rm -f /tmp/private.pem
           fi
-          rm -f /tmp/private.pem
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: void-repo
-          path: public/x86_64/
-
-  deploy:
-    name: Deploy and Relay
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.REPO_PAT }}
-          
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: void-repo
-          path: repo/
-          
-      - name: Deploy to Release
+      - name: Trigger Relay Race (no artifact)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view rolling || gh release create rolling --title "Void Nexus Rolling" --notes "Automated XBPS Binaries"
-          # Only upload binary files to the release, keep JSON out
-          find repo/ -type f ! -name "packages.json" -exec gh release upload rolling {} --clobber \;
-          
-      - name: Commit packages.json
-        run: |
-          if [ -f repo/packages.json ]; then
-            cp repo/packages.json ./packages.json
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add packages.json
-            git commit -m "chore: update packages data" || true
-            git push || true
-          fi
-          
-      - name: Trigger Next Package in Queue (Relay Race)
-        env:
-          GH_TOKEN: ${{ secrets.REPO_PAT }}
-        run: |
-          LIST="${{ github.event.inputs.package_list }}"
+          LIST="${{ env.PACKAGE_LIST }}"
           read -r -a PKGS <<< "$LIST"
           REMAINING="${PKGS[@]:1}"
           if [ -n "$REMAINING" ]; then
             echo "Relaying to next packages: $REMAINING"
-            gh workflow run "Build and Deploy Custom XBPS" --ref "${GITHUB_REF_NAME}" -f package_list="$REMAINING"
+            gh workflow run "Build and Deploy Custom XBPS" \
+              --ref "${GITHUB_REF_NAME}" \
+              -f package_list="$REMAINING"
           else
             echo "Queue finished."
           fi
