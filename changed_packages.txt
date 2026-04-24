@@ -1,1 +1,2 @@
-niri-git
+quickshell-git
+zed
