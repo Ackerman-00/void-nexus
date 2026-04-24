@@ -269,8 +269,9 @@ jobs:
             echo "Relaying to next packages: $REMAINING"
             gh workflow run "Build and Deploy Custom XBPS" \
               --ref "${GITHUB_REF_NAME}" \
+              --repo "${{ github.repository }}" \
               -f package_list="$REMAINING" \
-              -f force_rebuild=${{ env.FORCE_REBUILD }}
+              -f force_rebuild="${{ env.FORCE_REBUILD }}"
           else
             echo "Queue finished."
           fi
