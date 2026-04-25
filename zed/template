@@ -1,6 +1,6 @@
 # Template file for 'zed'
 pkgname=zed
-version=0.233.9
+version=0.233.10
 revision=1
 archs="x86_64* aarch64*"
 build_style=cargo
@@ -37,7 +37,7 @@ license="GPL-3.0-or-later, Apache-2.0, AGPL-3.0-or-later"
 homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
-checksum=13735305a18d7a52b0767ea5e0389ed104c93adab5b5ed215bd18bbbf47b4ecf
+checksum=e540560744ed8b3142781accaefe43d808e17c9b614cd3ece6babbb12f62f450
 
 pre_build() {
     # 1. Tell the extension registry and credential manager this is a stable build
