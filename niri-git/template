@@ -1,7 +1,7 @@
 # Template file for 'niri-git'
 pkgname=niri-git
-_commit=9438f59e2b9d8deb6fcec5922f8aca18162b673c
-version=20260424
+_commit=4438aefc8d01b775ee855f96c7d93b16e55a7a9f
+version=20260425
 revision=1
 build_style=cargo
 build_helper="qemu"
@@ -20,7 +20,7 @@ conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=f5e9b409fe120d0f4f82f19940e5cb5c380230289cab6cdb1c4a3e5596dbe0f7
+checksum=fe20b8ac689f2157824f3834f58692ed4602348457baf4ef75cc5a44cd036a79
 
 do_check() {
     if [ "$XBPS_TARGET_LIBC" != "musl" ]; then
