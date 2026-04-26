@@ -53,6 +53,7 @@ sudo xbps-install <package-name>
 
 | Package | Description | Type |
 |---------|-------------|:----:|
+| `hyprland` | Privacy-focused Firefox-based browser | No longer maintained anymore |
 | `zen-browser` | Privacy-focused Firefox-based browser | Stable |
 | `vesktop` | Vencord-bundled Discord client | Stable |
 | `rootapp` | Discord alternative for gaming communities | Stable |
