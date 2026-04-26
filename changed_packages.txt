@@ -1,1 +1,7 @@
-niri-git
+faugus-launcher
+hyprwayland-scanner
+dank-material-shell
+aquamarine
+hyprsysteminfo
+xdg-desktop-portal-hyprland
+hyprwire
