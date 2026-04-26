@@ -5,6 +5,7 @@ revision=1
 build_style=cmake
 configure_args+=" -DCMAKE_BUILD_TYPE:STRING=Release"
 configure_args+=" -DCMAKE_INSTALL_PREFIX:PATH=/usr"
+
 hostmakedepends="
   cmake
   pkgconf
@@ -12,6 +13,8 @@ hostmakedepends="
 makedepends="
   hyprland-qt-support
   hyprutils
+  hyprtoolkit
+  pciutils-devel
 "
 qtmakedepends="
   qt6-base-devel
@@ -22,8 +25,10 @@ qtmakedepends="
   qt6-wayland-devel
   qt6-wayland-private-devel
 "
+
 hostmakedepends+=" ${qtmakedepends}"
 makedepends+=" ${qtmakedepends}"
+
 short_desc="A tiny qt6/qml application to display information about the running system"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="BSD-3-Clause"
