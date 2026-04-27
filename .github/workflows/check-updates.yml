@@ -24,7 +24,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.REPO_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -113,10 +113,8 @@ jobs:
                   resp = requests.get(url, timeout=20)
                   resp.raise_for_status()
                   tags = resp.json()
-
                   if not isinstance(tags, list):
                       return None
-
                   versions = []
                   for tag in tags:
                       if not isinstance(tag, dict):
@@ -131,10 +129,8 @@ jobs:
                           versions.append(ver_str)
                       except InvalidVersion:
                           continue
-
                   if not versions:
                       return None
-
                   versions.sort(key=pkg_version.parse, reverse=True)
                   return versions[0]
               except Exception:
@@ -161,7 +157,6 @@ jobs:
           def resolve_url(url_template, pkgname, ver, sha, curr_ver=None, curr_sha=None, template_vars=None):
               url = resolve_site_vars(url_template)
               url = url.replace('${pkgname}', pkgname).replace('$pkgname', pkgname)
-              
               use_ver = ver if ver else curr_ver
               if use_ver is not None:
                   use_ver = str(use_ver)
@@ -173,12 +168,11 @@ jobs:
               if use_sha is not None:
                   use_sha = str(use_sha)
                   url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
-                  
               for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE', '${XBPS_TARGET_MACHINE}', '${_machine}']:
                   url = url.replace(arch_var, 'x86_64')
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
               if template_vars:
-                  for var, val in template_vars.items(): 
+                  for var, val in template_vars.items():
                       url = url.replace('${' + var + '}', str(val)).replace('$' + var, str(val))
               url = re.sub(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', '', url)
               return url
@@ -203,80 +197,56 @@ jobs:
 
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
-
               clean = []
               for h in new_hashes:
                   s = str(h).translate(str.maketrans('', '', '[]\'"')).strip()
                   if s:
                       clean.append(s)
               if not clean: return content
-
               for s in clean:
                   assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
-
               if len(clean) == 1:
                   repl = f"checksum={clean[0]}"
               else:
                   joined = '\n '.join(clean)
                   repl = f'checksum="{joined}"'
-
               content = re.sub(r'^_?checksum=.*(?:\n[ \t]+.*)*\n?', '', content, flags=re.MULTILINE)
               content = re.sub(r'^(distfiles=.*(?:\n[ \t]+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
               return content
 
-          # ------------------------------------------------------------
-          # Helper: Extract version from an AppImage file
-          # ------------------------------------------------------------
           def extract_appimage_version(appimage_path):
-              # Method 1: Try the --appimage-version flag
               try:
                   subprocess.run(['chmod', '+x', appimage_path], check=True)
-                  result = subprocess.run([appimage_path, '--appimage-version'], 
-                                         capture_output=True, text=True, timeout=30)
+                  result = subprocess.run([appimage_path, '--appimage-version'], capture_output=True, text=True, timeout=30)
                   if result.returncode == 0 and result.stdout.strip():
                       return result.stdout.strip()
               except Exception:
                   pass
-
-              # Method 2: Fallback to extracting and parsing .desktop file
               try:
                   with tempfile.TemporaryDirectory() as tmpdir:
-                      subprocess.run([appimage_path, '--appimage-extract'], 
-                                    cwd=tmpdir, capture_output=True, timeout=120)
+                      subprocess.run([appimage_path, '--appimage-extract'], cwd=tmpdir, capture_output=True, timeout=120)
                       extracted_dir = Path(tmpdir) / 'squashfs-root'
                       if extracted_dir.is_dir():
-                          # Find .desktop file
                           for desktop_file in extracted_dir.glob('*.desktop'):
                               content = desktop_file.read_text(encoding='utf-8', errors='ignore')
-                              # Look for X-AppImage-Version=
                               match = re.search(r'^X-AppImage-Version=(.+)', content, re.MULTILINE)
                               if match:
                                   return match.group(1).strip()
-                              # Fallback: standard Version=
                               match = re.search(r'^Version=(.+)', content, re.MULTILINE)
                               if match:
                                   return match.group(1).strip()
               except Exception:
                   pass
-
               return None
 
-          # ------------------------------------------------------------
-          # Helper: Get the checksum for a specific arch from template
-          # ------------------------------------------------------------
           def get_arch_checksum(template_content, arch):
-              # Look for the arch section and extract its checksum
               pattern = rf'{arch}.*?\n.*?checksum=([a-f0-9]+)'
               match = re.search(pattern, template_content, re.DOTALL)
               return match.group(1) if match else None
 
-          # ------------------------------------------------------------
-          # Main update logic
-          # ------------------------------------------------------------
           git_user = "github-actions[bot]"
           subprocess.run(['git', 'config', 'user.name', git_user], check=True)
           subprocess.run(['git', 'config', 'user.email', f'{git_user}@users.noreply.github.com'], check=True)
-
           branch = os.environ.get('GITHUB_REF_NAME', 'main')
           subprocess.run(['git', 'checkout', '-B', branch], check=True)
 
@@ -298,57 +268,40 @@ jobs:
               pkg_m = re.search(r'pkgname=["\']?([^"\'\s\n]+)', raw)
               ver_m = re.search(r'\bversion=["\']?([^"\'\n\s]+)', raw)
               if not pkg_m or not ver_m: continue
-
               pkgname, curr_ver = pkg_m.group(1), ver_m.group(1)
               commit_m = re.search(r'_commit=["\']?([a-fA-F0-9]{7,40})', raw)
               curr_sha = commit_m.group(1) if commit_m else None
               tmpl_vars = extract_template_vars(raw)
-
               print(f"Scanning {pkgname}...")
               new_ver, new_sha = None, None
 
-              # ------------------------------------------------------------
-              # SPECIAL CASE: rootapp (AppImage)
-              # ------------------------------------------------------------
               if pkgname == "rootapp":
                   print("  → Fetching rootapp AppImages...")
                   x64_url = "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
                   arm64_url = "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
-                  
                   with tempfile.TemporaryDirectory() as tmpdir:
                       x64_path = os.path.join(tmpdir, "Root_x64.AppImage")
                       arm64_path = os.path.join(tmpdir, "Root_arm64.AppImage")
-                      
                       if fetch_file(x64_url, x64_path) and fetch_file(arm64_url, arm64_path):
-                          # Extract version from the AppImage
                           new_ver = extract_appimage_version(x64_path)
                           if not new_ver:
                               print("  → ERROR: Could not extract version from AppImage")
                               continue
-                          
-                          # Calculate checksums
                           new_checksum_x64 = sha256_file(x64_path)
                           new_checksum_arm64 = sha256_file(arm64_path)
-                          
-                          # Get current checksums from template
                           curr_checksum_x64 = get_arch_checksum(raw, 'x86_64')
                           curr_checksum_arm64 = get_arch_checksum(raw, 'aarch64')
-                          
                           print(f"  → Current version: {curr_ver}, New version: {new_ver}")
                           print(f"  → X64 hash changed: {curr_checksum_x64 != new_checksum_x64}")
                           print(f"  → ARM64 hash changed: {curr_checksum_arm64 != new_checksum_arm64}")
-                          
-                          # Only update if the version is actually newer
                           if version_is_newer(new_ver, curr_ver):
                               candidate = raw
                               candidate = re.sub(r'^version=.*', f'version={new_ver}', candidate, flags=re.MULTILINE)
                               candidate = re.sub(r'^revision=.*', 'revision=1', candidate, flags=re.MULTILINE)
-                              
                               if curr_checksum_x64:
                                   candidate = candidate.replace(curr_checksum_x64, new_checksum_x64)
                               if curr_checksum_arm64:
                                   candidate = candidate.replace(curr_checksum_arm64, new_checksum_arm64)
-                              
                               tpath.write_text(candidate, encoding='utf-8')
                               changed_packages.append(pkgname)
                               print(f"  → Successfully processed {pkgname}")
@@ -356,12 +309,8 @@ jobs:
                               print("  → No version update available for rootapp")
                       else:
                           print("  → ERROR: Failed to download one or both AppImages")
-                  
-                  continue  # Skip the rest of the loop for rootapp
+                  continue
 
-              # ------------------------------------------------------------
-              # STANDARD PACKAGES (GitHub/GitLab/PyPI)
-              # ------------------------------------------------------------
               if curr_sha is not None:
                   repo_m = re.search(r'_gitrepo=["\']?([^"\'\n\s]+)', raw)
                   repo_url = repo_m.group(1) if repo_m else None
@@ -375,7 +324,6 @@ jobs:
               else:
                   gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
                   gl_m = re.search(r'https://(gitlab[A-Za-z0-9_.-]*\.[a-z]+)/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
-                  
                   if gh_m:
                       owner, repo = gh_m.group(1), gh_m.group(2)
                       latest = get_latest_github_release(owner, repo, gh_headers)
@@ -384,7 +332,6 @@ jobs:
                       host, project_path = gl_m.group(1), gl_m.group(2)
                       latest = get_latest_gitlab_tag(host, project_path)
                       if version_is_newer(latest, curr_ver): new_ver = latest
-
                   if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
                       pypi_latest = get_pypi_latest(pkgname)
                       if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
@@ -400,7 +347,6 @@ jobs:
               is_corrupted = False
               if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
                   is_corrupted = True
-
               if not new_ver and not new_sha and not is_corrupted:
                   continue
 
@@ -418,7 +364,6 @@ jobs:
                       resolved_urls = None
                       break
                   resolved_urls.append(r)
-
               if resolved_urls is None: continue
 
               new_checksums = []
@@ -433,13 +378,11 @@ jobs:
                       except OSError: pass
                       fetch_ok = False
                       break
-
               if not fetch_ok:
                   print(f"Failed to fetch distfiles for {pkgname}. Skipping.")
                   continue
 
               candidate_with_hashes = replace_checksums(candidate, new_checksums)
-
               if candidate_with_hashes == raw:
                   continue
 
@@ -455,7 +398,6 @@ jobs:
 
           if changed_packages:
               Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
-
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
           EOF
@@ -465,9 +407,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add -u
-
           if ! git diff --cached --quiet; then
             git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
             git pull --rebase origin ${{ github.ref_name }}
@@ -479,47 +419,21 @@ jobs:
       - name: Phase 3 - Trigger Relay Race
         if: steps.scan.outputs.updates_found == 'true'
         env:
-          GH_TOKEN: ${{ secrets.REPO_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ ! -f changed_packages.txt ]; then
             echo "Relay race skipped: No packages changed."
             exit 0
           fi
-
           WORKFLOW_NAME="Build and Deploy Custom XBPS"
-
-          PRIORITY_ORDER=(
-            "hyprutils" "hyprlang" "hyprwayland-scanner" "hyprcursor"
-            "hyprgraphics" "hyprtoolkit" "aquamarine" "hyprwire"
-            "hyprland" "hyprland-protocols" "hyprland-qt-support"
-            "hyprland-qtutils" "xdg-desktop-portal-hyprland"
-            "hyprlock" "hypridle" "hyprsunset" "hyprpaper"
-            "hyprsysteminfo" "hyprpolkitagent"
-          )
-
           CHANGED=$(cat changed_packages.txt)
           ORDERED=()
-
-          for pkg in "${PRIORITY_ORDER[@]}"; do
-            if echo "$CHANGED" | grep -qx "$pkg"; then
-              ORDERED+=("$pkg")
-            fi
-          done
-
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
-            already=false
-            for p in "${PRIORITY_ORDER[@]}"; do
-              [ "$p" = "$pkg" ] && already=true && break
-            done
-            if ! $already; then
-              ORDERED+=("$pkg")
-            fi
+            ORDERED+=("$pkg")
           done < changed_packages.txt
-
           LIST="${ORDERED[*]}"
           echo "Starting relay race with: $LIST"
-
           gh workflow run "${WORKFLOW_NAME}" \
             --ref "${{ github.ref_name }}" \
             -f package_list="$LIST"
