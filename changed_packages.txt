@@ -1,2 +1,1 @@
-dank-material-shell
-helium-browser-bin
+niri-git
