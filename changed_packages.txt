@@ -1,1 +1,1 @@
-quickshell-git
+faugus-launcher
