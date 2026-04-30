@@ -1,1 +1,1 @@
-faugus-launcher
+helium-browser-bin
