@@ -1,1 +1,2 @@
-faugus-launcher
+quickshell-git
+zed
