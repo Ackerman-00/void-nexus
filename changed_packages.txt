@@ -1,1 +1,1 @@
-niri-git
+helium-browser-bin
