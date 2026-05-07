@@ -1,1 +1,1 @@
-zed
+quickshell-git
