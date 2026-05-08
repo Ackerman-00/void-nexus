@@ -1,2 +1,1 @@
-quickshell-git
-niri-git
+faugus-launcher
