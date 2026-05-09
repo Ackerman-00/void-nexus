@@ -1,1 +1,2 @@
-zed
+faugus-launcher
+zen-browser
