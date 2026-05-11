@@ -1,7 +1,7 @@
 # Template file for 'quickshell-git'
 pkgname=quickshell-git
 _gitrepo="https://git.outfoxxed.me/quickshell/quickshell"
-_commit=3f64796e8dba1fccc8da24670f60d7dfcf8df43b
+_commit=7d1c9a9c6721606b129829134d6f614f015621e2
 version=20260511
 revision=1
 build_style=cmake
@@ -27,4 +27,4 @@ conflicts="quickshell>=0"
 provides="quickshell-${version}_${revision}"
 
 distfiles="https://git.outfoxxed.me/quickshell/quickshell/archive/${_commit}.tar.gz"
-checksum=2d4ba90b98253db37c15fe78141e3966d15997fdc51065d0e46fe05b1f47ab47
+checksum=c2f6a28a1ac47e5a5f94f69fb0e91bb6de649af04be094303b4a0739b23e18d7
