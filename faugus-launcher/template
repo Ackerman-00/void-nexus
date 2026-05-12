@@ -11,8 +11,9 @@ short_desc="Simple and lightweight app for running Windows games using UMU-Launc
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/Faugus/faugus-launcher"
-distfiles="
-checksum="a7cf76ef8d03978905850eb35f93265299a42b213f2f47eabecb5a23f74541da"https://github.com/Faugus/faugus-launcher/archive/refs/tags/${version}.tar.gz"
+
+distfiles="https://github.com/Faugus/faugus-launcher/archive/refs/tags/${version}.tar.gz"
+checksum="a7cf76ef8d03978905850eb35f93265299a42b213f2f47eabecb5a23f74541da"
 
 post_install() {
     vlicense LICENSE
