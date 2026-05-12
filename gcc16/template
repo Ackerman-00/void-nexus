@@ -46,7 +46,7 @@ replaces="gcc-gcj<7.2.0 gcc-gcj-jdk-compat<7.2.0 libmpx>=0 libmpx-devel>=0
  libssp>=0 libssp-devel>=0"
 
 if [ "$CHROOT_READY" ]; then
-    hostmakedepends="tar texinfo perl flex"
+    hostmakedepends="libarchive tar texinfo perl flex"
 else
     # libzstd fails to link in bootstrap with glibc 2.36
     # when zlib has been compiled with glibc 2.32.
