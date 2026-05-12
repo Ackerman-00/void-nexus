@@ -1,7 +1,7 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
 version=20260511
-revision=1
+revision=2
 _commit=761869a561548874fe7e293b157fd7841576b367
 build_style=meson
 buildtype=release
@@ -10,8 +10,8 @@ short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
 maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
-distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
-checksum="2649b91546ba7fcac16d03ba44e724652dff4c973cae95f7dd38e60ecbd6c7a7"
+distfiles="
+checksum="d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce"https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
 
 # Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
