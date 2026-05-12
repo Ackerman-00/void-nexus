@@ -1,20 +1,22 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
-version=4.7.6
+version=20260511
 revision=1
+
+_gitbranch="v5"
+_commit=761869a561548874fe7e293b157fd7841576b367
+wrksrc="noctalia-shell-${_commit}"
 
 build_style=meson
 buildtype=release
 configure_args="-Db_ndebug=true"
 short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 
-distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/heads/v5.tar.gz"
-checksum="9a575131eca9e790119abe940b972b97494895fbde3750f7c9390ab564001e6a"
-
-create_wrksrc=yes
+distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
+checksum="d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce"
 
 # Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
@@ -46,11 +48,6 @@ makedepends="
  jemalloc-devel
  glib-devel
 "
-
-post_extract() {
-    # Move all files from the unpredictable GitHub folder into the root build directory
-    mv noctalia-shell-*/* .
-}
 
 post_install() {
     vlicense LICENSE
