@@ -10,8 +10,9 @@ maintainer="Tony King <tonyking94@proton.me>"
 license="MIT"
 homepage="https://danklinux.com/docs/danksearch"
 changelog="https://github.com/AvengeMedia/danksearch/releases"
-distfiles="
-checksum="e2c263a233e45661e55bd841ee1395b9241132091f1b1e3d98caebb26d455727"https://github.com/AvengeMedia/danksearch/archive/refs/tags/v${version}.tar.gz"
+
+distfiles="https://github.com/AvengeMedia/danksearch/archive/refs/tags/v${version}.tar.gz"
+checksum="e2c263a233e45661e55bd841ee1395b9241132091f1b1e3d98caebb26d455727"
 
 wrksrc="danksearch-${version}"
 system_accounts="dsearch"
@@ -19,13 +20,13 @@ system_accounts="dsearch"
 make_dirs="/var/lib/dsearch 0750 dsearch dsearch"
 
 post_install() {
-	if [ -f LICENSE ]; then
-		vlicense LICENSE
-	fi
+    if [ -f LICENSE ]; then
+        vlicense LICENSE
+    fi
 
-	if [ -f config.example.toml ]; then
-		vinstall config.example.toml 0644 etc/dsearch config.toml
-	fi
+    if [ -f config.example.toml ]; then
+        vinstall config.example.toml 0644 etc/dsearch config.toml
+    fi
 
-	vsv dsearch
+    vsv dsearch
 }
