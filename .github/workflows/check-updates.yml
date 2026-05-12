@@ -220,7 +220,6 @@ jobs:
               if not m: return False
               return not m.group(1).strip().startswith('"')
 
-          # CRITICAL FIX: Bulletproof Regex replacement to prevent template destruction
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
               clean = [str(h).translate(str.maketrans('', '', '[]\'" ')).strip() for h in new_hashes]
@@ -234,12 +233,13 @@ jobs:
               else:
                   repl = 'checksum="\n ' + '\n '.join(clean) + '"'
                   
-              # Safely excise ONLY the checksum block (handles multiline quotes, arrays, and single lines)
+              # Safely excise ONLY the checksum block
               pattern = r'^_?checksum=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*)\n?'
               content = re.sub(pattern, '', content, flags=re.MULTILINE)
               
-              # Re-insert cleanly after distfiles
-              content = re.sub(r'^(distfiles\+?=.+?(?:\n[ \t]+.*)*)', r'\1\n'+repl, content, flags=re.MULTILINE)
+              # CRITICAL FIX: Greedy regex matches the full distfiles line + any continuation lines 
+              # mathematically ensuring the URL is never sliced or broken.
+              content = re.sub(r'^(distfiles\+?=[^\n]+(?:\n[ \t]+[^\n]+)*)', r'\1\n'+repl, content, flags=re.MULTILINE)
               return content
 
           def extract_appimage_version(appimage_path):
