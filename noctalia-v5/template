@@ -10,8 +10,8 @@ short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
 maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
-distfiles="
-checksum="d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce"https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
+distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
+checksum="d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce"
 
 # Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
