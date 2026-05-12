@@ -36,8 +36,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later, Apache-2.0, AGPL-3.0-or-later"
 homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
-distfiles="
-checksum="8b84b3dbae140addef9070ef3d0ebbf6f42e8826383f890b50aff1b094bc59b7"https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
+distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
+checksum="8b84b3dbae140addef9070ef3d0ebbf6f42e8826383f890b50aff1b094bc59b7"
 
 pre_build() {
     # 1. Tell the extension registry and credential manager this is a stable build
