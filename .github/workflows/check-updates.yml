@@ -107,9 +107,9 @@ jobs:
               except Exception: pass
               return None
 
-          def get_latest_commit(repo_url, gh_headers=None):
+          def get_latest_commit(repo_url, branch='HEAD', gh_headers=None):
               try:
-                  out = subprocess.check_output(['git', 'ls-remote', repo_url, 'HEAD'], timeout=30, stderr=subprocess.DEVNULL).decode()
+                  out = subprocess.check_output(['git', 'ls-remote', repo_url, branch], timeout=30, stderr=subprocess.DEVNULL).decode()
               except Exception: return None, None
               m = re.search(r'([a-f0-9]{40})', out)
               if not m: return None, None
@@ -220,6 +220,7 @@ jobs:
               if not m: return False
               return not m.group(1).strip().startswith('"')
 
+          # THE MASTER FIX: Surgically replaces checksum exactly where it lives, preserving context perfectly.
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
               clean = [str(h).translate(str.maketrans('', '', '[]\'" ')).strip() for h in new_hashes]
@@ -229,17 +230,19 @@ jobs:
                   if not re.fullmatch(r'[a-f0-9]{64}', s): raise ValueError(f"Bad checksum: {s!r}")
               
               if len(clean) == 1:
-                  repl = f'checksum="{clean[0]}"'
+                  repl = f'checksum="{clean[0]}"\n'
               else:
-                  repl = 'checksum="\n ' + '\n '.join(clean) + '"'
+                  repl = 'checksum="\n ' + '\n '.join(clean) + '"\n'
                   
-              # Safely excise ONLY the checksum block
-              pattern = r'^_?checksum=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*)\n?'
-              content = re.sub(pattern, '', content, flags=re.MULTILINE)
+              # Safely targets the checksum block whether it's quoted, single line, or multiline array
+              pattern_checksum = r'^_?checksum=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*)\n?'
               
-              # CRITICAL FIX: Greedy regex matches the full distfiles line + any continuation lines 
-              # mathematically ensuring the URL is never sliced or broken.
-              content = re.sub(r'^(distfiles\+?=[^\n]+(?:\n[ \t]+[^\n]+)*)', r'\1\n'+repl, content, flags=re.MULTILINE)
+              if re.search(pattern_checksum, content, flags=re.MULTILINE):
+                  content = re.sub(pattern_checksum, repl, content, flags=re.MULTILINE, count=1)
+              else:
+                  # Failsafe: if checksum doesn't exist at all, append exactly below distfiles
+                  pattern_distfiles = r'^(distfiles\+?=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*))'
+                  content = re.sub(pattern_distfiles, r'\1\n' + repl.strip(), content, flags=re.MULTILINE, count=1)
               return content
 
           def extract_appimage_version(appimage_path):
@@ -343,11 +346,16 @@ jobs:
               if curr_sha is not None:
                   repo_m = re.search(r'^_gitrepo=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
                   repo_url = repo_m.group(1) if repo_m else None
+                  
+                  # CRITICAL FIX: Extract branch info to ensure correct code base is downloaded
+                  branch_m = re.search(r'^_gitbranch=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
+                  git_branch = branch_m.group(1) if branch_m else 'HEAD'
+
                   if not repo_url:
                       gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
                       if gh_m: repo_url = f'https://github.com/{gh_m.group(1)}'
                   if repo_url:
-                      found_sha, found_date = get_latest_commit(repo_url, gh_headers)
+                      found_sha, found_date = get_latest_commit(repo_url, git_branch, gh_headers)
                       if found_sha and found_sha != curr_sha: new_sha, new_ver = found_sha, found_date
               else:
                   gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
