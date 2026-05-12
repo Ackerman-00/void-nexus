@@ -12,7 +12,7 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/heads/v5.tar.gz"
-checksum="8faaeb2e5004dfe1292084d406682b8c9481fb68e7a9d68a80708016cab28359"
+checksum="9a575131eca9e790119abe940b972b97494895fbde3750f7c9390ab564001e6a"
 
 create_wrksrc=yes
 
