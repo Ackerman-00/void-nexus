@@ -12,7 +12,7 @@ maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
-checksum=['d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce']
+checksum=0000000000000000000000000000000000000000
 
 # Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
