@@ -1,21 +1,20 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
 version=20260511
-revision=2
-_commit=761869a561548874fe7e293b157fd7841576b367
-wrksrc="noctalia-shell-${_commit}"
-build_wrksrc="noctalia"
+revision=3
 
 build_style=meson
 buildtype=release
 configure_args="-Db_ndebug=true"
 short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
-maintainer="Noctalia <team@noctalia.dev>"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 
-distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
-checksum="d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce"
+distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/heads/v5.tar.gz"
+checksum="8faaeb2e5004dfe1292084d406682b8c9481fb68e7a9d68a80708016cab28359"
+
+create_wrksrc=yes
 
 # Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
@@ -48,9 +47,14 @@ makedepends="
  glib-devel
 "
 
+post_extract() {
+    # Move all files from the unpredictable GitHub folder into the root build directory
+    mv noctalia-shell-*/* .
+}
+
 post_install() {
-    vlicense ../LICENSE
-    vdoc ../README.md
+    vlicense LICENSE
+    vdoc README.md
 
     if [ ! -x "${DESTDIR}/usr/bin/noctalia" ]; then
         msg_error "Expected binary /usr/bin/noctalia not found.\n"
