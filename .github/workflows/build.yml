@@ -38,7 +38,8 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli zstd
+          # CRITICAL FIX: Injected libarchive to ensure bsdtar resolves globally in the environment
+          xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli zstd libarchive
           git config --global --add safe.directory '*'
 
       - name: Clone void-packages
@@ -155,7 +156,6 @@ jobs:
           TARGET="${{ env.TARGET_PKG }}"
           TMPL="srcpkgs/$TARGET/template"
           if [ -f "$TMPL" ]; then
-            # FIXED: robust parsing of version/revision with or without quotes
             VER=$(grep '^version=' "$TMPL" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
             REV=$(grep '^revision=' "$TMPL" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
@@ -188,7 +188,6 @@ jobs:
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
-            # FIXED: robust parsing with or without quotes
             ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
             rev=$(grep '^revision=' "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             find hostdir/binpkgs -maxdepth 1 -type f \
