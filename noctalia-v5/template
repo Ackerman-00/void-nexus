@@ -1,0 +1,55 @@
+# Template file for 'noctalia-v5'
+pkgname=noctalia-v5
+version=20260512
+revision=1
+_gitrepo="https://github.com/noctalia-dev/noctalia-shell.git"
+_commit=39a4a335cb8c1e827b7f1141b71458e3e91121d5
+build_style=meson
+buildtype=release
+configure_args="-Db_ndebug=true"
+short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
+maintainer="Noctalia <team@noctalia.dev>"
+license="MIT"
+homepage="https://github.com/noctalia-dev/noctalia-shell"
+distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
+checksum="a21b343c1a8e110b9a89c9c3e4c441b7f0e3523f8588f28d84a3c1e2d7e5d8a9"
+
+# Conflict with 'noctalia' to prevent package collisions
+conflicts="noctalia>=0"
+provides="noctalia-${version}_${revision}"
+
+CXXFLAGS="-std=c++20"
+
+hostmakedepends="meson ninja pkg-config git curl"
+
+makedepends="
+ wayland-devel
+ wayland-protocols
+ libglvnd-devel
+ libepoxy-devel
+ cairo-devel
+ pango-devel
+ fontconfig-devel
+ freetype-devel
+ harfbuzz-devel
+ libxkbcommon-devel
+ pipewire-devel
+ libcurl-devel
+ pam-devel
+ libwebp-devel
+ basu-devel
+ sdbus-c++-devel
+ polkit-devel
+ librsvg-devel
+ jemalloc-devel
+ glib-devel
+"
+
+post_install() {
+    vlicense LICENSE
+    vdoc README.md
+
+    if [ ! -x "${DESTDIR}/usr/bin/noctalia" ]; then
+        msg_error "Expected binary /usr/bin/noctalia not found.\n"
+    fi
+}

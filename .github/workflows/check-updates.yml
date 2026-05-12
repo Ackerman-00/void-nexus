@@ -132,7 +132,7 @@ jobs:
                   if not versions:
                       return None
                   versions.sort(key=pkg_version.parse, reverse=True)
-                  return versions[0]
+                  return versions
               except Exception:
                   return None
 
@@ -206,7 +206,7 @@ jobs:
               for s in clean:
                   assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
               if len(clean) == 1:
-                  repl = f"checksum={clean[0]}"
+                  repl = f"checksum={clean}"
               else:
                   joined = '\n '.join(clean)
                   repl = f'checksum="{joined}"'
@@ -265,11 +265,11 @@ jobs:
 
           for tpath in templates:
               raw = tpath.read_text(encoding='utf-8')
-              pkg_m = re.search(r'pkgname=["\']?([^"\'\s\n]+)', raw)
-              ver_m = re.search(r'\bversion=["\']?([^"\'\n\s]+)', raw)
+              pkg_m = re.search(r'^pkgname=["\']?([^"\'\s\n]+)', raw, re.MULTILINE)
+              ver_m = re.search(r'^version=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
               if not pkg_m or not ver_m: continue
               pkgname, curr_ver = pkg_m.group(1), ver_m.group(1)
-              commit_m = re.search(r'_commit=["\']?([a-fA-F0-9]{7,40})', raw)
+              commit_m = re.search(r'^_commit=["\']?([a-fA-F0-9]{7,40})', raw, re.MULTILINE)
               curr_sha = commit_m.group(1) if commit_m else None
               tmpl_vars = extract_template_vars(raw)
               print(f"Scanning {pkgname}...")
@@ -312,7 +312,7 @@ jobs:
                   continue
 
               if curr_sha is not None:
-                  repo_m = re.search(r'_gitrepo=["\']?([^"\'\n\s]+)', raw)
+                  repo_m = re.search(r'^_gitrepo=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
                   repo_url = repo_m.group(1) if repo_m else None
                   if not repo_url:
                       gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
@@ -351,8 +351,8 @@ jobs:
                   continue
 
               candidate = raw
-              if new_sha: candidate = re.sub(r'(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate)
-              if new_ver: candidate = re.sub(r'(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate)
+              if new_sha: candidate = re.sub(r'^(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate, flags=re.MULTILINE)
+              if new_ver: candidate = re.sub(r'^(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate, flags=re.MULTILINE)
 
               urls = extract_distfile_urls(candidate)
               if not urls: continue
@@ -386,11 +386,14 @@ jobs:
               if candidate_with_hashes == raw:
                   continue
 
-              if new_ver or new_sha:
-                  candidate_final = re.sub(r'(\brevision=["\']?)\d+', r'\g<1>1', candidate_with_hashes)
+              # ROBUST REVISION BUMPING
+              # If new_ver exists AND it is different from curr_ver (meaning it's a new day or a new stable release)
+              if new_ver and str(new_ver) != str(curr_ver):
+                  candidate_final = re.sub(r'^revision=.*', 'revision=1', candidate_with_hashes, flags=re.MULTILINE)
+              # If new_ver is the same as curr_ver (same day for -git package, but hash changed) OR only a hash changed
               else:
-                  def bump_rev(m): return m.group(1) + str(int(m.group(2)) + 1)
-                  candidate_final = re.sub(r'(\brevision=["\']?)(\d+)', bump_rev, candidate_with_hashes)
+                  def bump_rev(m): return "revision=" + str(int(m.group(1)) + 1)
+                  candidate_final = re.sub(r'^revision=[\'"]?(\d+)[\'"]?', bump_rev, candidate_with_hashes, flags=re.MULTILINE)
 
               tpath.write_text(candidate_final, encoding='utf-8')
               changed_packages.append(pkgname)
