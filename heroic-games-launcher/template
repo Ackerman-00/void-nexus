@@ -9,8 +9,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://heroicgameslauncher.com"
 
-distfiles="
-checksum="dd862805f2e5b13efdf1c689d003bc22a5c5f9149a893a187fe18020d67e8e66"https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
+distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
+checksum="dd862805f2e5b13efdf1c689d003bc22a5c5f9149a893a187fe18020d67e8e66"
 
 # Pure dependencies
 depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm \
@@ -48,13 +48,13 @@ do_install() {
     # 3. Create the Native Wayland Wrapper Script
     vmkdir usr/bin
     cat <<-'EOF' > ${DESTDIR}/usr/bin/heroic
-	#!/bin/sh
-	# Automatically force native Wayland rendering if detected
-	if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
-	    export ELECTRON_OZONE_PLATFORM_HINT="auto"
-	fi
-	exec /opt/Heroic/heroic "$@"
-	EOF
+    #!/bin/sh
+    # Automatically force native Wayland rendering if detected
+    if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+        export ELECTRON_OZONE_PLATFORM_HINT="auto"
+    fi
+    exec /opt/Heroic/heroic "$@"
+    EOF
     chmod 755 ${DESTDIR}/usr/bin/heroic
 
     # 4. Optimization: Strip useless static libraries bundled by upstream
