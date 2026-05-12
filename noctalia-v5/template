@@ -3,7 +3,8 @@ pkgname=noctalia-v5
 version=20260511
 revision=2
 _commit=761869a561548874fe7e293b157fd7841576b367
-wrksrc="noctalia-shell-${_commit}/noctalia"
+wrksrc="noctalia-shell-${_commit}"
+build_wrksrc="noctalia"
 
 build_style=meson
 buildtype=release
@@ -48,6 +49,8 @@ makedepends="
 "
 
 post_install() {
+    # We use ../ because the license and readme are in the repo root, 
+    # but we are working inside the 'noctalia' subfolder.
     vlicense ../LICENSE
     vdoc ../README.md
 
