@@ -40,12 +40,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 << 'EOF'
+          python3 << 'PYEOF'
           import os, re, requests, subprocess, hashlib, datetime, tempfile, urllib.parse
           from packaging import version as pkg_version
           from packaging.version import InvalidVersion
           from pathlib import Path
 
+          # ── Site variable resolver ──────────────────────────────────────
           SITE_VARS = {
               '${GNOME_SITE}':        'https://download.gnome.org/sources',
               '$GNOME_SITE':          'https://download.gnome.org/sources',
@@ -74,36 +75,85 @@ jobs:
           }
 
           def resolve_site_vars(url):
-              for var, repl in SITE_VARS.items(): url = url.replace(var, repl)
+              for var, repl in SITE_VARS.items():
+                  url = url.replace(var, repl)
               return url
 
+          # ── File / network helpers ──────────────────────────────────────
           def fetch_file(url, dest_path):
               try:
-                  proc = subprocess.run(['curl', '-sSL', '-A', 'VoidNexus-BuildBot/1.0', '-o', dest_path, url], timeout=120)
+                  proc = subprocess.run(
+                      ['curl', '-sSL', '-A', 'VoidNexus-BuildBot/1.0',
+                       '-o', dest_path, url], timeout=120)
                   return proc.returncode == 0
               except Exception as e:
-                  print(f"Error fetching {url}: {e}")
+                  print(f"  ⚠ Error fetching {url}: {e}")
                   return False
 
           def sha256_file(path):
               h = hashlib.sha256()
               with open(path, 'rb') as f:
-                  for chunk in iter(lambda: f.read(65536), b''): h.update(chunk)
+                  for chunk in iter(lambda: f.read(65536), b''):
+                      h.update(chunk)
               return h.hexdigest()
 
-          def get_latest_commit(repo_url):
+          # ── API / version scanners ──────────────────────────────────────
+
+          # 🔧 FIXED: fetch the *real* commit date from the GitHub API
+          # instead of datetime.now().
+          def get_github_commit_date(owner, repo, sha, gh_headers):
+              """Return YYYYMMDD of the given commit, or None on failure."""
+              api_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{sha}"
+              h = gh_headers.copy() if gh_headers else {}
+              h.setdefault('Accept', 'application/vnd.github.v3+json')
               try:
-                  out = subprocess.check_output(['git', 'ls-remote', repo_url, 'HEAD'], timeout=30, stderr=subprocess.DEVNULL).decode()
-                  m = re.search(r'([a-f0-9]{40})', out)
-                  if m: return m.group(1), datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
-              except Exception: pass
-              return None, None
+                  resp = requests.get(api_url, headers=h, timeout=20)
+                  if resp.status_code == 200:
+                      data = resp.json()
+                      # e.g. "2026-05-12T05:50:18Z"
+                      date_str = data['commit']['committer']['date']
+                      dt = datetime.datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
+                      return dt.strftime('%Y%m%d')
+              except Exception:
+                  pass
+              return None
+
+          def get_latest_commit(repo_url, gh_headers=None):
+              """
+              Return (sha, YYYYMMDD_date) of HEAD.
+              Uses the GitHub API for accurate date; falls back to
+              datetime.now() only for non‑GitHub repos.
+              """
+              try:
+                  out = subprocess.check_output(
+                      ['git', 'ls-remote', repo_url, 'HEAD'],
+                      timeout=30, stderr=subprocess.DEVNULL).decode()
+              except Exception:
+                  return None, None
+              m = re.search(r'([a-f0-9]{40})', out)
+              if not m:
+                  return None, None
+              sha = m.group(1)
+
+              # Try GitHub API first
+              gh_m = re.search(r'github\.com[:/]([^/]+)/([^/\.]+?)(?:\.git)?$', repo_url)
+              if gh_m:
+                  owner, repo = gh_m.groups()
+                  date_str = get_github_commit_date(owner, repo, sha, gh_headers)
+                  if date_str:
+                      return sha, date_str
+
+              # Fallback for non‑GitHub remotes
+              return sha, datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
 
           def get_latest_github_release(owner, repo, gh_headers):
               try:
-                  resp = requests.get(f'https://api.github.com/repos/{owner}/{repo}/releases/latest', headers=gh_headers, timeout=20).json()
+                  resp = requests.get(
+                      f'https://api.github.com/repos/{owner}/{repo}/releases/latest',
+                      headers=gh_headers, timeout=20).json()
                   return resp.get('tag_name', '').lstrip('v')
-              except Exception: pass
+              except Exception:
+                  pass
               return None
 
           def get_latest_gitlab_tag(host, project_path):
@@ -120,10 +170,10 @@ jobs:
                       if not isinstance(tag, dict):
                           continue
                       name = tag.get('name', '')
-                      match = re.search(r'(\d+\.\d+(?:\.\d+)*)', name)
-                      if not match:
+                      m = re.search(r'(\d+\.\d+(?:\.\d+)*)', name)
+                      if not m:
                           continue
-                      ver_str = match.group(1)
+                      ver_str = m.group(1)
                       try:
                           pkg_version.parse(ver_str)
                           versions.append(ver_str)
@@ -138,23 +188,39 @@ jobs:
 
           def get_pypi_latest(pkgname):
               try:
-                  names = [pkgname, pkgname[8:] if pkgname.startswith('python3-') else pkgname, pkgname[7:] if pkgname.startswith('python-') else pkgname]
-                  for name in names:
-                      resp = requests.get(f'https://pypi.org/pypi/{name}/json', timeout=15)
-                      if resp.status_code == 200: return resp.json()['info']['version']
-              except Exception: pass
+                  cand = [pkgname]
+                  if pkgname.startswith('python3-'):
+                      cand.append(pkgname[8:])
+                  elif pkgname.startswith('python-'):
+                      cand.append(pkgname[7:])
+                  for name in cand:
+                      resp = requests.get(
+                          f'https://pypi.org/pypi/{name}/json', timeout=15)
+                      if resp.status_code == 200:
+                          return resp.json()['info']['version']
+              except Exception:
+                  pass
               return None
 
-          def is_date_version(ver): return bool(re.match(r'^\d{8}$', str(ver)))
-          def is_semver(ver): return '.' in str(ver)
+          def is_date_version(ver):
+              return bool(re.match(r'^\d{8}$', str(ver)))
+
+          def is_semver(ver):
+              return '.' in str(ver)
 
           def version_is_newer(latest, current):
-              if not latest or latest == current: return False
-              if is_date_version(current) and is_semver(latest): return True
-              try: return pkg_version.parse(str(latest)) > pkg_version.parse(str(current))
-              except Exception: return latest != current
+              if not latest or latest == current:
+                  return False
+              if is_date_version(current) and is_semver(latest):
+                  return True
+              try:
+                  return pkg_version.parse(str(latest)) > pkg_version.parse(str(current))
+              except Exception:
+                  return latest != current
 
-          def resolve_url(url_template, pkgname, ver, sha, curr_ver=None, curr_sha=None, template_vars=None):
+          # ── Template manipulation helpers ───────────────────────────────
+          def resolve_url(url_template, pkgname, ver, sha,
+                          curr_ver=None, curr_sha=None, template_vars=None):
               url = resolve_site_vars(url_template)
               url = url.replace('${pkgname}', pkgname).replace('$pkgname', pkgname)
               use_ver = ver if ver else curr_ver
@@ -168,109 +234,132 @@ jobs:
               if use_sha is not None:
                   use_sha = str(use_sha)
                   url = url.replace('${_commit}', use_sha).replace('$_commit', use_sha)
-              for arch_var in ['${_upstream_arch}', '${_arch}', '$XBPS_TARGET_MACHINE', '${XBPS_TARGET_MACHINE}', '${_machine}']:
-                  url = url.replace(arch_var, 'x86_64')
+              for a in ['${_upstream_arch}','${_arch}','$XBPS_TARGET_MACHINE',
+                        '${XBPS_TARGET_MACHINE}','${_machine}']:
+                  url = url.replace(a, 'x86_64')
               url = url.replace('${_deb_arch}', 'amd64').replace('$_deb_arch', 'amd64')
               if template_vars:
-                  for var, val in template_vars.items():
-                      url = url.replace('${' + var + '}', str(val)).replace('$' + var, str(val))
+                  for k, v in template_vars.items():
+                      url = url.replace('${'+k+'}', str(v)).replace('$'+k, str(v))
               url = re.sub(r'\$\{?[A-Za-z_][A-Za-z0-9_]*\}?', '', url)
               return url
 
           def extract_template_vars(content):
               vars_ = {}
-              for m in re.finditer(r'^_([A-Za-z0-9_]+)=["\']?([A-Za-z0-9._-]+)["\']?', content, re.MULTILINE):
+              for m in re.finditer(
+                  r'^_([A-Za-z0-9_]+)=["\']?([A-Za-z0-9._-]+)["\']?',
+                  content, re.MULTILINE):
                   vars_[m.group(1)] = m.group(2)
-                  vars_['_' + m.group(1)] = m.group(2)
+                  vars_['_'+m.group(1)] = m.group(2)
               return vars_
 
           def extract_shell_var(var_name, content):
               pattern = rf'^{var_name}=(?:(".*?")|(\'.*?\')|\[(.*?)\]|(\S+))'
               m = re.search(pattern, content, re.MULTILINE | re.DOTALL)
-              if not m: return None
+              if not m:
+                  return None
               return m.group(1) or m.group(2) or m.group(3) or m.group(4)
 
           def extract_distfile_urls(content):
-              m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#_]|\Z)', content, re.MULTILINE | re.DOTALL)
-              if not m: return []
+              m = re.search(r'^distfiles=(.+?)(?=\n[A-Za-z#_]|\Z)',
+                            content, re.MULTILINE | re.DOTALL)
+              if not m:
+                  return []
               return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
 
+          # 🔧 FIXED: always produce canonical Void checksum format.
+          # Single distfile → checksum=hash
+          # Multiple distfiles → checksum="hash1 hash2" (space‑separated)
           def replace_checksums(content, new_hashes):
-              if not new_hashes: return content
+              if not new_hashes:
+                  return content
               clean = []
               for h in new_hashes:
-                  s = str(h).translate(str.maketrans('', '', '[]\'"')).strip()
+                  s = str(h).translate(str.maketrans('', '', '[]\'" ')).strip()
                   if s:
                       clean.append(s)
-              if not clean: return content
+              if not clean:
+                  return content
               for s in clean:
-                  assert re.fullmatch(r'[a-f0-9]{64}', s), f"Bad checksum will not be written: {s!r}"
-              
-              # CRITICAL FIX: Explicitly extract the first string out of the array for a single distfile
+                  if not re.fullmatch(r'[a-f0-9]{64}', s):
+                      raise ValueError(f"Bad checksum: {s!r}")
+
+              # Remove any existing checksum line(s)
+              content = re.sub(r'^_?checksum=.*(?:\n[ \t]+.*)*\n?', '',
+                               content, flags=re.MULTILINE)
+
               if len(clean) == 1:
+                  # Void convention: bare `checksum=hash` works; the manual
+                  # example uses quotes but both are accepted.
                   repl = f"checksum={clean[0]}"
               else:
-                  joined = '\n '.join(clean)
-                  repl = f'checksum="{joined}"'
-                  
-              content = re.sub(r'^_?checksum=.*(?:\n[ \t]+.*)*\n?', '', content, flags=re.MULTILINE)
-              content = re.sub(r'^(distfiles=.*(?:\n[ \t]+.*)*)', r'\1\n' + repl, content, flags=re.MULTILINE)
+                  # Multiple distfiles: space‑separated inside quotes
+                  repl = f'checksum="{" ".join(clean)}"'
+
+              content = re.sub(r'^(distfiles=.+?(?:\n[ \t]+.*)*)',
+                               r'\1\n'+repl, content, flags=re.MULTILINE)
               return content
 
           def extract_appimage_version(appimage_path):
               try:
                   subprocess.run(['chmod', '+x', appimage_path], check=True)
-                  result = subprocess.run([appimage_path, '--appimage-version'], capture_output=True, text=True, timeout=30)
-                  if result.returncode == 0 and result.stdout.strip():
-                      return result.stdout.strip()
+                  res = subprocess.run([appimage_path, '--appimage-version'],
+                                       capture_output=True, text=True, timeout=30)
+                  if res.returncode == 0 and res.stdout.strip():
+                      return res.stdout.strip()
               except Exception:
                   pass
               try:
                   with tempfile.TemporaryDirectory() as tmpdir:
-                      subprocess.run([appimage_path, '--appimage-extract'], cwd=tmpdir, capture_output=True, timeout=120)
-                      extracted_dir = Path(tmpdir) / 'squashfs-root'
-                      if extracted_dir.is_dir():
-                          for desktop_file in extracted_dir.glob('*.desktop'):
-                              content = desktop_file.read_text(encoding='utf-8', errors='ignore')
-                              match = re.search(r'^X-AppImage-Version=(.+)', content, re.MULTILINE)
-                              if match:
-                                  return match.group(1).strip()
-                              match = re.search(r'^Version=(.+)', content, re.MULTILINE)
-                              if match:
-                                  return match.group(1).strip()
+                      subprocess.run(
+                          [appimage_path, '--appimage-extract'],
+                          cwd=tmpdir, capture_output=True, timeout=120)
+                      ed = Path(tmpdir)/'squashfs-root'
+                      if ed.is_dir():
+                          for d in ed.glob('*.desktop'):
+                              c = d.read_text('utf-8', errors='ignore')
+                              m = re.search(r'^X-AppImage-Version=(.+)', c, re.MULTILINE)
+                              if m:
+                                  return m.group(1).strip()
+                              m = re.search(r'^Version=(.+)', c, re.MULTILINE)
+                              if m:
+                                  return m.group(1).strip()
               except Exception:
                   pass
               return None
 
           def get_arch_checksum(template_content, arch):
-              pattern = rf'{arch}.*?\n.*?checksum=([a-f0-9]+)'
-              match = re.search(pattern, template_content, re.DOTALL)
-              return match.group(1) if match else None
+              pat = rf'{arch}.*?\n.*?checksum=([a-f0-9]+)'
+              m = re.search(pat, template_content, re.DOTALL)
+              return m.group(1) if m else None
 
-          git_user = "github-actions[bot]"
-          subprocess.run(['git', 'config', 'user.name', git_user], check=True)
-          subprocess.run(['git', 'config', 'user.email', f'{git_user}@users.noreply.github.com'], check=True)
+          # ── Git setup ───────────────────────────────────────────────────
+          subprocess.run(['git','config','user.name','github-actions[bot]'], check=True)
+          subprocess.run(['git','config','user.email',
+                          'github-actions[bot]@users.noreply.github.com'], check=True)
           branch = os.environ.get('GITHUB_REF_NAME', 'main')
-          subprocess.run(['git', 'checkout', '-B', branch], check=True)
+          subprocess.run(['git','checkout','-B',branch], check=True)
 
+          # Collect templates
           templates = []
           for d in os.listdir('.'):
-              tpath = os.path.join(d, 'template')
-              if os.path.isdir(d) and os.path.isfile(tpath):
-                  templates.append(Path(tpath))
+              tp = os.path.join(d, 'template')
+              if os.path.isdir(d) and os.path.isfile(tp):
+                  templates.append(Path(tp))
 
           changed_packages = []
           gh_token = os.environ.get('GITHUB_TOKEN')
-          gh_headers = {
-              'Accept': 'application/vnd.github.v3+json',
-              **(({'Authorization': f'token {gh_token}'}) if gh_token else {})
-          }
+          gh_headers = {'Accept': 'application/vnd.github.v3+json'}
+          if gh_token:
+              gh_headers['Authorization'] = f'token {gh_token}'
 
+          # ── Main scan loop ──────────────────────────────────────────────
           for tpath in templates:
               raw = tpath.read_text(encoding='utf-8')
               pkg_m = re.search(r'^pkgname=["\']?([^"\'\s\n]+)', raw, re.MULTILINE)
               ver_m = re.search(r'^version=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
-              if not pkg_m or not ver_m: continue
+              if not pkg_m or not ver_m:
+                  continue
               pkgname, curr_ver = pkg_m.group(1), ver_m.group(1)
               commit_m = re.search(r'^_commit=["\']?([a-fA-F0-9]{7,40})', raw, re.MULTILINE)
               curr_sha = commit_m.group(1) if commit_m else None
@@ -278,135 +367,157 @@ jobs:
               print(f"Scanning {pkgname}...")
               new_ver, new_sha = None, None
 
+              # --- AppImage special case (rootapp) ---
               if pkgname == "rootapp":
                   print("  → Fetching rootapp AppImages...")
-                  x64_url = "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
-                  arm64_url = "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
+                  x64_url ="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
+                  arm64_url="https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
                   with tempfile.TemporaryDirectory() as tmpdir:
-                      x64_path = os.path.join(tmpdir, "Root_x64.AppImage")
-                      arm64_path = os.path.join(tmpdir, "Root_arm64.AppImage")
-                      if fetch_file(x64_url, x64_path) and fetch_file(arm64_url, arm64_path):
-                          new_ver = extract_appimage_version(x64_path)
-                          if not new_ver:
-                              print("  → ERROR: Could not extract version from AppImage")
+                      xp = os.path.join(tmpdir,"Root_x64.AppImage")
+                      ap = os.path.join(tmpdir,"Root_arm64.AppImage")
+                      if fetch_file(x64_url,xp) and fetch_file(arm64_url,ap):
+                          nv = extract_appimage_version(xp)
+                          if not nv:
+                              print("  → ERROR: Could not extract AppImage version")
                               continue
-                          new_checksum_x64 = sha256_file(x64_path)
-                          new_checksum_arm64 = sha256_file(arm64_path)
-                          curr_checksum_x64 = get_arch_checksum(raw, 'x86_64')
-                          curr_checksum_arm64 = get_arch_checksum(raw, 'aarch64')
-                          print(f"  → Current version: {curr_ver}, New version: {new_ver}")
-                          print(f"  → X64 hash changed: {curr_checksum_x64 != new_checksum_x64}")
-                          print(f"  → ARM64 hash changed: {curr_checksum_arm64 != new_checksum_arm64}")
-                          if version_is_newer(new_ver, curr_ver):
-                              candidate = raw
-                              candidate = re.sub(r'^version=.*', f'version={new_ver}', candidate, flags=re.MULTILINE)
-                              candidate = re.sub(r'^revision=.*', 'revision=1', candidate, flags=re.MULTILINE)
-                              if curr_checksum_x64:
-                                  candidate = candidate.replace(curr_checksum_x64, new_checksum_x64)
-                              if curr_checksum_arm64:
-                                  candidate = candidate.replace(curr_checksum_arm64, new_checksum_arm64)
-                              tpath.write_text(candidate, encoding='utf-8')
+                          nx = sha256_file(xp)
+                          na = sha256_file(ap)
+                          cx = get_arch_checksum(raw,'x86_64')
+                          ca = get_arch_checksum(raw,'aarch64')
+                          print(f"  → {curr_ver} → {nv}")
+                          if version_is_newer(nv, curr_ver):
+                              c = raw
+                              c = re.sub(r'^version=.*',f'version={nv}',c,flags=re.MULTILINE)
+                              c = re.sub(r'^revision=.*','revision=1',c,flags=re.MULTILINE)
+                              if cx: c = c.replace(cx, nx)
+                              if ca: c = c.replace(ca, na)
+                              tpath.write_text(c, encoding='utf-8')
                               changed_packages.append(pkgname)
-                              print(f"  → Successfully processed {pkgname}")
+                              print(f"  → Updated {pkgname}")
                           else:
-                              print("  → No version update available for rootapp")
+                              print("  → No update")
                       else:
-                          print("  → ERROR: Failed to download one or both AppImages")
+                          print("  → ERROR: download failed")
                   continue
 
+              # --- Git‑based packages (have _commit) ---
               if curr_sha is not None:
                   repo_m = re.search(r'^_gitrepo=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
                   repo_url = repo_m.group(1) if repo_m else None
                   if not repo_url:
                       gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
-                      repo_url = f'https://github.com/{gh_m.group(1)}' if gh_m else None
+                      if gh_m:
+                          repo_url = f'https://github.com/{gh_m.group(1)}'
                   if repo_url:
-                      found_sha, found_date = get_latest_commit(repo_url)
+                      found_sha, found_date = get_latest_commit(repo_url, gh_headers)
                       if found_sha and found_sha != curr_sha:
                           new_sha, new_ver = found_sha, found_date
+
+              # --- Release‑based packages ---
               else:
                   gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
                   gl_m = re.search(r'https://(gitlab[A-Za-z0-9_.-]*\.[a-z]+)/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
                   if gh_m:
-                      owner, repo = gh_m.group(1), gh_m.group(2)
-                      latest = get_latest_github_release(owner, repo, gh_headers)
-                      if version_is_newer(latest, curr_ver): new_ver = latest
+                      owner, rpo = gh_m.group(1), gh_m.group(2)
+                      latest = get_latest_github_release(owner, rpo, gh_headers)
+                      if version_is_newer(latest, curr_ver):
+                          new_ver = latest
                   elif gl_m:
-                      host, project_path = gl_m.group(1), gl_m.group(2)
-                      latest = get_latest_gitlab_tag(host, project_path)
-                      if version_is_newer(latest, curr_ver): new_ver = latest
+                      host, proj = gl_m.group(1), gl_m.group(2)
+                      latest = get_latest_gitlab_tag(host, proj)
+                      if version_is_newer(latest, curr_ver):
+                          new_ver = latest
                   if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
-                      pypi_latest = get_pypi_latest(pkgname)
-                      if pypi_latest and version_is_newer(pypi_latest, curr_ver): new_ver = pypi_latest
+                      pv = get_pypi_latest(pkgname)
+                      if pv and version_is_newer(pv, curr_ver):
+                          new_ver = pv
 
+              # Safety: reject list values
               if isinstance(new_ver, list):
-                  print(f"ERROR: {pkgname} received a list instead of string. Skipping.")
+                  print(f"ERROR: {pkgname} version is list. Skipping.")
                   continue
               if isinstance(new_sha, list):
-                  print(f"ERROR: {pkgname} received a list instead of string for SHA. Skipping.")
+                  print(f"ERROR: {pkgname} SHA is list. Skipping.")
                   continue
 
-              curr_checksum_val = extract_shell_var(r'_?checksum', raw)
-              is_corrupted = False
-              if curr_checksum_val and re.search(r'[\[\],]', curr_checksum_val):
-                  is_corrupted = True
+              # Detect corrupted checksum
+              cval = extract_shell_var(r'_?checksum', raw)
+              is_corrupted = bool(cval and re.search(r'[\[\],]', cval))
+
               if not new_ver and not new_sha and not is_corrupted:
                   continue
 
               candidate = raw
-              if new_sha: candidate = re.sub(r'^(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate, flags=re.MULTILINE)
-              if new_ver: candidate = re.sub(r'^(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate, flags=re.MULTILINE)
+              if new_sha:
+                  candidate = re.sub(
+                      r'^(_commit=["\']?)[a-fA-F0-9]+',
+                      lambda m: f"{m.group(1)}{new_sha}",
+                      candidate, flags=re.MULTILINE)
+              if new_ver:
+                  candidate = re.sub(
+                      r'^(\bversion=["\']?)[^\n\s"\']+',
+                      lambda m: f"{m.group(1)}{new_ver}",
+                      candidate, flags=re.MULTILINE)
 
               urls = extract_distfile_urls(candidate)
-              if not urls: continue
+              if not urls:
+                  continue
 
-              resolved_urls = []
-              for url in urls:
-                  r = resolve_url(url, pkgname, ver=new_ver, sha=new_sha, curr_ver=curr_ver, curr_sha=curr_sha, template_vars=tmpl_vars)
+              resolved = []
+              for u in urls:
+                  r = resolve_url(u, pkgname, ver=new_ver, sha=new_sha,
+                                  curr_ver=curr_ver, curr_sha=curr_sha,
+                                  template_vars=tmpl_vars)
                   if r is None:
-                      resolved_urls = None
+                      resolved = None
                       break
-                  resolved_urls.append(r)
-              if resolved_urls is None: continue
+                  resolved.append(r)
+              if resolved is None:
+                  continue
 
               new_checksums = []
               fetch_ok = True
-              for url in resolved_urls:
-                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp: tmp_path = tmp.name
-                  if fetch_file(url, tmp_path):
-                      new_checksums.append(sha256_file(tmp_path))
-                      os.unlink(tmp_path)
+              for u in resolved:
+                  with tempfile.NamedTemporaryFile(delete=False, suffix='.dl') as tmp:
+                      tp = tmp.name
+                  if fetch_file(u, tp):
+                      new_checksums.append(sha256_file(tp))
+                      os.unlink(tp)
                   else:
-                      try: os.unlink(tmp_path)
-                      except OSError: pass
+                      try:
+                          os.unlink(tp)
+                      except OSError:
+                          pass
                       fetch_ok = False
                       break
               if not fetch_ok:
-                  print(f"Failed to fetch distfiles for {pkgname}. Skipping.")
+                  print(f"  ⚠ Failed to fetch distfiles for {pkgname}")
                   continue
 
-              candidate_with_hashes = replace_checksums(candidate, new_checksums)
-              if candidate_with_hashes == raw:
+              final = replace_checksums(candidate, new_checksums)
+              if final == raw:
                   continue
 
-              # ROBUST REVISION BUMPING
-              # If new_ver exists AND it is different from curr_ver (meaning it's a new day or a new stable release)
+              # 🔧 FIXED revision bumping
               if new_ver and str(new_ver) != str(curr_ver):
-                  candidate_final = re.sub(r'^revision=.*', 'revision=1', candidate_with_hashes, flags=re.MULTILINE)
-              # If new_ver is the same as curr_ver (same day for -git package, but hash changed) OR only a hash changed
+                  final = re.sub(r'^(revision=)\d+', r'\g<1>1',
+                                 final, flags=re.MULTILINE)
               else:
-                  def bump_rev(m): return "revision=" + str(int(m.group(1)) + 1)
-                  candidate_final = re.sub(r'^revision=[\'"]?(\d+)[\'"]?', bump_rev, candidate_with_hashes, flags=re.MULTILINE)
+                  def bump_rev(m):
+                      return m.group(1) + str(int(m.group(2)) + 1)
+                  final = re.sub(r'^(revision=)(\d+)', bump_rev,
+                                 final, flags=re.MULTILINE)
 
-              tpath.write_text(candidate_final, encoding='utf-8')
+              tpath.write_text(final, encoding='utf-8')
               changed_packages.append(pkgname)
-              print(f"Successfully processed {pkgname}")
+              print(f"  ✅ Processed {pkgname}")
 
           if changed_packages:
-              Path('changed_packages.txt').write_text('\n'.join(changed_packages) + '\n')
+              Path('changed_packages.txt').write_text(
+                  '\n'.join(changed_packages)+'\n')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
-          EOF
+          PYEOF
 
       - name: Phase 2 - Commit and Push Updates
         if: steps.scan.outputs.updates_found == 'true'
@@ -432,7 +543,6 @@ jobs:
             exit 0
           fi
           WORKFLOW_NAME="Build and Deploy Custom XBPS"
-          CHANGED=$(cat changed_packages.txt)
           ORDERED=()
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
