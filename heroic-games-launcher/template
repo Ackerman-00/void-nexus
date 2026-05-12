@@ -9,8 +9,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://heroicgameslauncher.com"
 
-distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
-checksum=dd862805f2e5b13efdf1c689d003bc22a5c5f9149a893a187fe18020d67e8e66
+distfiles="
+checksum="dd862805f2e5b13efdf1c689d003bc22a5c5f9149a893a187fe18020d67e8e66"https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
 
 # Pure dependencies
 depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm \

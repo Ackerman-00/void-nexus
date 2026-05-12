@@ -10,8 +10,8 @@ maintainer="Tony King <tonyking94@proton.me>"
 license="MIT"
 homepage="https://danklinux.com/docs/danksearch"
 changelog="https://github.com/AvengeMedia/danksearch/releases"
-distfiles="https://github.com/AvengeMedia/danksearch/archive/refs/tags/v${version}.tar.gz"
-checksum=e2c263a233e45661e55bd841ee1395b9241132091f1b1e3d98caebb26d455727
+distfiles="
+checksum="e2c263a233e45661e55bd841ee1395b9241132091f1b1e3d98caebb26d455727"https://github.com/AvengeMedia/danksearch/archive/refs/tags/v${version}.tar.gz"
 
 wrksrc="danksearch-${version}"
 system_accounts="dsearch"

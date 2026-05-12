@@ -10,5 +10,5 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/Vysp3r/ProtonPlus"
 
-distfiles="https://github.com/Vysp3r/ProtonPlus/archive/refs/tags/v${version}.tar.gz"
-checksum=824c7918636f2ba97b68f004cea3bf1da876dab6b39a80c049fc66e51621b660
+distfiles="
+checksum="824c7918636f2ba97b68f004cea3bf1da876dab6b39a80c049fc66e51621b660"https://github.com/Vysp3r/ProtonPlus/archive/refs/tags/v${version}.tar.gz"

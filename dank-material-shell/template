@@ -16,8 +16,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/AvengeMedia/DankMaterialShell"
 
-distfiles="https://github.com/AvengeMedia/DankMaterialShell/archive/refs/tags/v${version}.tar.gz"
-checksum=f54601e522c883fa9cce02bec070e4321e47389a1cf453e7ad0bb7379ad91b61
+distfiles="
+checksum="f54601e522c883fa9cce02bec070e4321e47389a1cf453e7ad0bb7379ad91b61"https://github.com/AvengeMedia/DankMaterialShell/archive/refs/tags/v${version}.tar.gz"
 
 post_install() {
     cd ..

@@ -35,8 +35,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="LGPL-3.0-only"
 homepage="https://github.com/noctalia-dev/noctalia-qs"
 
-distfiles="https://github.com/noctalia-dev/noctalia-qs/archive/refs/tags/v${version}.tar.gz"
-checksum=5de37541537307d141618aa0d782d3c34e42a6ad21c73533cce80c0e71ee9693
+distfiles="
+checksum="5de37541537307d141618aa0d782d3c34e42a6ad21c73533cce80c0e71ee9693"https://github.com/noctalia-dev/noctalia-qs/archive/refs/tags/v${version}.tar.gz"
 
 provides="quickshell-${version}_${revision}"
 conflicts="quickshell>=0 quickshell-git>=0"

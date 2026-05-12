@@ -26,5 +26,5 @@ homepage="https://quickshell.org"
 conflicts="quickshell>=0"
 provides="quickshell-${version}_${revision}"
 
-distfiles="https://git.outfoxxed.me/quickshell/quickshell/archive/${_commit}.tar.gz"
-checksum=c2f6a28a1ac47e5a5f94f69fb0e91bb6de649af04be094303b4a0739b23e18d7
+distfiles="
+checksum="c2f6a28a1ac47e5a5f94f69fb0e91bb6de649af04be094303b4a0739b23e18d7"https://git.outfoxxed.me/quickshell/quickshell/archive/${_commit}.tar.gz"

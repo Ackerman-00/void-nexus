@@ -19,8 +19,8 @@ homepage="https://github.com/niri-wm/niri"
 conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 
-distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum=011b718cb4a099d00deaed6522c21fd877b753706a1cfad0b1aa80b28d2189df
+distfiles="
+checksum="011b718cb4a099d00deaed6522c21fd877b753706a1cfad0b1aa80b28d2189df"https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
 
 do_check() {
     if [ "$XBPS_TARGET_LIBC" != "musl" ]; then
