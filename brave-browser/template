@@ -8,8 +8,10 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 hostmakedepends="tar xz" # need gtk+3!
 license="Mozilla Public License Version 2.0"
 homepage="https://brave.com"
-distfiles="
-checksum="5ce4f1cbaf8fe9a6c366d13d525c52557fde1037cd16bb9d0bfabef7e804dece"https://github.com/brave/brave-browser/releases/download/v${version}/brave-browser_${version}_amd64.deb"
+
+distfiles="https://github.com/brave/brave-browser/releases/download/v${version}/brave-browser_${version}_amd64.deb"
+checksum="5ce4f1cbaf8fe9a6c366d13d525c52557fde1037cd16bb9d0bfabef7e804dece"
+
 nostrip=yes
 
 do_extract() {
