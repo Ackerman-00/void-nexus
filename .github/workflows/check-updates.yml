@@ -220,6 +220,7 @@ jobs:
               if not m: return False
               return not m.group(1).strip().startswith('"')
 
+          # CRITICAL FIX: Bulletproof Regex replacement to prevent template destruction
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
               clean = [str(h).translate(str.maketrans('', '', '[]\'" ')).strip() for h in new_hashes]
@@ -233,27 +234,13 @@ jobs:
               else:
                   repl = 'checksum="\n ' + '\n '.join(clean) + '"'
                   
-              lines = content.split('\n')
-              out = []
-              in_checksum = False
-              for line in lines:
-                  if re.match(r'^_?checksum=', line):
-                      in_checksum = True
-                      out.append(repl)
-                      continue
-                  if in_checksum:
-                      if re.match(r'^\s*[a-fA-F0-9]{64}\s*$', line) or not line.strip():
-                          continue
-                      elif line.strip().endswith('"') or line.strip().endswith("'"):
-                          in_checksum = False
-                          continue
-                      else:
-                          in_checksum = False
-                  
-                  if not in_checksum:
-                      out.append(line)
+              # Safely excise ONLY the checksum block (handles multiline quotes, arrays, and single lines)
+              pattern = r'^_?checksum=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*)\n?'
+              content = re.sub(pattern, '', content, flags=re.MULTILINE)
               
-              return '\n'.join(out)
+              # Re-insert cleanly after distfiles
+              content = re.sub(r'^(distfiles\+?=.+?(?:\n[ \t]+.*)*)', r'\1\n'+repl, content, flags=re.MULTILINE)
+              return content
 
           def extract_appimage_version(appimage_path):
               try:
@@ -402,12 +389,10 @@ jobs:
                           else: fetch_ok = False; break
                       if not fetch_ok: print(f"  ⚠ Failed to fetch new distfiles for {pkgname}"); continue
                   else:
-                      # CRITICAL FIX: Safe fallback for -git packages using direct repo fetches (no distfiles)
                       new_checksums = cur_hashes
               else:
                   new_checksums = cur_hashes
 
-              # CRITICAL FIX: Ensure expected_len > 0 to prevent valid new hashes from being rejected
               expected_len = len(parse_checksums(raw))
               if len(new_checksums) > 0 and expected_len > 0 and len(new_checksums) != expected_len:
                   print(f"  ⚠ Hash count mismatch! Extracted {len(new_checksums)} distfiles but expected {expected_len}. Skipping checksum update for safety.")
