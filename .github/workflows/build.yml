@@ -63,8 +63,8 @@ jobs:
                local new_shlibs=$( \
                  (tar xOf "$pkg_file" ./props.plist 2>/dev/null || \
                   tar xOf "$pkg_file" props.plist 2>/dev/null || \
-                  zstdcat "$pkg_file" | tar xOf - ./props.plist 2>/dev/null || \
-                  zstdcat "$pkg_file" | tar xOf - props.plist 2>/dev/null) \
+                  (zstdcat "$pkg_file" 2>/dev/null || true) | tar xOf - ./props.plist 2>/dev/null || \
+                  (zstdcat "$pkg_file" 2>/dev/null || true) | tar xOf - props.plist 2>/dev/null) \
                  | awk -F'[><]' \
                     '/<key>shlib-provides<\/key>/ { p=1; next } \
                      /<\/array>/ { p=0; next } \
@@ -103,7 +103,6 @@ jobs:
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
             
-            # CRITICAL FIX: Merge directory contents securely to prevent structural nesting
             mkdir -p "srcpkgs/$pkg_name"
             cp -a "$pkg_dir/." "srcpkgs/$pkg_name/"
           done
@@ -134,8 +133,8 @@ jobs:
               PKGVER=$(echo "$fname" | sed -E 's/\.[^.]+\.xbps$//')
               PLIST=$(tar xOf "$file" "./props.plist" 2>/dev/null || \
                       tar xOf "$file" "props.plist" 2>/dev/null || \
-                      zstdcat "$file" | tar xOf - "./props.plist" 2>/dev/null || \
-                      zstdcat "$file" | tar xOf - "props.plist" 2>/dev/null || true)
+                      (zstdcat "$file" 2>/dev/null || true) | tar xOf - "./props.plist" 2>/dev/null || \
+                      (zstdcat "$file" 2>/dev/null || true) | tar xOf - "props.plist" 2>/dev/null || true)
               SHLIBS=$(echo "$PLIST" | \
                        awk -F'[><]' \
                           '/<key>shlib-provides<\/key>/ { p=1; next } \
