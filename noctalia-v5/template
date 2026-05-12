@@ -3,7 +3,7 @@ pkgname=noctalia-v5
 version=20260511
 revision=2
 _commit=761869a561548874fe7e293b157fd7841576b367
-wrksrc="noctalia-shell-${_commit}"
+wrksrc="noctalia-shell-${_commit}/noctalia"
 
 build_style=meson
 buildtype=release
@@ -48,8 +48,8 @@ makedepends="
 "
 
 post_install() {
-    vlicense LICENSE
-    vdoc README.md
+    vlicense ../LICENSE
+    vdoc ../README.md
 
     if [ ! -x "${DESTDIR}/usr/bin/noctalia" ]; then
         msg_error "Expected binary /usr/bin/noctalia not found.\n"
