@@ -3,6 +3,9 @@ pkgname=noctalia-v5
 version=20260511
 revision=2
 _commit=761869a561548874fe7e293b157fd7841576b367
+# CRITICAL FIX: Tell xbps-src the exact name of the extracted GitHub folder
+wrksrc="noctalia-shell-${_commit}"
+
 build_style=meson
 buildtype=release
 configure_args="-Db_ndebug=true"
@@ -10,6 +13,7 @@ short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
 maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
+
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
 checksum="d3d1a3bb6489b65060bbf8c44a91c4805d13c12a19a0a9ce791b16c3061808ce"
 
