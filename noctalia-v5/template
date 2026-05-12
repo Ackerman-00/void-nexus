@@ -49,8 +49,6 @@ makedepends="
 "
 
 post_install() {
-    # We use ../ because the license and readme are in the repo root, 
-    # but we are working inside the 'noctalia' subfolder.
     vlicense ../LICENSE
     vdoc ../README.md
 
