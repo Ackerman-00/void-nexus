@@ -10,8 +10,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/AvengeMedia/dgop"
 
-distfiles="
-checksum="2e45d94d2227bb596844681e66f948aeea4a09be3f7ee88dcbbf38938cabec32"https://github.com/AvengeMedia/dgop/archive/refs/tags/v${version}.tar.gz"
+distfiles="https://github.com/AvengeMedia/dgop/archive/refs/tags/v${version}.tar.gz"
+checksum="2e45d94d2227bb596844681e66f948aeea4a09be3f7ee88dcbbf38938cabec32"
 
 post_install() {
     # Install the sample config if it exists in the root of the source
