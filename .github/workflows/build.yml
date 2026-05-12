@@ -155,8 +155,9 @@ jobs:
           TARGET="${{ env.TARGET_PKG }}"
           TMPL="srcpkgs/$TARGET/template"
           if [ -f "$TMPL" ]; then
-            VER=$(grep '^version=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
-            REV=$(grep '^revision=' "$TMPL" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            # FIXED: robust parsing of version/revision with or without quotes
+            VER=$(grep '^version=' "$TMPL" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
+            REV=$(grep '^revision=' "$TMPL" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
             if [ "${{ env.FORCE_REBUILD }}" == "true" ]; then
               echo "Force rebuild enabled; not skipping $EXPECTED_PKG even if it exists."
@@ -187,8 +188,9 @@ jobs:
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
-            ver=$(grep '^version=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
-            rev=$(grep '^revision=' "$tmpl" | head -1 | cut -d= -f2 | tr -d '"'"'")
+            # FIXED: robust parsing with or without quotes
+            ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
+            rev=$(grep '^revision=' "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             find hostdir/binpkgs -maxdepth 1 -type f \
               -name "${pkg_name}-${ver}_${rev}.x86_64.xbps" \
               -exec cp {} public/x86_64/ \;
