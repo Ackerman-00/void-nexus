@@ -3,7 +3,7 @@ pkgname=noctalia-v5
 version=20260512
 revision=2
 _gitrepo="https://github.com/noctalia-dev/noctalia-shell.git"
-_commit=761869a561548874fe7e293b157fd7841576b367
+_commit=000000000000000000000000000000
 build_style=meson
 buildtype=release
 configure_args="-Db_ndebug=true"
