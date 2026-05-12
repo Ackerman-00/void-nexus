@@ -38,7 +38,6 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
-          # CRITICAL FIX: Injected libarchive to ensure bsdtar resolves globally in the environment
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli zstd libarchive
           git config --global --add safe.directory '*'
 
@@ -103,7 +102,10 @@ jobs:
             pkg_dir=$(dirname "$tmpl")
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
-            cp -r "$pkg_dir" srcpkgs/
+            
+            # CRITICAL FIX: Merge directory contents securely to prevent structural nesting
+            mkdir -p "srcpkgs/$pkg_name"
+            cp -a "$pkg_dir/." "srcpkgs/$pkg_name/"
           done
 
       - name: Restore Repository from GitHub Release
