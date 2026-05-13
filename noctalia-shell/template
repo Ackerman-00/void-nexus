@@ -1,6 +1,6 @@
 # Template file for 'noctalia-shell'
 pkgname=noctalia-shell
-version=4.7.6
+version=4.7.7
 revision=1
 hostmakedepends=""
 maintainer="Ackerman <https://github.com/Ackerman-00>"
@@ -15,7 +15,7 @@ homepage="https://github.com/noctalia-dev/noctalia-shell"
 license="MIT"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/refs/tags/v${version}.tar.gz"
-checksum="0b53aa9f2d20034be2e34fc412cdfb0e67a0bb79fe068076183404991a3709d1"
+checksum="1189099030b24097d2a351015d2f0290f2ff03dfc928dc4c4191cbace2b7b2ad"
 
 build() {
     return 0

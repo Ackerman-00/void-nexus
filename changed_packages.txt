@@ -1,1 +1,4 @@
+noctalia-shell
 noctalia-v5
+brave-browser
+zed
