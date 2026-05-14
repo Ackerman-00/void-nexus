@@ -1,4 +1,2 @@
-noctalia-shell
+faugus-launcher
 noctalia-v5
-brave-browser
-zed
