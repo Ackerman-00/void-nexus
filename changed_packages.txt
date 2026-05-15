@@ -1,2 +1,3 @@
+zen-browser
 noctalia-v5
-helium-browser-bin
+zed
