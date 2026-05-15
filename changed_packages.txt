@@ -1,3 +1,1 @@
-niri-git
 noctalia-v5
-zed
