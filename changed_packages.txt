@@ -1,3 +1,2 @@
-brave-browser
+helium-browser-bin
 noctalia-v5
-zed
