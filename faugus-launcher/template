@@ -1,6 +1,6 @@
 # Template file for 'faugus-launcher'
 pkgname=faugus-launcher
-version=1.20.1
+version=1.20.3
 revision=1
 build_style=meson
 hostmakedepends="meson pkg-config gettext glib-devel gtk-update-icon-cache"
@@ -13,7 +13,7 @@ license="MIT"
 homepage="https://github.com/Faugus/faugus-launcher"
 
 distfiles="https://github.com/Faugus/faugus-launcher/archive/refs/tags/${version}.tar.gz"
-checksum="7a37ee1a150d1b05856ecc9d16d782143f773c873ba4185e7bf7d50e7ab27d20"
+checksum="097aedd6527b2fa579e877565cfafb2bc0d7d6fca3b1d925c104220d6843584e"
 
 post_install() {
     vlicense LICENSE
