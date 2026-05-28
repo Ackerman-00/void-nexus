@@ -1,4 +1,3 @@
 zed
-helium-browser-bin
-niri-git
+brave-browser
 noctalia-v5
