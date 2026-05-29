@@ -1,10 +1,10 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
-version=20260528
-revision=5
+version=20260529
+revision=1
 
 _gitbranch="v5"
-_commit=5dab086d8b4302a948cfaf2200ec31ca1ae3edc4
+_commit=0e4bb96a8b42abb47af67286902a52eaa628c50a
 wrksrc="noctalia-shell-${_commit}"
 
 build_style=meson
@@ -16,7 +16,7 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
-checksum="a41da816d3f31d8db9d132a315eb638295ac01ab296ca7293de93c0508a33678"
+checksum="56027f7d40a70d81330a359e13e0321feb6bd8cdc28cda28c5c3be342db4a4f6"
 
 # Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
