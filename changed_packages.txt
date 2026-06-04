@@ -1,2 +1,2 @@
+brave-browser
 noctalia-v5
-zen-browser
