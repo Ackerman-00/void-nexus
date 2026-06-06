@@ -1,2 +1,2 @@
-faugus-launcher
+zed
 noctalia-v5
