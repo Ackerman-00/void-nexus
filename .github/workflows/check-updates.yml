@@ -1,40 +1,3 @@
-name: Check All Updates
-
-on:
-  schedule:
-    - cron: '0 */5 * * *'
-  workflow_dispatch:
-
-concurrency:
-  group: check-updates-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  NODE_OPTIONS: '--no-warnings'
-
-permissions:
-  contents: write
-  actions: write
-
-jobs:
-  check-updates:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install requests packaging
-
       - name: Phase 1 - Scan APIs & Update Versions
         id: scan
         env:
@@ -47,30 +10,30 @@ jobs:
           from pathlib import Path
 
           SITE_VARS = {
-              '${GNOME_SITE}':        'https://download.gnome.org/sources',
-              '$GNOME_SITE':          'https://download.gnome.org/sources',
-              '${KDE_SITE}':          'https://download.kde.org/stable',
-              '$KDE_SITE':            'https://download.kde.org/stable',
-              '${PYPI_SITE}':         'https://files.pythonhosted.org/packages/source',
-              '$PYPI_SITE':           'https://files.pythonhosted.org/packages/source',
-              '${GNU_SITE}':          'https://ftp.gnu.org/gnu',
-              '$GNU_SITE':            'https://ftp.gnu.org/gnu',
-              '${XFCE_SITE}':         'https://archive.xfce.org/src',
-              '$XFCE_SITE':           'https://archive.xfce.org/src',
-              '${SOURCEFORGE_SITE}':  'https://downloads.sourceforge.net',
-              '$SOURCEFORGE_SITE':    'https://downloads.sourceforge.net',
-              '${MOZILLA_SITE}':      'https://releases.mozilla.org/pub',
-              '$MOZILLA_SITE':        'https://releases.mozilla.org/pub',
-              '${NONGNU_SITE}':       'https://download.savannah.nongnu.org/releases',
-              '$NONGNU_SITE':         'https://download.savannah.nongnu.org/releases',
-              '${KERNEL_SITE}':       'https://www.kernel.org/pub',
-              '$KERNEL_SITE':         'https://www.kernel.org/pub',
-              '${CPAN_SITE}':         'https://cpan.metacpan.org/modules/by-module',
-              '$CPAN_SITE':           'https://cpan.metacpan.org/modules/by-module',
-              '${FREEDESKTOP_SITE}':  'https://freedesktop.org/software',
-              '$FREEDESKTOP_SITE':    'https://freedesktop.org/software',
-              '${DEBIAN_SITE}':       'https://ftp.debian.org/debian/pool',
-              '$DEBIAN_SITE':         'https://ftp.debian.org/debian/pool',
+              '${GNOME_SITE}':       'https://download.gnome.org/sources',
+              '$GNOME_SITE':         'https://download.gnome.org/sources',
+              '${KDE_SITE}':         'https://download.kde.org/stable',
+              '$KDE_SITE':           'https://download.kde.org/stable',
+              '${PYPI_SITE}':        'https://files.pythonhosted.org/packages/source',
+              '$PYPI_SITE':          'https://files.pythonhosted.org/packages/source',
+              '${GNU_SITE}':         'https://ftp.gnu.org/gnu',
+              '$GNU_SITE':           'https://ftp.gnu.org/gnu',
+              '${XFCE_SITE}':        'https://archive.xfce.org/src',
+              '$XFCE_SITE':          'https://archive.xfce.org/src',
+              '${SOURCEFORGE_SITE}': 'https://downloads.sourceforge.net',
+              '$SOURCEFORGE_SITE':   'https://downloads.sourceforge.net',
+              '${MOZILLA_SITE}':     'https://releases.mozilla.org/pub',
+              '$MOZILLA_SITE':       'https://releases.mozilla.org/pub',
+              '${NONGNU_SITE}':      'https://download.savannah.nongnu.org/releases',
+              '$NONGNU_SITE':        'https://download.savannah.nongnu.org/releases',
+              '${KERNEL_SITE}':      'https://www.kernel.org/pub',
+              '$KERNEL_SITE':        'https://www.kernel.org/pub',
+              '${CPAN_SITE}':        'https://cpan.metacpan.org/modules/by-module',
+              '$CPAN_SITE':          'https://cpan.metacpan.org/modules/by-module',
+              '${FREEDESKTOP_SITE}': 'https://freedesktop.org/software',
+              '$FREEDESKTOP_SITE':   'https://freedesktop.org/software',
+              '${DEBIAN_SITE}':      'https://ftp.debian.org/debian/pool',
+              '$DEBIAN_SITE':        'https://ftp.debian.org/debian/pool',
           }
 
           def resolve_site_vars(url):
@@ -103,7 +66,36 @@ jobs:
                   if resp.status_code == 200:
                       date_str = resp.json()['commit']['committer']['date']
                       dt = datetime.datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
-                      return dt.strftime('%Y%m%d')
+                      return dt.strftime('%Y%m%d%H%M%S')  # Full timestamp for unique versioning
+              except Exception: pass
+              return None
+
+          def get_tag_commit_sha(owner, repo, tag, gh_headers):
+              """CRITICAL FIX: Gets the exact commit SHA for a release tag to prevent version desync."""
+              for t in [tag, f"v{tag}"]:
+                  try:
+                      url = f"https://api.github.com/repos/{owner}/{repo}/git/ref/tags/{t}"
+                      resp = requests.get(url, headers=gh_headers, timeout=20)
+                      if resp.status_code == 200:
+                          obj = resp.json().get('object', {})
+                          if obj.get('type') == 'commit':
+                              return obj.get('sha')
+                          elif obj.get('type') == 'tag':
+                              tag_url = f"https://api.github.com/repos/{owner}/{repo}/git/tags/{obj['sha']}"
+                              tag_resp = requests.get(tag_url, headers=gh_headers, timeout=20)
+                              if tag_resp.status_code == 200:
+                                  return tag_resp.json().get('object', {}).get('sha')
+                  except Exception: pass
+              return None
+
+          def get_gitlab_tag_commit_sha(host, project_path, tag):
+              try:
+                  encoded = urllib.parse.quote(project_path, safe='')
+                  tag_encoded = urllib.parse.quote(tag, safe='')
+                  url = f"https://{host}/api/v4/projects/{encoded}/repository/tags/{tag_encoded}"
+                  resp = requests.get(url, timeout=20)
+                  if resp.status_code == 200:
+                      return resp.json().get('commit', {}).get('id')
               except Exception: pass
               return None
 
@@ -119,7 +111,7 @@ jobs:
                   owner, repo = gh_m.groups()
                   date_str = get_github_commit_date(owner, repo, sha, gh_headers)
                   if date_str: return sha, date_str
-              return sha, datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+              return sha, datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
 
           def get_latest_github_release(owner, repo, gh_headers):
               try:
@@ -159,7 +151,7 @@ jobs:
               except Exception: pass
               return None
 
-          def is_date_version(ver): return bool(re.match(r'^\d{8}$', str(ver)))
+          def is_date_version(ver): return bool(re.match(r'^\d{8,14}$', str(ver)))
           def version_is_newer(latest, current):
               if not latest or latest == current: return False
               if is_date_version(current) and '.' in str(latest): return True
@@ -220,7 +212,6 @@ jobs:
               if not m: return False
               return not m.group(1).strip().startswith('"')
 
-          # THE MASTER FIX: Surgically replaces checksum exactly where it lives, preserving context perfectly.
           def replace_checksums(content, new_hashes):
               if not new_hashes: return content
               clean = [str(h).translate(str.maketrans('', '', '[]\'" ')).strip() for h in new_hashes]
@@ -234,13 +225,11 @@ jobs:
               else:
                   repl = 'checksum="\n ' + '\n '.join(clean) + '"\n'
                   
-              # Safely targets the checksum block whether it's quoted, single line, or multiline array
               pattern_checksum = r'^_?checksum=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*)\n?'
               
               if re.search(pattern_checksum, content, flags=re.MULTILINE):
                   content = re.sub(pattern_checksum, repl, content, flags=re.MULTILINE, count=1)
               else:
-                  # Failsafe: if checksum doesn't exist at all, append exactly below distfiles
                   pattern_distfiles = r'^(distfiles\+?=(?:"[^"]*"|\'[^\']*\'|\[[^\]]*\]|[^\n]*))'
                   content = re.sub(pattern_distfiles, r'\1\n' + repl.strip(), content, flags=re.MULTILINE, count=1)
               return content
@@ -295,7 +284,72 @@ jobs:
               curr_sha = commit_m.group(1) if commit_m else None
               tmpl_vars = extract_template_vars(raw)
               print(f"Scanning {pkgname}...")
-              new_ver, new_sha = None, None
+              
+              new_sha, new_commit_date = None, None
+              new_release_ver = None
+
+              # --- CHECK 1: New Commits (Git Snapshots) ---
+              if curr_sha is not None:
+                  repo_m = re.search(r'^_gitrepo=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
+                  repo_url = repo_m.group(1) if repo_m else None
+                  
+                  branch_m = re.search(r'^_gitbranch=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
+                  git_branch = branch_m.group(1) if branch_m else 'HEAD'
+
+                  if not repo_url:
+                      gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
+                      if gh_m: repo_url = f'https://github.com/{gh_m.group(1)}'
+                  
+                  if repo_url:
+                      found_sha, found_date = get_latest_commit(repo_url, git_branch, gh_headers)
+                      if found_sha and found_sha != curr_sha: 
+                          new_sha, new_commit_date = found_sha, found_date
+
+              # --- CHECK 2: New Releases ---
+              has_basever = bool(re.search(r'^_basever=', raw, re.MULTILINE))
+              has_commit = bool(re.search(r'^_commit=', raw, re.MULTILINE))
+              
+              if has_basever:
+                  curr_cmp = re.search(r'^_basever=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
+                  curr_cmp = curr_cmp.group(1) if curr_cmp else curr_ver
+              else:
+                  curr_cmp = curr_ver
+
+              # Check releases if it's a standard package OR if it's a git package with a _basever
+              if not has_commit or has_basever:
+                  gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
+                  gl_m = re.search(r'https://(gitlab[A-Za-z0-9_.-]*\.[a-z]+)/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
+                  if gh_m:
+                      owner, rpo = gh_m.group(1), gh_m.group(2)
+                      latest = get_latest_github_release(owner, rpo, gh_headers)
+                      if latest and version_is_newer(latest, curr_cmp): 
+                          new_release_ver = latest
+                          # CRITICAL FIX: If this is a git snapshot, we MUST also update the commit to the release tag's commit!
+                          if has_commit:
+                              tag_sha = get_tag_commit_sha(owner, rpo, latest, gh_headers)
+                              if tag_sha:
+                                  new_sha = tag_sha
+                                  new_commit_date = get_github_commit_date(owner, rpo, tag_sha, gh_headers) or datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
+                              else:
+                                  print(f"  ⚠ Found new release {latest} but could not resolve tag commit. Skipping release update for git snapshot.")
+                                  new_release_ver = None
+                  elif gl_m:
+                      host, proj = gl_m.group(1), gl_m.group(2)
+                      latest = get_latest_gitlab_tag(host, proj)
+                      if latest and version_is_newer(latest, curr_cmp): 
+                          new_release_ver = latest
+                          if has_commit:
+                              tag_sha = get_gitlab_tag_commit_sha(host, proj, latest)
+                              if tag_sha:
+                                  new_sha = tag_sha
+                                  new_commit_date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
+                              else:
+                                  print(f"  ⚠ Found new release {latest} but could not resolve tag commit. Skipping release update for git snapshot.")
+                                  new_release_ver = None
+                  
+                  if new_release_ver is None and not has_commit and ('PYPI_SITE' in raw or pkgname.startswith('python')):
+                      pv = get_pypi_latest(pkgname)
+                      if pv and version_is_newer(pv, curr_cmp): new_release_ver = pv
 
               if pkgname == "rootapp":
                   print("  → Fetching rootapp AppImages...")
@@ -343,50 +397,38 @@ jobs:
                       is_corrupted = bool(extract_shell_var(r'_?checksum', raw) and re.search(r'[\[\],]', extract_shell_var(r'_?checksum', raw)))
                       if is_corrupted: checksum_changed = True
 
-              if curr_sha is not None:
-                  repo_m = re.search(r'^_gitrepo=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
-                  repo_url = repo_m.group(1) if repo_m else None
-                  
-                  # CRITICAL FIX: Extract branch info to ensure correct code base is downloaded
-                  branch_m = re.search(r'^_gitbranch=["\']?([^"\'\n\s]+)', raw, re.MULTILINE)
-                  git_branch = branch_m.group(1) if branch_m else 'HEAD'
-
-                  if not repo_url:
-                      gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
-                      if gh_m: repo_url = f'https://github.com/{gh_m.group(1)}'
-                  if repo_url:
-                      found_sha, found_date = get_latest_commit(repo_url, git_branch, gh_headers)
-                      if found_sha and found_sha != curr_sha: new_sha, new_ver = found_sha, found_date
-              else:
-                  gh_m = re.search(r'https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)', raw)
-                  gl_m = re.search(r'https://(gitlab[A-Za-z0-9_.-]*\.[a-z]+)/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', raw)
-                  if gh_m:
-                      owner, rpo = gh_m.group(1), gh_m.group(2)
-                      latest = get_latest_github_release(owner, rpo, gh_headers)
-                      if version_is_newer(latest, curr_ver): new_ver = latest
-                  elif gl_m:
-                      host, proj = gl_m.group(1), gl_m.group(2)
-                      latest = get_latest_gitlab_tag(host, proj)
-                      if version_is_newer(latest, curr_ver): new_ver = latest
-                  if new_ver is None and ('PYPI_SITE' in raw or pkgname.startswith('python')):
-                      pv = get_pypi_latest(pkgname)
-                      if pv and version_is_newer(pv, curr_ver): new_ver = pv
-
-              if isinstance(new_ver, list) or isinstance(new_sha, list): continue
+              if isinstance(new_release_ver, list) or isinstance(new_sha, list): continue
 
               needs_quote_fix = check_missing_quotes(raw)
-              if not new_ver and not new_sha and not checksum_changed and not needs_quote_fix: continue
+              if not new_release_ver and not new_sha and not checksum_changed and not needs_quote_fix: continue
 
               candidate = raw
-              if new_sha: candidate = re.sub(r'^(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate, flags=re.MULTILINE)
-              if new_ver: candidate = re.sub(r'^(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_ver}", candidate, flags=re.MULTILINE)
+              
+              # --- APPLY UPDATES ---
+              # 1. Update commit info if new commit found
+              if new_sha:
+                  candidate = re.sub(r'^(_commit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha}", candidate, flags=re.MULTILINE)
+                  candidate = re.sub(r'^(_shortcommit=["\']?)[a-fA-F0-9]+', lambda m: f"{m.group(1)}{new_sha[:7]}", candidate, flags=re.MULTILINE)
+                  candidate = re.sub(r'^(_gitdate=["\']?)[0-9]+', lambda m: f"{m.group(1)}{new_commit_date}", candidate, flags=re.MULTILINE)
+              
+              # 2. Update release version
+              if new_release_ver:
+                  if has_basever:
+                      # Git package: update _basever, leave version string untouched
+                      candidate = re.sub(r'^(_basever=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_release_ver}", candidate, flags=re.MULTILINE)
+                  else:
+                      # Standard package: update the main version line
+                      candidate = re.sub(r'^(\bversion=["\']?)[^\n\s"\']+', lambda m: f"{m.group(1)}{new_release_ver}", candidate, flags=re.MULTILINE)
 
-              if new_ver or new_sha:
+              if new_release_ver or new_sha:
+                  # CRITICAL FIX: Re-extract template vars from the updated candidate!
+                  updated_tmpl_vars = extract_template_vars(candidate)
+                  
                   urls = extract_distfile_urls(candidate)
                   if urls:
                       resolved = []
                       for u in urls:
-                          r = resolve_url(u, pkgname, ver=new_ver, sha=new_sha, curr_ver=curr_ver, curr_sha=curr_sha, template_vars=tmpl_vars)
+                          r = resolve_url(u, pkgname, ver=new_release_ver, sha=new_sha, curr_ver=curr_ver, curr_sha=curr_sha, template_vars=updated_tmpl_vars)
                           if r is None: resolved = None; break
                           resolved.append(r)
                       if resolved is None: continue
@@ -409,7 +451,8 @@ jobs:
               final = replace_checksums(candidate, new_checksums)
               if final == raw: continue
 
-              if new_ver and str(new_ver) != str(curr_ver):
+              # Reset revision to 1 if either commit or base version changed
+              if new_release_ver or new_sha:
                   final = re.sub(r'^(revision=)\d+', r'\g<1>1', final, flags=re.MULTILINE)
               elif not needs_quote_fix:
                   def bump_rev(m): return m.group(1) + str(int(m.group(2)) + 1)
@@ -417,7 +460,7 @@ jobs:
 
               tpath.write_text(final, encoding='utf-8')
               changed_packages.append(pkgname)
-              if needs_quote_fix and not new_ver and not new_sha and not checksum_changed:
+              if needs_quote_fix and not new_release_ver and not new_sha and not checksum_changed:
                   print(f"  ✅ Formatted checksums for {pkgname}")
               else:
                   print(f"  ✅ Processed {pkgname}")
@@ -427,38 +470,3 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
           PYEOF
-
-      - name: Phase 2 - Commit and Push Updates
-        if: steps.scan.outputs.updates_found == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -u
-          if ! git diff --cached --quiet; then
-            git commit -m "auto-update: template refresh $(date -u '+%Y-%m-%d')"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push origin HEAD:${{ github.ref_name }}
-          else
-            echo "No changes staged. Skipping commit."
-          fi
-
-      - name: Phase 3 - Trigger Relay Race
-        if: steps.scan.outputs.updates_found == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ ! -f changed_packages.txt ]; then
-            echo "Relay race skipped: No packages changed."
-            exit 0
-          fi
-          WORKFLOW_NAME="Build and Deploy Custom XBPS"
-          ORDERED=()
-          while IFS= read -r pkg; do
-            [ -z "$pkg" ] && continue
-            ORDERED+=("$pkg")
-          done < changed_packages.txt
-          LIST="${ORDERED[*]}"
-          echo "Starting relay race with: $LIST"
-          gh workflow run "${WORKFLOW_NAME}" \
-            --ref "${{ github.ref_name }}" \
-            -f package_list="$LIST"
