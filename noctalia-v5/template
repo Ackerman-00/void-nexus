@@ -1,10 +1,13 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
-version=20260607
-revision=4
+_basever=5.0.0
+_commit=5213fae8cc0ebb0996d0df7cf5155d1d4cf4d7a6
+_shortcommit=5213fae
+_gitdate=20260607153948
+version="${_basever}+git${_gitdate}.${_shortcommit}"
+revision=1
 
 _gitbranch="v5"
-_commit=5213fae8cc0ebb0996d0df7cf5155d1d4cf4d7a6
 wrksrc="noctalia-shell-${_commit}"
 
 build_style=meson
@@ -18,7 +21,6 @@ homepage="https://github.com/noctalia-dev/noctalia-shell"
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
 checksum="111aacd387449211abb4d8877884cf5a28e50f5f51a77901a0fd2c3581be806d"
 
-# Conflict with 'noctalia' to prevent package collisions
 conflicts="noctalia>=0"
 provides="noctalia-${version}_${revision}"
 
@@ -27,28 +29,10 @@ CXXFLAGS="-std=c++23 -Wno-unused-result"
 hostmakedepends="meson ninja pkg-config git curl"
 
 makedepends="
- wayland-devel
- wayland-protocols
- libglvnd-devel
- libepoxy-devel
- cairo-devel
- pango-devel
- fontconfig-devel
- freetype-devel
- harfbuzz-devel
- libxkbcommon-devel
- pipewire-devel
- libcurl-devel
- pam-devel
- libwebp-devel
- basu-devel
- sdbus-c++-devel
- polkit-devel
- librsvg-devel
- jemalloc-devel
- glib-devel
- libqalculate-devel
- libxml2-devel
+ wayland-devel wayland-protocols libglvnd-devel libepoxy-devel cairo-devel
+ pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
+ pipewire-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
+ polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
 "
 
 post_install() {
