@@ -1,7 +1,10 @@
 # Template file for 'xwayland-satellite-git'
 pkgname=xwayland-satellite-git
+_basever=0.8.1
 _commit=5d1efbc9dc3ab1c10160b656e0247f3325daf0f2
-version=20260525
+_shortcommit=5d1efbc
+_gitdate=20260525000000
+version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cargo
 hostmakedepends="pkg-config clang"
