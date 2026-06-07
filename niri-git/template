@@ -1,7 +1,10 @@
 # Template file for 'niri-git'
 pkgname=niri-git
+_basever=26.04
 _commit=f717ae030fe56fc52522ebef69f17f3f09064ac4
-version=20260605
+_shortcommit=f717ae0
+_gitdate=20260605052852
+version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cargo
 build_helper="qemu"
