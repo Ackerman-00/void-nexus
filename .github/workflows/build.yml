@@ -30,6 +30,7 @@ jobs:
       ARCH: 'x86_64'
       BOOTSTRAP: 'x86_64'
       TEST: '0'
+
     steps:
       - name: Prepare container
         shell: sh
@@ -38,6 +39,7 @@ jobs:
           REPO="https://repo-default.voidlinux.org/current"
           xbps-install -S -R "$REPO" -yu xbps || true
           xbps-install -S -R "$REPO" -yu || true
+          # libarchive provides bsdtar, which natively reads modern xbps compression
           xbps-install -S -R "$REPO" -y bash curl git grep openssl tar xz shadow sudo base-devel file github-cli zstd libarchive
           git config --global --add safe.directory '*'
 
@@ -60,6 +62,7 @@ jobs:
             local pkg_file="$XBPS_REPOSITORY/${pkgname}-${version}_${revision}.${XBPS_TARGET_MACHINE}.xbps"
             if [ -f "$pkg_file" ]; then
                echo "=> ${pkgname}: Dynamically injecting shlibs from ${pkg_file}..."
+               # Native bsdtar completely prevents SIGPIPE/Error 39 crashes
                local new_shlibs=$( \
                  bsdtar xOf "$pkg_file" props.plist 2>/dev/null \
                  | awk -F'[><]' \
@@ -99,7 +102,6 @@ jobs:
             pkg_dir=$(dirname "$tmpl")
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
-            
             mkdir -p "srcpkgs/$pkg_name"
             cp -a "$pkg_dir/." "srcpkgs/$pkg_name/"
           done
@@ -118,7 +120,7 @@ jobs:
           fi
           echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
-      - name: Build self‑healing shlibs map
+      - name: Build self-healing shlibs map
         run: |
           echo "Generating shlibs map by directly extracting props.plist from binaries..."
           touch common/shlibs
@@ -145,19 +147,22 @@ jobs:
           fi
           rm -f "$TMP_SHLIBS"
 
-      - name: Check if Binary Already Exists (Zero‑Compile)
+      - name: Check if Binary Already Exists (Zero-Compile)
         id: check_bin
         run: |
-          # Function to evaluate dynamic version strings
+          # Evaluates dynamic version strings like ${_basever}+git${_gitdate}.${_shortcommit}
+          # Uses native Bash parameter expansion — safe against special chars in pkg names.
           get_evaluated_version() {
             local tmpl="$1"
-            local ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
-            
-            local _basever=$(grep '^_basever=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_basever=//' | tr -d '"'"'" | xargs)
-            local _commit=$(grep '^_commit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_commit=//' | tr -d '"'"'" | xargs)
-            local _shortcommit=$(grep '^_shortcommit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_shortcommit=//' | tr -d '"'"'" | xargs)
-            local _gitdate=$(grep '^_gitdate=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_gitdate=//' | tr -d '"'"'" | xargs)
-            
+            local ver _basever _commit _shortcommit _gitdate
+
+            ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
+            _basever=$(grep '^_basever=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_basever=//' | tr -d '"'"'" | xargs)
+            _commit=$(grep '^_commit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_commit=//' | tr -d '"'"'" | xargs)
+            _shortcommit=$(grep '^_shortcommit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_shortcommit=//' | tr -d '"'"'" | xargs)
+            _gitdate=$(grep '^_gitdate=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_gitdate=//' | tr -d '"'"'" | xargs)
+
+            # Bash parameter expansion is literal — no regex injection possible
             ver="${ver/\$\{_basever\}/$_basever}"
             ver="${ver/\$\{_commit\}/$_commit}"
             ver="${ver/\$\{_shortcommit\}/$_shortcommit}"
@@ -166,16 +171,17 @@ jobs:
             ver="${ver/\$_commit/$_commit}"
             ver="${ver/\$_shortcommit/$_shortcommit}"
             ver="${ver/\$_gitdate/$_gitdate}"
-            
+
             echo "$ver"
           }
-          
+
           TARGET="${{ env.TARGET_PKG }}"
           TMPL="srcpkgs/$TARGET/template"
           if [ -f "$TMPL" ]; then
             VER=$(get_evaluated_version "$TMPL")
             REV=$(grep '^revision=' "$TMPL" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             EXPECTED_PKG="${TARGET}-${VER}_${REV}.x86_64.xbps"
+            echo "Resolved expected binary: $EXPECTED_PKG"
             if [ "${{ env.FORCE_REBUILD }}" == "true" ]; then
               echo "Force rebuild enabled; not skipping $EXPECTED_PKG even if it exists."
               echo "skip_build=false" >> "$GITHUB_OUTPUT"
@@ -183,33 +189,36 @@ jobs:
               echo "Binary ${EXPECTED_PKG} found in cache. Skipping build."
               echo "skip_build=true" >> "$GITHUB_OUTPUT"
             else
+              echo "Binary ${EXPECTED_PKG} not found. Will build."
               echo "skip_build=false" >> "$GITHUB_OUTPUT"
             fi
           else
+            echo "Template not found at $TMPL. Will attempt build anyway."
             echo "skip_build=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build package
         if: steps.check_bin.outputs.skip_build != 'true'
-        run: |
-          touch build_start_marker
-          ./xbps-src pkg "${{ env.TARGET_PKG }}"
+        run: ./xbps-src pkg "${{ env.TARGET_PKG }}"
 
       - name: Build and Upload Signed Repo to GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # Function to evaluate dynamic version strings
+          set -e
+
+          # Same dynamic version resolver as above — defined here so this step is self-contained
           get_evaluated_version() {
             local tmpl="$1"
-            local ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
-            
-            local _basever=$(grep '^_basever=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_basever=//' | tr -d '"'"'" | xargs)
-            local _commit=$(grep '^_commit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_commit=//' | tr -d '"'"'" | xargs)
-            local _shortcommit=$(grep '^_shortcommit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_shortcommit=//' | tr -d '"'"'" | xargs)
-            local _gitdate=$(grep '^_gitdate=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_gitdate=//' | tr -d '"'"'" | xargs)
-            
+            local ver _basever _commit _shortcommit _gitdate
+
+            ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
+            _basever=$(grep '^_basever=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_basever=//' | tr -d '"'"'" | xargs)
+            _commit=$(grep '^_commit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_commit=//' | tr -d '"'"'" | xargs)
+            _shortcommit=$(grep '^_shortcommit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_shortcommit=//' | tr -d '"'"'" | xargs)
+            _gitdate=$(grep '^_gitdate=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_gitdate=//' | tr -d '"'"'" | xargs)
+
             ver="${ver/\$\{_basever\}/$_basever}"
             ver="${ver/\$\{_commit\}/$_commit}"
             ver="${ver/\$\{_shortcommit\}/$_shortcommit}"
@@ -218,111 +227,139 @@ jobs:
             ver="${ver/\$_commit/$_commit}"
             ver="${ver/\$_shortcommit/$_shortcommit}"
             ver="${ver/\$_gitdate/$_gitdate}"
-            
+
             echo "$ver"
           }
-          
-          set -e
+
           mkdir -p public/x86_64
-          
-          # Process each package: copy new binaries and purge old versions
+
+          # Copy newly built packages and purge old versions of each from the release
           ls -1 custom-templates-temp/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/$pkg_name" ] && continue
             tmpl="custom-templates-temp/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
-            
+
             ver=$(get_evaluated_version "$tmpl")
             rev=$(grep '^revision=' "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             EXPECTED_PKG="${pkg_name}-${ver}_${rev}.x86_64.xbps"
-            
-            if [ -f "hostdir/binpkgs/$EXPECTED_PKG" ]; then
-              cp "hostdir/binpkgs/$EXPECTED_PKG" public/x86_64/
-              
-              # PURGE OLD ASSETS: Delete all old .xbps and .sig2 files for this package
-              echo ">>> Purging old versions of $pkg_name from GitHub Release..."
-              OLD_ASSETS=$(gh release view rolling --json assets --jq ".assets[].name" --repo "$REPO" 2>/dev/null | grep -E "^${pkg_name}-.*\.x86_64\.xbps$" || true)
-              for asset in $OLD_ASSETS; do
-                if [ "$asset" != "$EXPECTED_PKG" ]; then
-                  echo "  Deleting old binary: $asset"
-                  gh release delete-asset rolling "$asset" --repo "$REPO" -y 2>/dev/null || true
-                fi
-              done
-              
-              OLD_SIGS=$(gh release view rolling --json assets --jq ".assets[].name" --repo "$REPO" 2>/dev/null | grep -E "^${pkg_name}-.*\.x86_64\.xbps\.sig2$" || true)
-              for sig in $OLD_SIGS; do
-                if [ "$sig" != "${EXPECTED_PKG}.sig2" ]; then
-                  echo "  Deleting old signature: $sig"
-                  gh release delete-asset rolling "$sig" --repo "$REPO" -y 2>/dev/null || true
-                fi
-              done
+
+            if [ ! -f "hostdir/binpkgs/$EXPECTED_PKG" ]; then
+              echo ">>> $pkg_name: expected binary $EXPECTED_PKG not found, skipping."
+              continue
             fi
+
+            cp "hostdir/binpkgs/$EXPECTED_PKG" public/x86_64/
+            echo ">>> Copied $EXPECTED_PKG to public/x86_64/"
+
+            # PURGE OLD ASSETS: use awk for literal matching — safe against regex special chars
+            # in package names (e.g. c++, libstdc++)
+            echo ">>> Purging old versions of $pkg_name from GitHub Release..."
+            OLD_XBPS=$(gh release view rolling --json assets \
+              --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
+              | awk -v pkg="${pkg_name}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps$/' \
+              || true)
+            for asset in $OLD_XBPS; do
+              if [ "$asset" != "$EXPECTED_PKG" ]; then
+                echo "  Deleting old binary: $asset"
+                gh release delete-asset rolling "$asset" --repo "$REPO" -y 2>/dev/null || true
+              fi
+            done
+
+            OLD_SIGS=$(gh release view rolling --json assets \
+              --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
+              | awk -v pkg="${pkg_name}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps\.sig2$/' \
+              || true)
+            for sig in $OLD_SIGS; do
+              if [ "$sig" != "${EXPECTED_PKG}.sig2" ]; then
+                echo "  Deleting old signature: $sig"
+                gh release delete-asset rolling "$sig" --repo "$REPO" -y 2>/dev/null || true
+              fi
+            done
           done
 
           cd public/x86_64
-          if ls *.xbps 1>/dev/null 2>&1; then
-            echo "Generating fresh RSA signatures for all packages..."
-            rm -f *.sig2
-            echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
-            chmod 600 /tmp/private.pem
-            for pkg in *.xbps; do
-              xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
-            done
-            
-            echo "Generating repodata index..."
-            xbps-rindex -f -a *.xbps || true
-            xbps-rindex --privkey /tmp/private.pem --signedby "Void Nexus Build Bot <actions@github.com>" --sign . || true
-            
-            echo "Generating packages.json for the website..."
-            echo "[" > packages.json
-            first=1
-            for pkg in *.xbps; do
-              [ -e "$pkg" ] || continue
-              if [ "$first" -eq 0 ]; then echo "," >> packages.json; fi
-              fname=$(basename "$pkg" .x86_64.xbps)
-              version="${fname##*-}"
-              name="${fname%-$version}"
-              echo -n "  {\"name\": \"$name\", \"version\": \"$version\"}" >> packages.json
-              first=0
-            done
-            echo -e "\n]" >> packages.json
-            
-            gh release view rolling -R "$REPO" 2>/dev/null \
-              || gh release create rolling -R "$REPO" \
-                   --title "Void Nexus Rolling Binaries" \
-                   --notes "Automated XBPS Repository" \
-                   --prerelease
-            
-            echo "Uploading XBPS repo files to GitHub Release..."
-            
-            retry_upload() {
-              local file="$1"
-              local max_retries=3
-              for i in $(seq 1 $max_retries); do
-                if gh release upload rolling -R "$REPO" "$file" --clobber 2>&1; then
-                  return 0
-                fi
-                sleep 5
-              done
-              echo "::error::Failed to upload $file after $max_retries attempts"
-              return 1
-            }
-            
-            retry_upload "x86_64-repodata"
-            
-            for pkg in *.xbps; do
-              retry_upload "$pkg"
-            done
-            
-            for sig in *.sig2; do
-              [ -f "$sig" ] && retry_upload "$sig"
-            done
-            
-            retry_upload "packages.json"
-            
-            rm -f /tmp/private.pem
+          if ! ls *.xbps 1>/dev/null 2>&1; then
+            echo "No .xbps files to upload. Exiting."
+            exit 0
           fi
 
-      - name: Trigger Relay Race (no artifact)
+          echo "Generating fresh RSA signatures for all packages..."
+          rm -f *.sig2
+          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
+          chmod 600 /tmp/private.pem
+          for pkg in *.xbps; do
+            xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
+          done
+
+          echo "Generating repodata index..."
+          xbps-rindex -f -a *.xbps || true
+          xbps-rindex --privkey /tmp/private.pem \
+            --signedby "Void Nexus Build Bot <actions@github.com>" \
+            --sign . || true
+
+          echo "Generating packages.json for the website..."
+          # Extract name and version from props.plist inside each .xbps for accuracy —
+          # avoids the broken "fname##*-" split that fails on names containing dashes (e.g. niri-git).
+          echo "[" > packages.json
+          first=1
+          for pkg in *.xbps; do
+            [ -e "$pkg" ] || continue
+            # Extract pkgver field: e.g. "niri-git-26.04+git20260601120000.abc1234_1"
+            pkgver=$(bsdtar xOf "$pkg" props.plist 2>/dev/null \
+              | awk -F'[><]' '
+                  /<key>pkgver<\/key>/ { getline; print $3; exit }
+              ' || true)
+            if [ -z "$pkgver" ]; then
+              # Fallback: derive from filename (strip arch and extension)
+              pkgver=$(basename "$pkg" .x86_64.xbps)
+            fi
+            # Strip trailing _<revision> to get name-version, then split on last dash
+            pkgver_no_rev="${pkgver%_*}"
+            pkg_version="${pkgver_no_rev##*-}"
+            pkg_name="${pkgver_no_rev%-${pkg_version}}"
+            if [ "$first" -eq 0 ]; then echo "," >> packages.json; fi
+            echo -n "  {\"name\": \"$pkg_name\", \"version\": \"$pkg_version\"}" >> packages.json
+            first=0
+          done
+          echo -e "\n]" >> packages.json
+
+          # Create release if it doesn't exist yet
+          gh release view rolling -R "$REPO" 2>/dev/null \
+            || gh release create rolling -R "$REPO" \
+                 --title "Void Nexus Rolling Binaries" \
+                 --notes "Automated XBPS Repository" \
+                 --prerelease
+
+          echo "Uploading XBPS repo files to GitHub Release..."
+
+          retry_upload() {
+            local file="$1"
+            local max_retries=3
+            for i in $(seq 1 $max_retries); do
+              if gh release upload rolling -R "$REPO" "$file" --clobber 2>&1; then
+                return 0
+              fi
+              sleep 5
+            done
+            echo "::error::Failed to upload $file after $max_retries attempts"
+            return 1
+          }
+
+          retry_upload "x86_64-repodata"
+
+          for pkg in *.xbps; do
+            retry_upload "$pkg"
+          done
+
+          for sig in *.sig2; do
+            [ -f "$sig" ] && retry_upload "$sig"
+          done
+
+          retry_upload "packages.json"
+
+          rm -f /tmp/private.pem
+
+      - name: Trigger Relay Race (next package in queue)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -337,5 +374,5 @@ jobs:
               -f package_list="$REMAINING" \
               -f force_rebuild="${{ env.FORCE_REBUILD }}"
           else
-            echo "Queue finished."
+            echo "Build queue finished."
           fi
