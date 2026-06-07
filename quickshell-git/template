@@ -1,21 +1,21 @@
 # Template file for 'quickshell-git'
 pkgname=quickshell-git
+_basever=0.3.0
 _gitrepo="https://git.outfoxxed.me/quickshell/quickshell"
 _commit=b66495fcc5022681b56b61f928c7acbe910e722c
-version=20260601
+_shortcommit=b66495f
+_gitdate=20260601000000
+version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cmake
 
 configure_args="-DDISTRIBUTOR=Void -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=YES
  -DINSTALL_QML_PREFIX=lib/qt6/qml -DCRASH_HANDLER=OFF -DNO_PCH=ON"
 
-hostmakedepends="pkg-config wayland-devel qt6-base qt6-declarative-devel
- qt6-shadertools"
-
-makedepends="cli11 qt6-base-private-devel qt6-declarative-private-devel
- qt6-shadertools-devel pipewire-devel jemalloc-devel pam-devel
- Vulkan-Headers polkit-devel libgbm-devel wayland-protocols qt6-wayland-devel"
-
+hostmakedepends="pkg-config wayland-devel qt6-base qt6-declarative-devel qt6-shadertools"
+makedepends="cli11 qt6-base-private-devel qt6-declarative-private-devel qt6-shadertools-devel
+ pipewire-devel jemalloc-devel pam-devel Vulkan-Headers polkit-devel libgbm-devel
+ wayland-protocols qt6-wayland-devel"
 depends="qt6-svg"
 
 short_desc="Flexible QtQuick-based desktop shell toolkit (Git Snapshot)"
