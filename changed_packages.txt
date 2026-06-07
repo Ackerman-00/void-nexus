@@ -1,1 +1,2 @@
+helium-browser-bin
 noctalia-v5
