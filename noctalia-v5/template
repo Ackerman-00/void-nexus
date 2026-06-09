@@ -5,7 +5,7 @@ _commit=aa420b7f077ca6c6dded999e317f776c5ba9f5c7
 _shortcommit=aa420b7
 _gitdate=20260608041201
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=1
+revision=2
 
 _gitbranch="v5"
 wrksrc="noctalia-shell-${_commit}"
@@ -19,7 +19,7 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-shell"
 
 distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
-checksum="0251b319d10afc743aec62f118feea2d1d21978495b793e5d026d38ce058ce0b"
+checksum="82b12e2a552d0abed4d6d855dfd61b4e8bf14e7a245dbda27f782251e5317661"
 
 conflicts="noctalia>=0"
 provides="noctalia-${version}_${revision}"

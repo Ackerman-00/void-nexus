@@ -1,1 +1,3 @@
+noctalia-shell
+niri-git
 noctalia-v5
