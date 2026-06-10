@@ -2,9 +2,9 @@
 pkgname=quickshell-git
 _basever=0.3.0
 _gitrepo="https://git.outfoxxed.me/quickshell/quickshell"
-_commit=b66495fcc5022681b56b61f928c7acbe910e722c
-_shortcommit=b66495f
-_gitdate=20260601000000
+_commit=d99d87d5e5ec4e696815348692fdaaf0b6be1b2c
+_shortcommit=d99d87d
+_gitdate=20260610063029
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cmake
@@ -27,4 +27,4 @@ conflicts="quickshell>=0"
 provides="quickshell-${version}_${revision}"
 
 distfiles="https://git.outfoxxed.me/quickshell/quickshell/archive/${_commit}.tar.gz"
-checksum="9bef563f78f30b37e2debc64b8b2dbabf55a96f94f371a9167ce797ed95471a6"
+checksum="42450cd2a27ee8f83d13fec140b293250304cf60c83a9ac9c6780026eaf8ee97"

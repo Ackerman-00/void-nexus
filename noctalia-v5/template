@@ -1,9 +1,9 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
 _basever=5.0.0
-_commit=39a4a335c0000000000000000000000000000000
-_shortcommit=39a4a33
-_gitdate=20260608041201
+_commit=72b216ce2416e0904616286078b3f5be037d9f77
+_shortcommit=72b216c
+_gitdate=20260610043910
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 
@@ -21,7 +21,7 @@ homepage="https://github.com/noctalia-dev/noctalia"
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
 # Note: You must generate the new SHA256 checksum for the updated tarball.
 # Run: xgum https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz
-checksum=""
+checksum="7527ec0900455d3f4f2180d38e3324609595a611d8180df9291f7557bb98a233"
 
 conflicts="noctalia>=0"
 provides="noctalia-${version}_${revision}"

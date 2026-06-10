@@ -1,3 +1,4 @@
-noctalia-shell
-niri-git
 noctalia-v5
+quickshell-git
+zed
+brave-browser
