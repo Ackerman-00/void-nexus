@@ -1,14 +1,14 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
 _basever=5.0.0
-_commit=aa420b7f077ca6c6dded999e317f776c5ba9f5c7
-_shortcommit=aa420b7
+_commit=39a4a335c0000000000000000000000000000000
+_shortcommit=39a4a33
 _gitdate=20260608041201
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=2
+revision=1
 
-_gitbranch="v5"
-wrksrc="noctalia-shell-${_commit}"
+_gitbranch="main"
+wrksrc="noctalia-${_commit}"
 
 build_style=meson
 buildtype=release
@@ -16,10 +16,12 @@ configure_args="-Db_ndebug=true"
 short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
 maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
-homepage="https://github.com/noctalia-dev/noctalia-shell"
+homepage="https://github.com/noctalia-dev/noctalia"
 
-distfiles="https://github.com/noctalia-dev/noctalia-shell/archive/${_commit}.tar.gz"
-checksum="82b12e2a552d0abed4d6d855dfd61b4e8bf14e7a245dbda27f782251e5317661"
+distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
+# Note: You must generate the new SHA256 checksum for the updated tarball.
+# Run: xgum https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz
+checksum=""
 
 conflicts="noctalia>=0"
 provides="noctalia-${version}_${revision}"
