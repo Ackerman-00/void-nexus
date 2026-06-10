@@ -19,8 +19,6 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia"
 
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
-# Note: You must generate the new SHA256 checksum for the updated tarball.
-# Run: xgum https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz
 checksum="7527ec0900455d3f4f2180d38e3324609595a611d8180df9291f7557bb98a233"
 
 conflicts="noctalia>=0"
