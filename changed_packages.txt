@@ -1,4 +1,1 @@
-noctalia-v5
-quickshell-git
-zed
-brave-browser
+helium-browser-bin
