@@ -1,9 +1,9 @@
 # Template file for 'xwayland-satellite-git'
 pkgname=xwayland-satellite-git
 _basever=0.8.1
-_commit=5d1efbc9dc3ab1c10160b656e0247f3325daf0f2
-_shortcommit=5d1efbc
-_gitdate=20260525000000
+_commit=8575d0ef55d70f9b4c46b6bffb3accf912217e1e
+_shortcommit=8575d0e
+_gitdate=20260612011343
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cargo
@@ -19,7 +19,7 @@ conflicts="xwayland-satellite>=0"
 provides="xwayland-satellite-${version}_${revision}"
 
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
-checksum="0eac0b09053734cc5adbb87336fd97581a2f65b05f8d41656aa3f7eafd471365"
+checksum="470a7ba43944e7e8187022fa9b25e34734cc0bf4c991ecdf0974c9658b45a1de"
 
 make_check="no"
 

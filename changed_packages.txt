@@ -1,3 +1,4 @@
-zed
+faugus-launcher
 noctalia-v5
-zen-browser
+helium-browser-bin
+xwayland-satellite-git
