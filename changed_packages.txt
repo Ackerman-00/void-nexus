@@ -1,4 +1,2 @@
-faugus-launcher
 noctalia-v5
-helium-browser-bin
-xwayland-satellite-git
+brave-browser
