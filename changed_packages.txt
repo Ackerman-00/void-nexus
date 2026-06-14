@@ -1,2 +1,3 @@
+faugus-launcher
 noctalia-v5
-brave-browser
+zen-browser
