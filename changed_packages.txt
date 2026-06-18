@@ -1,1 +1,4 @@
 noctalia-v5
+zen-browser
+zed
+brave-browser
