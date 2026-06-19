@@ -1,4 +1,5 @@
 noctalia-v5
+niri-git
 zen-browser
-zed
-brave-browser
+quickshell-git
+helium-browser-bin
