@@ -1,1 +1,6 @@
+faugus-launcher
 noctalia-v5
+zed
+helium-browser-bin
+brave-browser
+protonplus
