@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Blender
+GenericName=3D modeler
+Comment=3D modeling, animation, rendering and post-production
+Exec=blender %f
+Icon=blender
+Type=Application
+Categories=Graphics;3DGraphics;
+MimeType=application/x-blender;
+Terminal=false
+StartupNotify=true
+StartupWMClass=Blender

@@ -1,0 +1,35 @@
+# Template file for 'blender-bin'
+pkgname=blender-bin
+version=5.1.2
+revision=1
+archs="x86_64"
+build_style=fetch
+hostmakedepends="tar xz"
+nostrip=yes
+short_desc="3D graphics creation suite (binary build)"
+maintainer="Ackerman <https://github.com/Ackerman-00>"
+license="GPL-3.0-or-later"
+homepage="https://www.blender.org"
+distfiles="https://download.blender.org/release/Blender${version%.*}/blender-${version}-linux-x64.tar.xz"
+checksum=aaccb355f50183979b698bcce7467103a76261b5fa59f4972295842662a285fb
+
+do_install() {
+    vmkdir opt/blender-bin
+    tar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/blender-${version}-linux-x64.tar.xz \
+        -C ${DESTDIR}/opt/blender-bin --strip-components=1
+
+    vmkdir usr/bin
+    ln -sf /opt/blender-bin/blender ${DESTDIR}/usr/bin/blender
+
+    vinstall ${FILESDIR}/blender.desktop 0644 usr/share/applications/
+
+    local _icon_base=${DESTDIR}/opt/blender-bin
+    if [ -f ${_icon_base}/blender.svg ]; then
+        vmkdir usr/share/icons/hicolor/scalable/apps
+        cp -a ${_icon_base}/blender.svg ${DESTDIR}/usr/share/icons/hicolor/scalable/apps/blender.svg
+    fi
+    if [ -f ${_icon_base}/blender.png ]; then
+        vmkdir usr/share/pixmaps
+        cp -a ${_icon_base}/blender.png ${DESTDIR}/usr/share/pixmaps/blender.png
+    fi
+}
