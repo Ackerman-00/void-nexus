@@ -1,0 +1,21 @@
+[Desktop Entry]
+Name=Brave Origin
+Comment=The minimalist browser from the makers of Brave
+Exec=brave-origin %u
+Icon=brave-origin
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/x-xpinstall;application/pdf;application/json;
+StartupWMClass=brave-origin
+Categories=Network;WebBrowser;
+StartupNotify=true
+Terminal=false
+Keywords=Internet;WWW;Browser;Web;Explorer;
+Actions=new-window;new-private-window;
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=brave-origin %u
+
+[Desktop Action new-private-window]
+Name=Open a New Private Window
+Exec=brave-origin --incognito %u

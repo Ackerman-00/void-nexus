@@ -1,0 +1,41 @@
+# Template file for 'brave-origin-bin'
+pkgname=brave-origin-bin
+version=1.91.180
+revision=1
+archs="x86_64"
+hostmakedepends="unzip"
+depends="alsa-lib gtk+3 libXScrnSaver nss"
+short_desc="Minimalist browser from the makers of Brave (binary release)"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="MPL-2.0"
+homepage="https://brave.com/origin/download"
+nostrip=yes
+
+distfiles="https://github.com/brave/brave-browser/releases/download/v${version}/brave-origin-${version}-linux-amd64.zip"
+checksum="931c1a7090d090382d8c5f867f0e97fe9f19b422447cb050b3921150b0a95c67"
+
+do_extract() {
+	mkdir -p ${wrksrc}
+	unzip -q ${XBPS_SRCDISTDIR}/${pkgname}-${version}/brave-origin-${version}-linux-amd64.zip -d ${wrksrc}
+}
+
+do_install() {
+	vmkdir opt/brave-origin-bin
+	cp -a ${wrksrc}/* ${DESTDIR}/opt/brave-origin-bin/
+	chmod 4755 ${DESTDIR}/opt/brave-origin-bin/chrome-sandbox
+
+	vmkdir usr/bin
+	ln -sf /opt/brave-origin-bin/brave ${DESTDIR}/usr/bin/brave-origin
+
+	vinstall ${FILESDIR}/brave-origin.desktop 0644 usr/share/applications/
+
+	for size in 16 24 32 48 64 128 256; do
+		vmkdir usr/share/icons/hicolor/${size}x${size}/apps
+		vinstall ${DESTDIR}/opt/brave-origin-bin/product_logo_${size}.png \
+			0644 usr/share/icons/hicolor/${size}x${size}/apps brave-origin.png
+	done
+	vinstall ${DESTDIR}/opt/brave-origin-bin/product_logo_128.png \
+		0644 usr/share/pixmaps brave-origin.png
+
+	vlicense ${DESTDIR}/opt/brave-origin-bin/LICENSE
+}
