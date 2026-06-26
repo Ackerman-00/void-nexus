@@ -30,7 +30,7 @@
   {"name": "noctalia-qs", "version": "0.0.12_3"},
   {"name": "noctalia-v5", "version": "5.0.0+git20260626082113.4263897_1"},  {"name": "protonplus", "version": "0.5.20_1"},
   {"name": "quickshell-git", "version": "20260422_1"},
-  {"name": "rootapp", "version": "0.9.116_1"},
+  {"name": "rootapp", "version": "0.9.115_1"},
   {"name": "sdbus-cpp", "version": "2.2.1_2"},
   {"name": "tomlplusplus", "version": "3.4.0_3"},
   {"name": "vesktop", "version": "1.6.5_1"},
