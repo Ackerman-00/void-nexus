@@ -43,13 +43,13 @@ do_install() {
     cp -a usr/share/icons ${DESTDIR}/usr/share/
 
     vmkdir usr/bin
-    cat <<-'EOF' > ${DESTDIR}/usr/bin/heroic
-    #!/bin/sh
-    if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
-        export ELECTRON_OZONE_PLATFORM_HINT="auto"
-    fi
-    exec /opt/Heroic/heroic "$@"
-    EOF
+    cat <<'HEREDOC_EOF' > ${DESTDIR}/usr/bin/heroic
+#!/bin/sh
+if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+    export ELECTRON_OZONE_PLATFORM_HINT="auto"
+fi
+exec /opt/Heroic/heroic "$@"
+HEREDOC_EOF
     chmod 755 ${DESTDIR}/usr/bin/heroic
 
     find ${DESTDIR}/opt/Heroic -type f -name "*.a" -delete
