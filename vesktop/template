@@ -31,26 +31,21 @@ checksum="2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5"
 nostrip_files="/opt/Vesktop/vesktop"
 
 do_extract() {
-    # Using our wildcard trick to handle .xz or .zst compression safely
     bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_${_deb_arch}.deb data.tar.*
     bsdtar xf data.tar.* -C .
 }
 
 do_install() {
-    # 1. Install the main app
     vmkdir opt
     cp -a opt/Vesktop ${DESTDIR}/opt/
 
-    # 2. Install Desktop entries and Icons (THIS FIXES YOUR LAUNCHER BUG)
     vmkdir usr/share
     cp -a usr/share/applications ${DESTDIR}/usr/share/
     cp -a usr/share/icons ${DESTDIR}/usr/share/
 
-    # 3. Create the executable symlink
     vmkdir usr/bin
     ln -sf /opt/Vesktop/vesktop ${DESTDIR}/usr/bin/vesktop
 
-    # 4. Sandbox permissions
     if [ -f ${DESTDIR}/opt/Vesktop/chrome-sandbox ]; then
         chmod 4755 ${DESTDIR}/opt/Vesktop/chrome-sandbox
     fi

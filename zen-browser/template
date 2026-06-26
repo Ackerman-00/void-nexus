@@ -33,24 +33,20 @@ do_install() {
     vmkdir opt/zen-browser
     vmkdir usr/bin
 
-    # 1. The Bypass: Extract the binary package directly into the destination folder
-    # We use -xf (quiet) instead of -xvf so it doesn't spam the GitHub Actions logs
-    tar -xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/zen.linux-${_upstream_arch}.tar.xz -C ${DESTDIR}/opt/zen-browser --strip-components=1
+    tar -xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/zen.linux-${_upstream_arch}.tar.xz \
+        -C ${DESTDIR}/opt/zen-browser --strip-components=1
 
-    # 2. Symlink the executable
     ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
 
-    # 3. Install desktop entries and policies
     if [ -f "${FILESDIR}/zen.desktop" ]; then
         vinstall ${FILESDIR}/zen.desktop 0644 usr/share/applications/
     fi
-    
+
     if [ -f "${FILESDIR}/policies.json" ]; then
         vmkdir opt/zen-browser/distribution
         vinstall ${FILESDIR}/policies.json 0644 opt/zen-browser/distribution/
     fi
 
-    # 4. Install icons
     local _icon_path="${DESTDIR}/opt/zen-browser/browser/chrome/icons/default"
     if [ -d "$_icon_path" ]; then
         vinstall ${_icon_path}/default48.png 0644 usr/share/pixmaps zen.png
@@ -60,11 +56,9 @@ do_install() {
         done
     fi
 
-    # 5. Link system dictionaries (for spellcheck)
     ln -sf /usr/share/hunspell ${DESTDIR}/opt/zen-browser/dictionaries
     ln -sf /usr/share/hyphen ${DESTDIR}/opt/zen-browser/hyphenation
 
-    # 6. Force Zen to use Void's native NSS/NSPR libraries and certificates
     for f in libnspr4.so libnss3.so libnssutil3.so libplc4.so \
              libplds4.so libsmime3.so libssl3.so libnssckbi.so; do
         if [ -f "${DESTDIR}/opt/zen-browser/${f}" ]; then
@@ -72,7 +66,6 @@ do_install() {
             ln -sf /usr/lib/${f} ${DESTDIR}/opt/zen-browser/${f}
         fi
     done
-    
-    # 7. Install License directly from the source distribution directory
+
     vlicense ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE
 }

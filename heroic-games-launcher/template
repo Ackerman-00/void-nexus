@@ -12,7 +12,6 @@ homepage="https://heroicgameslauncher.com"
 distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
 checksum="4c8585ad7c7a76bd3c8058aa995b9064f457603f3b6afbd9114433cf4af7ecd2"
 
-# Pure dependencies
 depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm \
  libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
 
@@ -36,20 +35,16 @@ do_extract() {
 }
 
 do_install() {
-    # 1. Install the main application folder
     vmkdir opt
     cp -a opt/Heroic ${DESTDIR}/opt/
 
-    # 2. Install standard desktop entries and icons
     vmkdir usr/share
     cp -a usr/share/applications ${DESTDIR}/usr/share/
     cp -a usr/share/icons ${DESTDIR}/usr/share/
 
-    # 3. Create the Native Wayland Wrapper Script
     vmkdir usr/bin
     cat <<-'EOF' > ${DESTDIR}/usr/bin/heroic
     #!/bin/sh
-    # Automatically force native Wayland rendering if detected
     if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
         export ELECTRON_OZONE_PLATFORM_HINT="auto"
     fi
@@ -57,10 +52,8 @@ do_install() {
     EOF
     chmod 755 ${DESTDIR}/usr/bin/heroic
 
-    # 4. Optimization: Strip useless static libraries bundled by upstream
     find ${DESTDIR}/opt/Heroic -type f -name "*.a" -delete
 
-    # 5. Strict Permissions
     chmod 755 ${DESTDIR}/opt/Heroic/heroic
     if [ -f ${DESTDIR}/opt/Heroic/chrome-sandbox ]; then
         chmod 4755 ${DESTDIR}/opt/Heroic/chrome-sandbox

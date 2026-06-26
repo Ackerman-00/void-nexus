@@ -16,26 +16,20 @@ distfiles="https://github.com/imputnet/helium-linux/releases/download/${version}
 checksum="d066dfe1d2a4f3db0a2aa71a315fc4a072832868f65686ae0662d4a0ad8769e6"
 
 do_install() {
-    # 1. Copy the prebuilt binaries straight to /opt/helium 
     vmkdir opt/helium
     cp -a * ${DESTDIR}/opt/helium/
 
-    # Clean up useless appimage junk
     rm -f ${DESTDIR}/opt/helium/helium-wrapper-appimage.sh
 
-    # 2. Patch the variable
     vsed -i 's/CHROME_VERSION_EXTRA="custom"/CHROME_VERSION_EXTRA="Void Linux"/' ${DESTDIR}/opt/helium/helium-wrapper
 
-    # 3. Create the symlink "helium" in /usr/bin
     vmkdir usr/bin
     ln -sf /opt/helium/helium-wrapper ${DESTDIR}/usr/bin/helium
 
-    # 4. Install system integrations
     vinstall helium.desktop 644 usr/share/applications
     vinstall product_logo_256.png 644 usr/share/pixmaps helium.png
     vinstall product_logo_256.png 644 usr/share/icons/hicolor/256x256/apps helium.png
-    
-    # 5. Generate the text file to satisfy license check
+
     echo "License: GPL-3.0-only, BSD-3-Clause" > LICENSE
     vlicense LICENSE
 }

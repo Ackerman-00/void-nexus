@@ -40,17 +40,13 @@ distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.t
 checksum="4f8b1857ed6f14c853e3fb9d8c3b1c2830f033530a1ba646bd5077ea6161ff08"
 
 pre_build() {
-    # 1. Tell the extension registry and credential manager this is a stable build
-    # Without this, Zed cannot authenticate or download extensions.
     printf "stable" > crates/zed/RELEASE_CHANNEL
 
-    # 2. Stable check
     export ZED_UPDATE_EXPLANATION="Updates are handled by Void Nexus"
     export RELEASE_VERSION="${version}"
     export CARGO_PROFILE_RELEASE_DEBUG=0
     export CARGO_PROFILE_RELEASE_STRIP="symbols"
 
-    # Force the mold linker
     export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=mold"
 }
 
@@ -65,10 +61,8 @@ pre_install() {
 post_install() {
     vlicense ${wrksrc}/LICENSE-GPL
 
-    # 1. Drop the icon into the universal pixmaps folder
     vinstall ${wrksrc}/crates/zed/resources/app-icon.png 644 usr/share/pixmaps zed.png
 
-    # 2. Desktop file
     vmkdir usr/share/applications
     cat > "${DESTDIR}/usr/share/applications/zed.desktop" <<EOF
 [Desktop Entry]

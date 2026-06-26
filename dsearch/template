@@ -16,7 +16,6 @@ checksum="d6e34db26bb3a48eae6fb86164bd6745f4539e9ba62064a99adf6a58038253a1"
 
 wrksrc="danksearch-${version}"
 system_accounts="dsearch"
-# This prevents the permission denied error in INSTALL.msg
 make_dirs="/var/lib/dsearch 0750 dsearch dsearch"
 
 post_install() {
