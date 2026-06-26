@@ -463,29 +463,22 @@ jobs:
               # Special case: rootapp AppImage
               # --------------------------------------------------------
               if pkgname == "rootapp":
-                  print("  → Fetching rootapp AppImages...")
-                  x64_url = "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
-                  arm64_url = "https://installer.rootapp.com/installer/Linux/Arm64/Root.AppImage"
+                  print("  → Fetching rootapp AppImage...")
+                  url = "https://installer.rootapp.com/installer/Linux/X64/Root.AppImage"
                   with tempfile.TemporaryDirectory() as tmpdir:
-                      xp = os.path.join(tmpdir, "Root_x64.AppImage")
-                      ap = os.path.join(tmpdir, "Root_arm64.AppImage")
-                      if fetch_file(x64_url, xp) and fetch_file(arm64_url, ap):
-                          nv = extract_appimage_version(xp)
+                      fp = os.path.join(tmpdir, "Root.AppImage")
+                      if fetch_file(url, fp):
+                          nv = extract_appimage_version(fp)
                           if not nv:
                               print("  → ERROR: Could not extract AppImage version")
                               continue
-                          nx, na = sha256_file(xp), sha256_file(ap)
-                          cx = get_arch_checksum(raw, 'x86_64')
-                          ca = get_arch_checksum(raw, 'aarch64')
+                          nh = sha256_file(fp)
                           print(f"  → {curr_ver} → {nv}")
                           if version_is_newer(nv, curr_ver):
                               c = raw
                               c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
                               c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
-                              if cx:
-                                  c = c.replace(cx, nx)
-                              if ca:
-                                  c = c.replace(ca, na)
+                              c = re.sub(r'^checksum="[a-f0-9]+"', f'checksum="{nh}"', c, flags=re.MULTILINE)
                               tpath.write_text(c, encoding='utf-8')
                               changed_packages.append(pkgname)
                               print(f"  → Updated {pkgname}")
