@@ -1,1 +1,2 @@
-brave-browser
+rootapp
+brave-origin-bin
