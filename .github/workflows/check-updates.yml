@@ -648,16 +648,10 @@ jobs:
           git commit -m "chore: auto-update package versions [skip ci]"
           git push origin HEAD
 
-      - name: Trigger builds for updated packages
-        if: steps.scan.outputs.updates_found == 'true'
+      - name: Trigger builds for missing binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ ! -f changed_packages.txt ]; then
-            echo "No changed_packages.txt found."
-            exit 0
-          fi
-
           get_evaluated_version() {
             local tmpl="$1"
             local ver _basever _commit _shortcommit _gitdate
@@ -680,26 +674,47 @@ jobs:
             echo "$ver"
           }
 
+          UPDATED_PKGS=""
+          if [ -f changed_packages.txt ]; then
+            UPDATED_PKGS=$(cat changed_packages.txt)
+          fi
+
           NEEDS_BUILD=""
-          for PKG in $(cat changed_packages.txt); do
-            TMPL="${PKG}/template"
+
+          check_pkg() {
+            local PKG="$1"
+            local TMPL="${PKG}/template"
             if [ ! -f "$TMPL" ]; then
-              echo "⚠ Template for $PKG not found, skipping..."
-              continue
+              return
             fi
 
-            VER=$(get_evaluated_version "$TMPL")
-            REV=$(grep '^revision=' "$TMPL" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
-            BINARY="${PKG}-${VER}_${REV}.x86_64.xbps"
+            local VER=$(get_evaluated_version "$TMPL")
+            local REV=$(grep '^revision=' "$TMPL" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
+            local BINARY="${PKG}-${VER}_${REV}.x86_64.xbps"
 
             echo "→ ${PKG}: checking ${BINARY}..."
             if gh release view rolling --repo ${{ github.repository }} --json assets \
               --jq '.assets[].name' 2>/dev/null | grep -qFx "$BINARY"; then
-              echo "  ✓ Binary exists in releases. Skipping build trigger."
+              echo "  ✓ Binary exists in releases. Skipping."
             else
               echo "  ✗ Binary not found. Will build."
               NEEDS_BUILD="$NEEDS_BUILD $PKG"
             fi
+          }
+
+          # 1. Check newly-updated packages (from auto-updater)
+          for PKG in $UPDATED_PKGS; do
+            check_pkg "$PKG"
+          done
+
+          # 2. Check ALL other packages for missing binaries
+          for DIR in */; do
+            DIRNAME="${DIR%/}"
+            [ "$DIRNAME" = ".github" ] && continue
+            [ -f "${DIRNAME}/template" ] || continue
+            # Skip if already checked above
+            echo "$UPDATED_PKGS" | tr ' ' '\n' | grep -qFx "$DIRNAME" && continue
+            check_pkg "$DIRNAME"
           done
 
           NEEDS_BUILD=$(echo "$NEEDS_BUILD" | xargs)
