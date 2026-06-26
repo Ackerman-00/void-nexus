@@ -1,6 +1,6 @@
 # Template file for 'blender-bin'
 pkgname=blender-bin
-version=5.1.2
+version=5.1.1
 revision=1
 archs="x86_64"
 build_style=fetch
@@ -11,7 +11,7 @@ maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://www.blender.org"
 distfiles="https://download.blender.org/release/Blender${version%.*}/blender-${version}-linux-x64.tar.xz"
-checksum=aaccb355f50183979b698bcce7467103a76261b5fa59f4972295842662a285fb
+checksum=0000000000000000000000000000000000000000000000000000000000000000
 
 do_install() {
     vmkdir opt/blender-bin
