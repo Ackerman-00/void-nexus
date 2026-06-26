@@ -322,18 +322,13 @@ jobs:
                   with tempfile.TemporaryDirectory() as tmpdir:
                       subprocess.run(
                           [appimage_path, '--appimage-extract'],
-                          cwd=tmpdir, capture_output=True, timeout=180
+                          cwd=tmpdir, capture_output=True, timeout=300
                       )
-                      ed = Path(tmpdir) / 'squashfs-root'
-                      if ed.is_dir():
-                          for d in ed.glob('*.desktop'):
-                              c = d.read_text('utf-8', errors='ignore')
-                              m = re.search(r'^X-AppImage-Version=(.+)', c, re.MULTILINE)
-                              if m:
-                                  return m.group(1).strip()
-                              m = re.search(r'^Version=(.+)', c, re.MULTILINE)
-                              if m:
-                                  return m.group(1).strip()
+                      for d in Path(tmpdir).rglob('*.desktop'):
+                          c = d.read_text('utf-8', errors='ignore')
+                          m = re.search(r'^X-AppImage-Version=(.+)', c, re.MULTILINE)
+                          if m:
+                              return m.group(1).strip()
               except Exception:
                   pass
               return None
