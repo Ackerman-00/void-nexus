@@ -319,6 +319,7 @@ jobs:
 
           def extract_appimage_version(appimage_path):
               try:
+                  os.chmod(appimage_path, 0o755)
                   with tempfile.TemporaryDirectory() as tmpdir:
                       subprocess.run(
                           [appimage_path, '--appimage-extract'],

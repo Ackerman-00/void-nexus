@@ -1,6 +1,6 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=0.9.110
+version=0.9.116
 revision=1
 depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core"
 short_desc="Discord alternative for gaming communities and large online groups"
@@ -8,7 +8,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="custom"
 homepage="https://www.rootapp.com"
 distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}-x86_64.AppImage"
-checksum="ac504262c31a5a963ca6907fbe6352d6a7e8f2dbd32e4fbf44ccdcc31ef9fd0f"
+checksum="26e8b3bcbec30629c769efe64602b1b88bbceca0e3e8e6f29104b658bb5080cd"
 nostrip=yes
 
 do_extract() {
