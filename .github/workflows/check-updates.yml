@@ -319,20 +319,10 @@ jobs:
 
           def extract_appimage_version(appimage_path):
               try:
-                  subprocess.run(['chmod', '+x', appimage_path], check=True)
-                  res = subprocess.run(
-                      [appimage_path, '--appimage-version'],
-                      capture_output=True, text=True, timeout=30
-                  )
-                  if res.returncode == 0 and res.stdout.strip():
-                      return res.stdout.strip()
-              except Exception:
-                  pass
-              try:
                   with tempfile.TemporaryDirectory() as tmpdir:
                       subprocess.run(
                           [appimage_path, '--appimage-extract'],
-                          cwd=tmpdir, capture_output=True, timeout=120
+                          cwd=tmpdir, capture_output=True, timeout=180
                       )
                       ed = Path(tmpdir) / 'squashfs-root'
                       if ed.is_dir():
@@ -349,8 +339,8 @@ jobs:
               return None
 
           def get_arch_checksum(template_content, arch):
-              pat = rf'{arch}.*?\n.*?checksum=([a-f0-9]+)'
-              m = re.search(pat, template_content, re.DOTALL)
+              pat = rf'^\s+{arch}\*?\).*?^\s+checksum=([a-f0-9]+)'
+              m = re.search(pat, template_content, re.MULTILINE | re.DOTALL)
               return m.group(1) if m else None
 
           # ---------- Git setup ----------
