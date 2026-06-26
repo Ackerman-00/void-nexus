@@ -200,6 +200,37 @@ jobs:
               except Exception:
                   return None
 
+          def get_latest_blender_version():
+              try:
+                  resp = requests.get('https://download.blender.org/release/', timeout=20)
+                  resp.raise_for_status()
+                  dirs = re.findall(r'href="(Blender\d+\.\d+)/"', resp.text)
+                  if not dirs:
+                      return None
+                  latest_dir = sorted(dirs,
+                      key=lambda x: [int(n) for n in x.replace('Blender', '').split('.')]
+                  )[-1]
+                  resp2 = requests.get(
+                      f'https://download.blender.org/release/{latest_dir}/', timeout=20
+                  )
+                  resp2.raise_for_status()
+                  m = re.search(r'href="(blender-([\d.]+)-linux-x64\.tar\.xz)"', resp2.text)
+                  return m.group(2) if m else None
+              except Exception:
+                  return None
+
+          def get_blender_sha256(version):
+              major_minor = '.'.join(version.split('.')[:2])
+              url = f'https://download.blender.org/release/Blender{major_minor}/blender-{version}.sha256'
+              try:
+                  resp = requests.get(url, timeout=20)
+                  resp.raise_for_status()
+                  for line in resp.text.strip().split('\n'):
+                      if 'linux-x64.tar.xz' in line:
+                          return line.split()[0].strip()
+              except Exception:
+                  return None
+
           def get_pypi_latest(pkgname):
               try:
                   cand = [pkgname]
@@ -481,6 +512,37 @@ jobs:
                               print("  → No update")
                       else:
                           print("  → ERROR: download failed")
+                  continue
+
+              # --------------------------------------------------------
+              # Special case: blender-bin (download.blender.org)
+              # --------------------------------------------------------
+              if pkgname == "blender-bin":
+                  print("  → Checking blender.org for latest version...")
+                  nv = get_latest_blender_version()
+                  if nv and version_is_newer(nv, curr_ver):
+                      nh = get_blender_sha256(nv)
+                      if nh:
+                          major_minor = '.'.join(nv.split('.')[:2])
+                          print(f"  → {curr_ver} → {nv}")
+                          c = raw
+                          c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
+                          c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
+                          c = re.sub(
+                              r'^distfiles=.*',
+                              f'distfiles="https://download.blender.org/release/Blender{major_minor}/blender-{nv}-linux-x64.tar.xz"',
+                              c, flags=re.MULTILINE
+                          )
+                          c = re.sub(r'^checksum="[a-f0-9]+"', f'checksum="{nh}"', c, flags=re.MULTILINE)
+                          tpath.write_text(c, encoding='utf-8')
+                          changed_packages.append(pkgname)
+                          print(f"  → Updated {pkgname}")
+                      else:
+                          print(f"  → Found {nv} but could not get checksum")
+                  elif nv:
+                      print(f"  → No update (latest: {nv})")
+                  else:
+                      print("  → Could not determine latest version")
                   continue
 
               # --------------------------------------------------------
