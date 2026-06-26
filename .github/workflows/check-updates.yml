@@ -10,7 +10,6 @@ permissions:
   actions: write
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   NODE_OPTIONS: '--no-warnings'
 
 jobs:
@@ -23,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -658,10 +657,59 @@ jobs:
             echo "No changed_packages.txt found."
             exit 0
           fi
-          PACKAGES=$(tr '\n' ' ' < changed_packages.txt | xargs)
-          echo "Triggering build for: $PACKAGES"
-          gh workflow run "Build and Deploy Custom XBPS" \
-            --ref "${GITHUB_REF_NAME}" \
-            --repo "${{ github.repository }}" \
-            -f package_list="$PACKAGES" \
-            -f force_rebuild="false"
+
+          get_evaluated_version() {
+            local tmpl="$1"
+            local ver _basever _commit _shortcommit _gitdate
+
+            ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'" | xargs)
+            _basever=$(grep '^_basever=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_basever=//' | tr -d '"'"'" | xargs)
+            _commit=$(grep '^_commit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_commit=//' | tr -d '"'"'" | xargs)
+            _shortcommit=$(grep '^_shortcommit=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_shortcommit=//' | tr -d '"'"'" | xargs)
+            _gitdate=$(grep '^_gitdate=' "$tmpl" 2>/dev/null | head -1 | sed 's/^_gitdate=//' | tr -d '"'"'" | xargs)
+
+            ver="${ver/\$\{_basever\}/$_basever}"
+            ver="${ver/\$\{_commit\}/$_commit}"
+            ver="${ver/\$\{_shortcommit\}/$_shortcommit}"
+            ver="${ver/\$\{_gitdate\}/$_gitdate}"
+            ver="${ver/\$_basever/$_basever}"
+            ver="${ver/\$_commit/$_commit}"
+            ver="${ver/\$_shortcommit/$_shortcommit}"
+            ver="${ver/\$_gitdate/$_gitdate}"
+
+            echo "$ver"
+          }
+
+          NEEDS_BUILD=""
+          for PKG in $(cat changed_packages.txt); do
+            TMPL="${PKG}/template"
+            if [ ! -f "$TMPL" ]; then
+              echo "⚠ Template for $PKG not found, skipping..."
+              continue
+            fi
+
+            VER=$(get_evaluated_version "$TMPL")
+            REV=$(grep '^revision=' "$TMPL" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
+            BINARY="${PKG}-${VER}_${REV}.x86_64.xbps"
+
+            echo "→ ${PKG}: checking ${BINARY}..."
+            if gh release view rolling --repo ${{ github.repository }} --json assets \
+              --jq '.assets[].name' 2>/dev/null | grep -qFx "$BINARY"; then
+              echo "  ✓ Binary exists in releases. Skipping build trigger."
+            else
+              echo "  ✗ Binary not found. Will build."
+              NEEDS_BUILD="$NEEDS_BUILD $PKG"
+            fi
+          done
+
+          NEEDS_BUILD=$(echo "$NEEDS_BUILD" | xargs)
+          if [ -n "$NEEDS_BUILD" ]; then
+            echo "Triggering build for: $NEEDS_BUILD"
+            gh workflow run "Build and Deploy Custom XBPS" \
+              --ref "${GITHUB_REF_NAME}" \
+              --repo "${{ github.repository }}" \
+              -f package_list="$NEEDS_BUILD" \
+              -f force_rebuild="false"
+          else
+            echo "All binaries already exist. No build needed."
+          fi

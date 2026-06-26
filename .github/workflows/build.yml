@@ -13,7 +13,6 @@ on:
         default: false
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   NODE_OPTIONS: '--no-warnings'
 
 jobs:
@@ -81,7 +80,7 @@ jobs:
           chmod +x common/hooks/post-pkg/99-shlibs-inject.sh
 
       - name: Checkout custom templates
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: custom-templates-temp
