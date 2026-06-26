@@ -29,7 +29,7 @@ CXXFLAGS="-std=c++23 -Wno-unused-result"
 hostmakedepends="meson ninja pkg-config git curl"
 
 makedepends="
- wayland-devel wayland-protocols libglvnd-devel libepoxy-devel cairo-devel
+ wayland-devel wayland-protocols MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
  pipewire-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
  polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
