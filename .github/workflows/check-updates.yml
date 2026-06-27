@@ -504,7 +504,7 @@ jobs:
                               c = raw
                               c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
                               c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
-                              c = re.sub(r'^checksum="[a-f0-9]+"', f'checksum="{nh}"', c, flags=re.MULTILINE)
+                          c = re.sub(r'^checksum=[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
                               tpath.write_text(c, encoding='utf-8')
                               changed_packages.append(pkgname)
                               print(f"  → Updated {pkgname}")
