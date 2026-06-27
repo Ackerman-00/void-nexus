@@ -128,7 +128,7 @@ do_build() {
 	ulimit -s unlimited
 	local _jobs=${makejobs#-j}
 	_jobs=${_jobs:-1}
-	[ "$_jobs" -gt 4 ] && _jobs=4
+	[ "$_jobs" -gt 6 ] && _jobs=6
 	make -C build -j${_jobs}
 }
 
