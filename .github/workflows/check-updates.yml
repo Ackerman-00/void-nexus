@@ -529,7 +529,7 @@ jobs:
                           c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
                           c = re.sub(
                               r'^distfiles=.*',
-                              f'distfiles="https://download.blender.org/release/Blender${{version%.*}}/blender-${{version}}-linux-x64.tar.xz"',
+                              'distfiles="https://download.blender.org/release/Blender${version%.*}/blender-${version}-linux-x64.tar.xz"',
                               c, flags=re.MULTILINE
                           )
                           c = re.sub(r'^checksum="[a-f0-9]+"', f'checksum="{nh}"', c, flags=re.MULTILINE)
