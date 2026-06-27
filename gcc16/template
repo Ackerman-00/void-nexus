@@ -42,7 +42,7 @@ esac
 nopie=yes
 lib32disabled=yes
 
-hostmakedepends="tar texinfo perl flex"
+hostmakedepends="tar texinfo perl flex libarchive"
 makedepends="zlib-devel libzstd-devel"
 depends="binutils libgcc16-devel-${version}_${revision}
  libstdc++16-devel-${version}_${revision} libatomic16-devel-${version}_${revision}"
