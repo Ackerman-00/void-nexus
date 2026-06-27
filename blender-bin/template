@@ -6,6 +6,7 @@ archs="x86_64"
 build_style=fetch
 hostmakedepends="tar xz"
 nostrip=yes
+python_version=3
 short_desc="3D graphics creation suite (binary build)"
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
