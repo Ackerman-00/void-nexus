@@ -122,6 +122,7 @@ do_configure() {
 	_args+=" --enable-lto"
 	_args+=" --enable-plugins"
 	_args+=" --enable-linker-build-id"
+	_args+=" --with-tls=gnu2"
 	_args+=" --disable-werror"
 	_args+=" --disable-nls"
 	_args+=" --disable-analyzer"
@@ -164,6 +165,9 @@ do_build() {
 
 do_install() {
 	make -C build DESTDIR=${DESTDIR} install
+
+	# Remove libiberty.a provided by binutils (Gentoo does this too)
+	find ${DESTDIR} -name libiberty.a -delete
 
 	vmkdir usr/bin
 	ln -sf ${_opt_prefix}/bin/gcc ${DESTDIR}/usr/bin/gcc16
