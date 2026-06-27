@@ -47,8 +47,7 @@ makedepends="zlib-devel libzstd-devel"
 depends="binutils libgcc16-devel-${version}_${revision}
  libstdc++16-devel-${version}_${revision} libatomic16-devel-${version}_${revision}"
 checkdepends="dejagnu"
-subpackages="libgcc16 libgcc16-devel libgomp16 libgomp16-devel
- libatomic16 libatomic16-devel libstdc++16 libstdc++16-devel"
+subpackages="libgcc16 libgcc16-devel libgomp16 libgomp16-devel libatomic16 libatomic16-devel libstdc++16 libstdc++16-devel"
 
 _have_libquadmath=yes
 _triplet="x86_64-unknown-linux-gnu"

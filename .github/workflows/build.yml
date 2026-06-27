@@ -109,13 +109,23 @@ jobs:
         run: |
           set -e
           # For templates that define subpackages, create srcpkgs/ symlinks so
-          # xbps-src can resolve subpackage dependencies (see $subpackages line).
+          # xbps-src can resolve subpackage dependencies.
           find srcpkgs -maxdepth 2 -name template | while read -r tmpl; do
-            subpkgs=$(grep '^subpackages=' "$tmpl" 2>/dev/null | head -1 || true)
+            subpkgs=$(sed -n '
+              /^subpackages=/ {
+                :a
+                /"$/! {
+                  N
+                  s/\n[[:space:]]*/ /
+                  ta
+                }
+                s/^subpackages="//; s/"$//
+                p
+              }
+            ' "$tmpl" 2>/dev/null || true)
             if [ -n "$subpkgs" ]; then
               pkg=$(basename "$(dirname "$tmpl")")
-              # Extract subpackage names, removing -version suffixes and quotes
-              for sub in $(echo "$subpkgs" | sed "s/^subpackages=['\"]//; s/['\" ]*$//" | tr '"' ' '); do
+              for sub in $subpkgs; do
                 [ -n "$sub" ] && [ ! -e "srcpkgs/$sub" ] && ln -sf "$pkg" "srcpkgs/$sub"
               done
             fi
