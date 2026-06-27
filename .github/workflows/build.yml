@@ -107,10 +107,10 @@ jobs:
           chmod +x common/hooks/post-pkg/99-shlibs-inject.sh
 
       - name: Checkout custom templates
-        uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: custom-templates-temp
+        run: |
+          git clone --depth=1 \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git \
+            custom-templates-temp
 
       - name: Parse Package List
         run: |
