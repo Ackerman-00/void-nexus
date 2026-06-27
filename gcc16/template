@@ -21,7 +21,7 @@ _opt_prefix="/opt/gcc16"
 short_desc="GNU Compiler Collection 16 (parallel install)"
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 homepage="http://gcc.gnu.org"
-license="GFDL-1.2-or-later, GPL-3.0-or-later, LGPL-2.1-or-later"
+license="GFDL-1.2-or-later AND GPL-3.0-or-later AND LGPL-2.1-or-later"
 case "${version}" in
 	*+*) distfiles="https://gcc.gnu.org/pub/gcc/snapshots/${_majorver}-${version#*+}/gcc-${_majorver}-${version#*+}.tar.xz" ;;
 	*) distfiles="${GNU_SITE}/gcc/gcc-${version}/gcc-${version}.tar.xz" ;;
@@ -86,7 +86,7 @@ post_patch() {
 	done
 	# Fix ac_cpp for configure: avoid warnings-as-errors in C++ preprocessor test
 	sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {gcc,libiberty}/configure
-	# Bypass fixincludes (Gentoo approach: fixinc.sh is a no-op by default)
+	# Belt-and-suspenders: configure flag + Makefile override like Gentoo
 	sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 	# ISL C++17 compat: silence C++17 deprecation
 	sed -i 's/HAVE_CXX17=1/HAVE_CXX17=0/' isl/configure
@@ -107,6 +107,8 @@ do_configure() {
 	_args+=" --enable-secureplt"
 	_args+=" --disable-silent-rules"
 	_args+=" --disable-dependency-tracking"
+	_args+=" --disable-fixincludes"
+	_args+=" --disable-libunwind-exceptions"
 	_args+=" --enable-threads=posix"
 	_args+=" --enable-__cxa_atexit"
 	_args+=" --enable-clocale=gnu"
