@@ -59,7 +59,6 @@ sudo xbps-install <package-name>
 | `rootapp` | Discord alternative for gaming communities | Stable |
 | `dank-material-shell` | Material Design shell for niri / Hyprland | Stable |
 | `noctalia-v5` | Lightweight Wayland shell built on Wayland and OpenGL ES | Git |
-| `noctalia-qs` | Quickshell fork with extended audio support | Stable |
 | `niri-git` | Scrollable-tiling Wayland compositor | Git |
 | `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git |
 
