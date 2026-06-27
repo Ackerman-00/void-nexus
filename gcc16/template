@@ -96,6 +96,7 @@ do_configure() {
 	_args+=" --enable-linker-build-id"
 	_args+=" --disable-werror"
 	_args+=" --disable-nls"
+	_args+=" --disable-analyzer"
 	_args+=" --disable-libsanitizer"
 	_args+=" --disable-libitm"
 	_args+=" --disable-libvtv"
@@ -128,7 +129,7 @@ do_build() {
 	ulimit -s unlimited
 	local _jobs=${makejobs#-j}
 	_jobs=${_jobs:-1}
-	[ "$_jobs" -gt 6 ] && _jobs=6
+	[ "$_jobs" -gt 4 ] && _jobs=4
 	make -C build -j${_jobs}
 }
 
