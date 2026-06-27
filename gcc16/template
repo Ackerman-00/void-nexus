@@ -122,6 +122,7 @@ do_configure() {
 }
 
 do_build() {
+	ulimit -s unlimited
 	make -C build ${makejobs}
 }
 
