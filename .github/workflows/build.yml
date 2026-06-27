@@ -72,6 +72,7 @@ jobs:
       - name: Clone void-packages
         run: |
           set -e
+          rm -rf .[!.]* * 2>/dev/null || true
           git clone --depth=1 https://github.com/void-linux/void-packages.git .
           ln -s / masterdir
           echo "x86_64" > /.xbps_chroot_init
