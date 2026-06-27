@@ -1,2 +1,1 @@
-rootapp
-brave-origin-bin
+noctalia-v5
