@@ -1,12 +1,13 @@
 # Template file for 'gcc16'
+# Based on Gentoo's sys-devel/gcc-16.1.1_p20260620 ebuild + patchset v3
+# Ref: https://gitweb.gentoo.org/repo/gentoo.git/plain/sys-devel/gcc/gcc-16.1.1_p20260620.ebuild
+# Patchset: https://distfiles.gentoo.org/pub/proj/toolchain/gcc/patches/gcc-16.1.0-patches-3.tar.xz
 
 pkgname=gcc16
 version=16.1.1+20260502
-revision=1
+revision=2
 archs="x86_64*"
-# nobootstrap: parallel install doesn't need 3-stage self-verification.
-# Stage3 fails on gimple-match-1.cc during var-tracking pass (memory exhaustion
-# compiling auto-generated 20K-line function at -O2 -fchecking=1).
+# nobootstrap: parallel install doesn't need 3-stage self-verification
 nobootstrap=yes
 _patchver="${version%+*}"
 _minorver="${version%.*}"
@@ -15,6 +16,7 @@ _gmp_version=6.3.0
 _mpfr_version=4.2.2
 _mpc_version=1.3.1
 _isl_version=0.27
+_gcc_patchver=16.1.0-patches-3
 _opt_prefix="/opt/gcc16"
 short_desc="GNU Compiler Collection 16 (parallel install)"
 maintainer="Ackerman <https://github.com/Ackerman-00>"
@@ -28,14 +30,17 @@ distfiles+="
  ${GNU_SITE}/gmp/gmp-${_gmp_version}.tar.xz
  ${GNU_SITE}/mpfr/mpfr-${_mpfr_version}.tar.xz
  ${GNU_SITE}/mpc/mpc-${_mpc_version}.tar.gz
- ${SOURCEFORGE_SITE}/libisl/isl-${_isl_version}.tar.bz2"
+ ${SOURCEFORGE_SITE}/libisl/isl-${_isl_version}.tar.bz2
+ https://distfiles.gentoo.org/pub/proj/toolchain/gcc/patches/gcc-${_gcc_patchver}.tar.xz"
 checksum="d78e2e56ee6f89e40dc742ae0c8a716ad4eb4637bc57bd49f9dec48ce9753283
  a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898
  b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
  ab642492f5cf882b74aa0cb730cd410a81edcdbec895183ce930e706c1c759b8
- 626335529331f7c89fec493de929e2e92fb3d8cc860fc7af554e0518ee0029ee"
+ 626335529331f7c89fec493de929e2e92fb3d8cc860fc7af554e0518ee0029ee
+ 108897dc58711f94489d7245f93780f197b3582108e6cac365496c31b75fb7b1"
 skip_extraction="gmp-${_gmp_version}.tar.xz mpfr-${_mpfr_version}.tar.xz
- mpc-${_mpc_version}.tar.gz isl-${_isl_version}.tar.bz2"
+ mpc-${_mpc_version}.tar.gz isl-${_isl_version}.tar.bz2
+ gcc-${_gcc_patchver}.tar.xz"
 
 case "$XBPS_DISTFILES_FALLBACK" in
 	*"repo-default.voidlinux.org/distfiles"*) ;;
@@ -55,7 +60,7 @@ subpackages="libgcc16 libgomp16 libgomp16-devel libgcc16-devel libatomic16 libat
 _triplet="x86_64-unknown-linux-gnu"
 
 post_extract() {
-	mkdir -p gmp mpfr mpc isl
+	mkdir -p gmp mpfr mpc isl gentoo-patches
 	tar -x --strip-components=1 -C gmp \
 		--no-same-permissions --no-same-owner \
 		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/gmp-${_gmp_version}.tar.xz"
@@ -68,11 +73,22 @@ post_extract() {
 	tar -x --strip-components=1 -C isl \
 		--no-same-permissions --no-same-owner \
 		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/isl-${_isl_version}.tar.bz2"
+	tar -xJ --strip-components=1 -C gentoo-patches \
+		--no-same-permissions --no-same-owner \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/gcc-${_gcc_patchver}.tar.xz"
 }
 
 post_patch() {
+	# Apply Gentoo patchset in numerical order
+	for f in gentoo-patches/*.patch; do
+		[ -f "$f" ] || continue
+		patch -p1 -i "$f"
+	done
+	# Fix ac_cpp for configure: avoid warnings-as-errors in C++ preprocessor test
 	sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {gcc,libiberty}/configure
+	# Bypass fixincludes (Gentoo approach: fixinc.sh is a no-op by default)
 	sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+	# ISL C++17 compat: silence C++17 deprecation
 	sed -i 's/HAVE_CXX17=1/HAVE_CXX17=0/' isl/configure
 }
 
@@ -86,11 +102,20 @@ do_configure() {
 	_args+=" --mandir=${_opt_prefix}/share/man"
 	_args+=" --infodir=${_opt_prefix}/share/info"
 	_args+=" --build=${_triplet}"
+	# Gentoo standard flags (toolchain.eclass)
+	_args+=" --enable-obsolete"
+	_args+=" --enable-secureplt"
+	_args+=" --disable-silent-rules"
+	_args+=" --disable-dependency-tracking"
 	_args+=" --enable-threads=posix"
 	_args+=" --enable-__cxa_atexit"
+	_args+=" --enable-clocale=gnu"
+	_args+=" --enable-libstdcxx-time=yes"
+	# Disable features we don't need / would cause memory issues
 	_args+=" --disable-multilib"
 	_args+=" --disable-bootstrap"
 	_args+=" --with-system-zlib"
+	_args+=" --with-zstd"
 	_args+=" --enable-shared"
 	_args+=" --enable-lto"
 	_args+=" --enable-plugins"
@@ -102,7 +127,6 @@ do_configure() {
 	_args+=" --disable-libitm"
 	_args+=" --disable-libvtv"
 	_args+=" --enable-gnu-unique-object"
-	_args+=" --enable-vtable-verify"
 	_args+=" --enable-default-pie"
 	_args+=" --enable-default-ssp"
 	_args+=" --enable-checking=release"
@@ -112,6 +136,8 @@ do_configure() {
 	_args+=" --disable-sjlj-exceptions"
 	_args+=" --disable-target-libiberty"
 	_args+=" --disable-libssp"
+	_args+=" --with-pkgversion=\"Void GCC ${version} Gentoo patches-3\""
+	_args+=" --with-bugurl=\"https://github.com/void-linux/void-packages/issues\""
 	_args+=" --enable-languages=${_langs}"
 
 	export CFLAGS="${CFLAGS/-D_FORTIFY_SOURCE=2/}"
