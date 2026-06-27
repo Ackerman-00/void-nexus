@@ -1,1 +1,2 @@
-blender-bin
+noctalia-v5
+zen-browser
