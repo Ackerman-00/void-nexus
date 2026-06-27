@@ -53,10 +53,14 @@ _have_libquadmath=yes
 _triplet="x86_64-unknown-linux-gnu"
 
 post_extract() {
-	vsrcextract -C gmp gmp-${_gmp_version}.tar.xz
-	vsrcextract -C mpfr mpfr-${_mpfr_version}.tar.xz
-	vsrcextract -C mpc mpc-${_mpc_version}.tar.gz
-	vsrcextract -C isl isl-${_isl_version}.tar.bz2
+	tar -x --strip-components=1 -C gmp \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/gmp-${_gmp_version}.tar.xz"
+	tar -x --strip-components=1 -C mpfr \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/mpfr-${_mpfr_version}.tar.xz"
+	tar -x --strip-components=1 -C mpc \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/mpc-${_mpc_version}.tar.gz"
+	tar -x --strip-components=1 -C isl \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/isl-${_isl_version}.tar.bz2"
 }
 
 post_patch() {
