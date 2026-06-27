@@ -42,14 +42,13 @@ esac
 nopie=yes
 lib32disabled=yes
 
-hostmakedepends="tar texinfo perl flex libarchive"
+hostmakedepends="tar texinfo perl flex"
 makedepends="zlib-devel libzstd-devel"
 depends="binutils libgcc16-devel-${version}_${revision}
  libstdc++16-devel-${version}_${revision} libatomic16-devel-${version}_${revision}"
 checkdepends="dejagnu"
 subpackages="libgcc16 libgcc16-devel libgomp16 libgomp16-devel libatomic16 libatomic16-devel libstdc++16 libstdc++16-devel"
 
-_have_libquadmath=yes
 _triplet="x86_64-unknown-linux-gnu"
 
 post_extract() {
@@ -77,7 +76,7 @@ post_patch() {
 do_configure() {
 	local _langs _args
 
-	_langs="c,c++,fortran,lto,objc,obj-c++"
+	_langs="c,c++,lto"
 	_args=" --prefix=${_opt_prefix}"
 	_args+=" --libexecdir=${_opt_prefix}/libexec"
 	_args+=" --libdir=${_opt_prefix}/lib64"
@@ -94,7 +93,11 @@ do_configure() {
 	_args+=" --enable-linker-build-id"
 	_args+=" --disable-werror"
 	_args+=" --disable-nls"
-	_args+=" --enable-libsanitizer"
+	_args+=" --disable-libsanitizer"
+	_args+=" --disable-libitm"
+	_args+=" --disable-libvtv"
+	_args+=" --enable-gnu-unique-object"
+	_args+=" --enable-vtable-verify"
 	_args+=" --enable-default-pie"
 	_args+=" --enable-default-ssp"
 	_args+=" --enable-checking=release"
@@ -129,12 +132,34 @@ do_install() {
 	ln -sf ${_opt_prefix}/bin/gcc ${DESTDIR}/usr/bin/gcc16
 	ln -sf ${_opt_prefix}/bin/g++ ${DESTDIR}/usr/bin/g++16
 	ln -sf ${_opt_prefix}/bin/cpp ${DESTDIR}/usr/bin/cpp16
-	ln -sf ${_opt_prefix}/bin/gfortran ${DESTDIR}/usr/bin/gfortran16
 	ln -sf ${_opt_prefix}/bin/gcc-ar ${DESTDIR}/usr/bin/gcc16-ar
 	ln -sf ${_opt_prefix}/bin/gcc-nm ${DESTDIR}/usr/bin/gcc16-nm
 	ln -sf ${_opt_prefix}/bin/gcc-ranlib ${DESTDIR}/usr/bin/gcc16-ranlib
 	ln -sf gcc16 ${DESTDIR}/usr/bin/cc16
 	ln -sf g++16 ${DESTDIR}/usr/bin/c++16
+	# Make version a symlink of major version to make all versions
+	# from the same series work automagically.
+	mv ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_patchver} \
+		${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}
+	ln -sfr ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver} \
+		${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_patchver}
+
+	# Ditto for c++ headers.
+	mv ${DESTDIR}${_opt_prefix}/include/c++/${_patchver} \
+		${DESTDIR}${_opt_prefix}/include/c++/${_minorver}
+	ln -sfr ${DESTDIR}${_opt_prefix}/include/c++/${_minorver} \
+		${DESTDIR}${_opt_prefix}/include/c++/${_patchver}
+
+	# lto plugin symlink
+	vmkdir ${_opt_prefix}/lib64/bfd-plugins
+	ln -sfr ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_patchver}/liblto_plugin.so \
+		${DESTDIR}${_opt_prefix}/lib64/bfd-plugins
+
+	# rpcgen wants /lib/cpp
+	ln -sf ${_opt_prefix}/bin/cpp ${DESTDIR}/usr/lib/cpp
+
+	# Remove "fixed" header that overrides system kernel headers
+	rm -vf ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include-fixed/bits/statx.h
 
 	rm -f ${DESTDIR}/usr/lib/libffi*
 	rm -f ${DESTDIR}/usr/share/man/man3/ffi*
@@ -155,6 +180,9 @@ libgcc16-devel_package() {
 	depends="libgcc16-${version}_${revision}"
 	short_desc+=" - GCC library - development files"
 	pkg_install() {
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include-fixed"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/plugin"
 		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/*.o"
 		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/*.a"
 	}
@@ -168,6 +196,7 @@ libgomp16-devel_package() {
 		vmove "${_opt_prefix}/lib64/libgomp.a"
 		vmove "${_opt_prefix}/lib64/libgomp.spec"
 		vmove "${_opt_prefix}/share/info/libgomp.info"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include/omp.h"
 	}
 }
 
