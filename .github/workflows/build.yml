@@ -108,25 +108,33 @@ jobs:
       - name: Create subpackage symlinks
         run: |
           set -e
-          # For templates that define subpackages, create srcpkgs/ symlinks so
-          # xbps-src can resolve subpackage dependencies.
-          find srcpkgs -maxdepth 2 -name template | while read -r tmpl; do
-            subpkgs=$(sed -n '
+          mkdir -p srcpkgs
+          # Only process templates from our repo — avoid void-packages' own templates
+          # whose subpackages already have symlinks in the upstream repo.
+          find custom-templates-temp -maxdepth 2 -name template | while read -r tmpl; do
+            pkg_name=$(basename "$(dirname "$tmpl")")
+            [ "$pkg_name" = ".github" ] && continue
+            [ ! -d "srcpkgs/$pkg_name" ] && continue
+            # Read full subpackages= value, joining continuation lines
+            subpkgs=$(awk '
               /^subpackages=/ {
-                :a
-                /"$/! {
-                  N
-                  s/\n[[:space:]]*/ /
-                  ta
+                val = $0
+                while (getline nxt > 0) {
+                  if (nxt ~ /^[[:space:]]+[^[:space:]]/) {
+                    val = val nxt
+                  } else {
+                    break
+                  }
                 }
-                s/^subpackages="//; s/"$//
-                p
+                gsub(/"/, "", val)
+                gsub(/^subpackages=/, "", val)
+                print val
+                exit
               }
             ' "$tmpl" 2>/dev/null || true)
             if [ -n "$subpkgs" ]; then
-              pkg=$(basename "$(dirname "$tmpl")")
               for sub in $subpkgs; do
-                [ -n "$sub" ] && [ ! -e "srcpkgs/$sub" ] && ln -sf "$pkg" "srcpkgs/$sub"
+                [ -n "$sub" ] && [ ! -e "srcpkgs/$sub" ] && ln -sf "$pkg_name" "srcpkgs/$sub"
               done
             fi
           done
