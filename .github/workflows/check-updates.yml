@@ -523,14 +523,13 @@ jobs:
                   if nv and version_is_newer(nv, curr_ver):
                       nh = get_blender_sha256(nv)
                       if nh:
-                          major_minor = '.'.join(nv.split('.')[:2])
                           print(f"  → {curr_ver} → {nv}")
                           c = raw
                           c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
                           c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
                           c = re.sub(
                               r'^distfiles=.*',
-                              f'distfiles="https://download.blender.org/release/Blender{major_minor}/blender-{nv}-linux-x64.tar.xz"',
+                              f'distfiles="https://download.blender.org/release/Blender${{version%.*}}/blender-${{version}}-linux-x64.tar.xz"',
                               c, flags=re.MULTILINE
                           )
                           c = re.sub(r'^checksum="[a-f0-9]+"', f'checksum="{nh}"', c, flags=re.MULTILINE)
