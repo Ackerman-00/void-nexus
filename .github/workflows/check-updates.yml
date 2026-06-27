@@ -401,6 +401,10 @@ jobs:
               tmpl_vars = extract_template_vars(raw)
               print(f"Scanning {pkgname}...")
 
+              if pkgname in ("gcc16",):
+                  print(f"  → Skipping {pkgname} (manual build only)")
+                  continue
+
               new_sha, new_commit_date = None, None
               new_release_ver = None
 

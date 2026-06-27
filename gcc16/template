@@ -1,0 +1,203 @@
+# Template file for 'gcc16'
+
+pkgname=gcc16
+version=16.1.1+20260502
+revision=1
+archs="x86_64*"
+bootstrap=yes
+_patchver="${version%+*}"
+_minorver="${version%.*}"
+_majorver="${_minorver%.*}"
+_gmp_version=6.3.0
+_mpfr_version=4.2.2
+_mpc_version=1.3.1
+_isl_version=0.27
+_opt_prefix="/opt/gcc16"
+short_desc="GNU Compiler Collection 16 (parallel install)"
+maintainer="Ackerman <https://github.com/Ackerman-00>"
+homepage="http://gcc.gnu.org"
+license="GFDL-1.2-or-later, GPL-3.0-or-later, LGPL-2.1-or-later"
+case "${version}" in
+	*+*) distfiles="https://gcc.gnu.org/pub/gcc/snapshots/${_majorver}-${version#*+}/gcc-${_majorver}-${version#*+}.tar.xz" ;;
+	*) distfiles="${GNU_SITE}/gcc/gcc-${version}/gcc-${version}.tar.xz" ;;
+esac
+distfiles+="
+ ${GNU_SITE}/gmp/gmp-${_gmp_version}.tar.xz
+ ${GNU_SITE}/mpfr/mpfr-${_mpfr_version}.tar.xz
+ ${GNU_SITE}/mpc/mpc-${_mpc_version}.tar.gz
+ ${SOURCEFORGE_SITE}/libisl/isl-${_isl_version}.tar.bz2"
+checksum="d78e2e56ee6f89e40dc742ae0c8a716ad4eb4637bc57bd49f9dec48ce9753283
+ a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898
+ b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
+ ab642492f5cf882b74aa0cb730cd410a81edcdbec895183ce930e706c1c759b8
+ 626335529331f7c89fec493de929e2e92fb3d8cc860fc7af554e0518ee0029ee"
+skip_extraction="gmp-${_gmp_version}.tar.xz mpfr-${_mpfr_version}.tar.xz
+ mpc-${_mpc_version}.tar.gz isl-${_isl_version}.tar.bz2"
+
+case "$XBPS_DISTFILES_FALLBACK" in
+	*"repo-default.voidlinux.org/distfiles"*) ;;
+	*) XBPS_DISTFILES_FALLBACK+=" https://repo-default.voidlinux.org/distfiles" ;;
+esac
+
+nopie=yes
+lib32disabled=yes
+
+hostmakedepends="tar texinfo perl flex"
+makedepends="zlib-devel libzstd-devel"
+depends="binutils"
+checkdepends="dejagnu"
+subpackages="libgcc16 libgcc16-devel libgomp16 libgomp16-devel
+ libatomic16 libatomic16-devel libstdc++16 libstdc++16-devel"
+
+_have_libquadmath=yes
+_triplet="x86_64-unknown-linux-gnu"
+
+post_extract() {
+	vsrcextract -C gmp gmp-${_gmp_version}.tar.xz
+	vsrcextract -C mpfr mpfr-${_mpfr_version}.tar.xz
+	vsrcextract -C mpc mpc-${_mpc_version}.tar.gz
+	vsrcextract -C isl isl-${_isl_version}.tar.bz2
+}
+
+post_patch() {
+	sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {gcc,libiberty}/configure
+	sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+	sed -i 's/HAVE_CXX17=1/HAVE_CXX17=0/' isl/configure
+}
+
+do_configure() {
+	local _langs _args
+
+	_langs="c,c++,fortran,lto,objc,obj-c++"
+	_args=" --prefix=${_opt_prefix}"
+	_args+=" --libexecdir=${_opt_prefix}/libexec"
+	_args+=" --libdir=${_opt_prefix}/lib64"
+	_args+=" --mandir=${_opt_prefix}/share/man"
+	_args+=" --infodir=${_opt_prefix}/share/info"
+	_args+=" --build=${_triplet}"
+	_args+=" --enable-threads=posix"
+	_args+=" --enable-__cxa_atexit"
+	_args+=" --disable-multilib"
+	_args+=" --with-system-zlib"
+	_args+=" --enable-shared"
+	_args+=" --enable-lto"
+	_args+=" --enable-plugins"
+	_args+=" --enable-linker-build-id"
+	_args+=" --disable-werror"
+	_args+=" --disable-nls"
+	_args+=" --enable-libsanitizer"
+	_args+=" --enable-default-pie"
+	_args+=" --enable-default-ssp"
+	_args+=" --enable-checking=release"
+	_args+=" --disable-libstdcxx-pch"
+	_args+=" --with-isl"
+	_args+=" --with-linker-hash-style=gnu"
+	_args+=" --disable-sjlj-exceptions"
+	_args+=" --disable-target-libiberty"
+	_args+=" --disable-libssp"
+	_args+=" --enable-languages=${_langs}"
+
+	export CFLAGS="${CFLAGS/-D_FORTIFY_SOURCE=2/}"
+	export CXXFLAGS="${CXXFLAGS/-D_FORTIFY_SOURCE=2/}"
+	export CFLAGS="${CFLAGS//-fno-PIE/}"
+	export CXXFLAGS="${CXXFLAGS//-fno-PIE/}"
+	export LDFLAGS="${LDFLAGS//-no-pie/}"
+
+	mkdir -p build
+	cd build
+	CONFIG_SHELL=/bin/bash \
+		${wrksrc}/configure ${_args}
+}
+
+do_build() {
+	make -C build ${makejobs}
+}
+
+do_install() {
+	make -C build DESTDIR=${DESTDIR} install
+
+	vmkdir usr/bin
+	ln -sf ${_opt_prefix}/bin/gcc ${DESTDIR}/usr/bin/gcc16
+	ln -sf ${_opt_prefix}/bin/g++ ${DESTDIR}/usr/bin/g++16
+	ln -sf ${_opt_prefix}/bin/cpp ${DESTDIR}/usr/bin/cpp16
+	ln -sf ${_opt_prefix}/bin/gfortran ${DESTDIR}/usr/bin/gfortran16
+	ln -sf ${_opt_prefix}/bin/gcc-ar ${DESTDIR}/usr/bin/gcc16-ar
+	ln -sf ${_opt_prefix}/bin/gcc-nm ${DESTDIR}/usr/bin/gcc16-nm
+	ln -sf ${_opt_prefix}/bin/gcc-ranlib ${DESTDIR}/usr/bin/gcc16-ranlib
+	ln -sf gcc16 ${DESTDIR}/usr/bin/cc16
+	ln -sf g++16 ${DESTDIR}/usr/bin/c++16
+
+	rm -f ${DESTDIR}/usr/lib/libffi*
+	rm -f ${DESTDIR}/usr/share/man/man3/ffi*
+	rm -f ${DESTDIR}${_opt_prefix}/lib64/libffi*
+	mkdir -p ${DESTDIR}/usr/share/gdb/auto-load/opt/gcc16/lib64
+	mv ${DESTDIR}${_opt_prefix}/lib64/*.py ${DESTDIR}/usr/share/gdb/auto-load/opt/gcc16/lib64/
+}
+
+libgcc16_package() {
+	short_desc+=" - GCC library"
+	noverifyrdeps=yes
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libgcc_s.so*"
+	}
+}
+
+libgcc16-devel_package() {
+	depends="libgcc16-${version}_${revision}"
+	short_desc+=" - GCC library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/*.o"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/*.a"
+	}
+}
+
+libgomp16-devel_package() {
+	depends="libgomp16>=${_minorver}"
+	short_desc+=" - OpenMP v4.0 library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libgomp.so"
+		vmove "${_opt_prefix}/lib64/libgomp.a"
+		vmove "${_opt_prefix}/lib64/libgomp.spec"
+		vmove "${_opt_prefix}/share/info/libgomp.info"
+	}
+}
+
+libgomp16_package() {
+	short_desc+=" - OpenMP v4.0 library"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libgomp*.so.*"
+	}
+}
+
+libatomic16-devel_package() {
+	depends="libatomic16>=${_minorver}"
+	short_desc+=" - Atomics library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libatomic.a"
+		vmove "${_opt_prefix}/lib64/libatomic.so"
+	}
+}
+
+libatomic16_package() {
+	short_desc+=" - Atomics library"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libatomic.so.*"
+	}
+}
+
+libstdc++16-devel_package() {
+	depends="libstdc++16>=${_minorver}"
+	short_desc+=" - Standard C++ Library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libstdc++*.a"
+		vmove "${_opt_prefix}/lib64/libsupc++.a"
+		vmove "${_opt_prefix}/include/c++"
+	}
+}
+
+libstdc++16_package() {
+	short_desc+=" - Standard C++ Library"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libstdc++.so*"
+	}
+}
