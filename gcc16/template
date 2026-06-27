@@ -55,12 +55,16 @@ _triplet="x86_64-unknown-linux-gnu"
 post_extract() {
 	mkdir -p gmp mpfr mpc isl
 	tar -x --strip-components=1 -C gmp \
+		--no-same-permissions --no-same-owner \
 		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/gmp-${_gmp_version}.tar.xz"
 	tar -x --strip-components=1 -C mpfr \
+		--no-same-permissions --no-same-owner \
 		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/mpfr-${_mpfr_version}.tar.xz"
 	tar -x --strip-components=1 -C mpc \
+		--no-same-permissions --no-same-owner \
 		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/mpc-${_mpc_version}.tar.gz"
 	tar -x --strip-components=1 -C isl \
+		--no-same-permissions --no-same-owner \
 		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/isl-${_isl_version}.tar.bz2"
 }
 
