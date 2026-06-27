@@ -4,7 +4,10 @@ pkgname=gcc16
 version=16.1.1+20260502
 revision=1
 archs="x86_64*"
-bootstrap=yes
+# nobootstrap: parallel install doesn't need 3-stage self-verification.
+# Stage3 fails on gimple-match-1.cc during var-tracking pass (memory exhaustion
+# compiling auto-generated 20K-line function at -O2 -fchecking=1).
+nobootstrap=yes
 _patchver="${version%+*}"
 _minorver="${version%.*}"
 _majorver="${_minorver%.*}"
