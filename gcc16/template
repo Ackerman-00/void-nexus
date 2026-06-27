@@ -89,6 +89,7 @@ do_configure() {
 	_args+=" --enable-threads=posix"
 	_args+=" --enable-__cxa_atexit"
 	_args+=" --disable-multilib"
+	_args+=" --disable-bootstrap"
 	_args+=" --with-system-zlib"
 	_args+=" --enable-shared"
 	_args+=" --enable-lto"
