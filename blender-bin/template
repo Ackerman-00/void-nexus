@@ -11,7 +11,7 @@ maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://www.blender.org"
 distfiles="https://download.blender.org/release/Blender5.1/blender-5.1.2-linux-x64.tar.xz"
-checksum=0000000000000000000000000000000000000000000000000000000000000000
+checksum="0000000000000000000000000000000000000000000000000000000000000000"
 
 do_install() {
     vmkdir opt/blender-bin
