@@ -214,8 +214,8 @@ jobs:
                       f'https://download.blender.org/release/{latest_dir}/', timeout=20
                   )
                   resp2.raise_for_status()
-                  m = re.search(r'href="(blender-([\d.]+)-linux-x64\.tar\.xz)"', resp2.text)
-                  return m.group(2) if m else None
+                  versions = re.findall(r'href="blender-([\d.]+)-linux-x64\.tar\.xz"', resp2.text)
+                  return sorted(versions, key=lambda v: [int(x) for x in v.split('.')])[-1] if versions else None
               except Exception:
                   return None
 
