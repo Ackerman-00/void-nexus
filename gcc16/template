@@ -44,7 +44,8 @@ lib32disabled=yes
 
 hostmakedepends="tar texinfo perl flex"
 makedepends="zlib-devel libzstd-devel"
-depends="binutils"
+depends="binutils libgcc16-devel-${version}_${revision}
+ libstdc++16-devel-${version}_${revision} libatomic16-devel-${version}_${revision}"
 checkdepends="dejagnu"
 subpackages="libgcc16 libgcc16-devel libgomp16 libgomp16-devel
  libatomic16 libatomic16-devel libstdc++16 libstdc++16-devel"
@@ -164,6 +165,7 @@ libgomp16-devel_package() {
 
 libgomp16_package() {
 	short_desc+=" - OpenMP v4.0 library"
+	noverifyrdeps=yes
 	pkg_install() {
 		vmove "${_opt_prefix}/lib64/libgomp*.so.*"
 	}
@@ -180,6 +182,7 @@ libatomic16-devel_package() {
 
 libatomic16_package() {
 	short_desc+=" - Atomics library"
+	noverifyrdeps=yes
 	pkg_install() {
 		vmove "${_opt_prefix}/lib64/libatomic.so.*"
 	}
@@ -197,6 +200,7 @@ libstdc++16-devel_package() {
 
 libstdc++16_package() {
 	short_desc+=" - Standard C++ Library"
+	noverifyrdeps=yes
 	pkg_install() {
 		vmove "${_opt_prefix}/lib64/libstdc++.so*"
 	}
