@@ -379,7 +379,10 @@ jobs:
           # ---------- Discover templates in srcpkgs/ ----------
           templates = []
           for d in os.listdir('srcpkgs'):
-              tp = os.path.join('srcpkgs', d, 'template')
+              dp = os.path.join('srcpkgs', d)
+              if os.path.islink(dp):
+                  continue
+              tp = os.path.join(dp, 'template')
               if os.path.isfile(tp):
                   templates.append(Path(tp))
 
@@ -775,6 +778,7 @@ jobs:
           # 2. Check ALL other packages for missing binaries
           for DIR in srcpkgs/*/; do
             DIRNAME="${DIR%/}"
+            [ -L "$DIRNAME" ] && continue
             PKGNAME=$(basename "$DIRNAME")
             [ "$PKGNAME" = ".github" ] && continue
             [ "$PKGNAME" = "gcc16" ] && continue
@@ -787,7 +791,7 @@ jobs:
           NEEDS_BUILD=$(echo "$NEEDS_BUILD" | xargs)
           if [ -n "$NEEDS_BUILD" ]; then
             echo "Triggering build for: $NEEDS_BUILD"
-            gh workflow run "Build and Deploy Custom XBPS" \
+            gh workflow run "Build Nexus XBPS" \
               --ref "${GITHUB_REF_NAME}" \
               --repo "${{ github.repository }}" \
               -f package_list="$NEEDS_BUILD" \
