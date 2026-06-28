@@ -25,22 +25,10 @@ echo 'repository=https://github.com/Ackerman-00/void-nexus/releases/download/rol
   | sudo tee /etc/xbps.d/10-nexus.conf
 ```
 
-**② Trust the signing key**
-
-Pre-download the key so sync is silent:
+**② Sync and install**
 
 ```bash
-sudo mkdir -p /var/db/xbps/keys && sudo curl -L \
-  -o /var/db/xbps/keys/b9:f2:38:0f:3f:a7:76:be:5f:ad:01:b9:ef:b5:55:77.plist \
-  https://github.com/Ackerman-00/void-nexus/raw/main/signing-key.plist
-```
-
-Or run `sudo xbps-install -S` and press `y` when prompted.
-
-**③ Sync and install**
-
-```bash
-sudo xbps-install -S
+sudo xbps-install -S    # press y when prompted to trust the signing key
 sudo xbps-install <package-name>
 ```
 
