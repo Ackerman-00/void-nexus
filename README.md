@@ -43,30 +43,30 @@ sudo xbps-install <package-name>
 
 | Package | Description | Type |
 |---------|-------------|:----:|
-| `blender-bin` | 3D creation suite (official binary) | Stable |
-| `brave-browser` | Privacy-focused web browser | Stable |
-| `brave-origin-bin` | Brave Origin browser binary | Stable |
-| `dank-material-shell` | Material Design shell for niri | Stable |
-| `dgop` | D language package manager | Stable |
-| `dsearch` | Desktop search utility | Stable |
-| `faugus-launcher` | Game launcher for Linux | Stable |
+| `blender-bin` | 3D graphics creation suite (binary build) | Stable |
+| `brave-browser` | Secure, fast and private web browser with ad blocker | Stable |
+| `brave-origin-bin` | Minimalist browser from the makers of Brave (binary release) | Stable |
+| `dank-material-shell` | A Material You inspired shell for Wayland | Stable |
+| `dgop` | Stateless, cursor-based system and process monitoring tool | Stable |
+| `dsearch` | Fast configurable filesystem search service | Stable |
+| `faugus-launcher` | Simple and lightweight app for running Windows games using UMU-Launcher | Stable |
 | `gcc16` | GNU Compiler Collection 16 (parallel install) | Snapshot |
-| `helium-browser-bin` | Helium browser binary | Stable |
-| `heroic-games-launcher` | Epic/GOG games launcher | Stable |
-| `libspng` | Simple PNG library | Stable |
-| `niri-git` | Scrollable-tiling Wayland compositor | Git |
-| `noctalia-qs` | Quick Settings extension for GNOME | Stable |
-| `noctalia-shell` | GNOME Shell theme & extensions | Stable |
-| `noctalia-v5` | Lightweight Wayland shell | Git |
-| `protonplus` | Proton management tool | Stable |
-| `quickshell-git` | Quick script launcher | Git |
-| `rootapp` | Discord alternative for gaming communities | Stable |
+| `helium-browser-bin` | Private, fast, and honest web browser based on Chromium | Stable |
+| `heroic-games-launcher` | Open source launcher for GOG, Epic, and Amazon Games | Stable |
+| `libspng` | Simple, modern libpng alternative | Stable |
+| `niri-git` | Scrollable-tiling Wayland compositor (Git Snapshot) | Git |
+| `noctalia-qs` | Noctalia Quick Settings - GNOME Shell quick settings extension | Stable |
+| `noctalia-shell` | Noctalia Shell - GNOME Shell theme and extensions | Stable |
+| `noctalia-v5` | Lightweight Wayland shell built directly on Wayland and OpenGL ES | Git |
+| `protonplus` | Compatibility tools manager for GNOME (Wine/Proton) | Stable |
+| `quickshell-git` | Flexible QtQuick-based desktop shell toolkit (Git Snapshot) | Git |
+| `rootapp` | Discord alternative for gaming communities and large online groups | Stable |
 | `sdbus-cpp` | High-level C++ D-Bus library | Stable |
-| `tomlplusplus` | Header-only TOML parser for C++ | Stable |
-| `vesktop` | Vencord-bundled Discord client | Stable |
-| `xwayland-satellite-git` | Rootless Xwayland for any compositor | Git |
-| `zed` | High-performance code editor | Stable |
-| `zen-browser` | Privacy-focused Firefox-based browser | Stable |
+| `tomlplusplus` | Header-only TOML config file parser and serializer for C++ | Stable |
+| `vesktop` | Custom Discord desktop client with Vencord preinstalled | Stable |
+| `xwayland-satellite-git` | Xwayland outside your Wayland compositor (Git Snapshot) | Git |
+| `zed` | High-performance, multiplayer code editor from the creators of Atom | Stable |
+| `zen-browser` | Welcome to a calmer internet | Stable |
 
 > `Git` packages track upstream HEAD and rebuild on every new commit.
 
