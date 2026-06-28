@@ -1,0 +1,327 @@
+# Template file for 'gcc16'
+# Based on Gentoo's sys-devel/gcc-16.1.1_p20260620 ebuild + patchset v3
+# Ref: https://gitweb.gentoo.org/repo/gentoo.git/plain/sys-devel/gcc/gcc-16.1.1_p20260620.ebuild
+# Patchset: https://distfiles.gentoo.org/pub/proj/toolchain/gcc/patches/gcc-16.1.0-patches-3.tar.xz
+
+pkgname=gcc16
+version=16.1.1+20260502
+revision=2
+archs="x86_64*"
+# nobootstrap: parallel install doesn't need 3-stage self-verification
+nobootstrap=yes
+_patchver="${version%+*}"
+_minorver="${version%.*}"
+_majorver="${_minorver%.*}"
+_gmp_version=6.3.0
+_mpfr_version=4.2.2
+_mpc_version=1.3.1
+_isl_version=0.27
+_gcc_patchver=16.1.0-patches-3
+_opt_prefix="/opt/gcc16"
+short_desc="GNU Compiler Collection 16 (parallel install)"
+maintainer="Ackerman <https://github.com/Ackerman-00>"
+homepage="http://gcc.gnu.org"
+license="GFDL-1.2-or-later AND GPL-3.0-or-later AND LGPL-2.1-or-later"
+case "${version}" in
+	*+*) distfiles="https://gcc.gnu.org/pub/gcc/snapshots/${_majorver}-${version#*+}/gcc-${_majorver}-${version#*+}.tar.xz" ;;
+	*) distfiles="${GNU_SITE}/gcc/gcc-${version}/gcc-${version}.tar.xz" ;;
+esac
+distfiles+="
+ ${GNU_SITE}/gmp/gmp-${_gmp_version}.tar.xz
+ ${GNU_SITE}/mpfr/mpfr-${_mpfr_version}.tar.xz
+ ${GNU_SITE}/mpc/mpc-${_mpc_version}.tar.gz
+ ${SOURCEFORGE_SITE}/libisl/isl-${_isl_version}.tar.bz2
+ https://distfiles.gentoo.org/pub/proj/toolchain/gcc/patches/gcc-${_gcc_patchver}.tar.xz"
+checksum="d78e2e56ee6f89e40dc742ae0c8a716ad4eb4637bc57bd49f9dec48ce9753283
+ a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898
+ b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
+ ab642492f5cf882b74aa0cb730cd410a81edcdbec895183ce930e706c1c759b8
+ 626335529331f7c89fec493de929e2e92fb3d8cc860fc7af554e0518ee0029ee
+ 108897dc58711f94489d7245f93780f197b3582108e6cac365496c31b75fb7b1"
+skip_extraction="gmp-${_gmp_version}.tar.xz mpfr-${_mpfr_version}.tar.xz
+ mpc-${_mpc_version}.tar.gz isl-${_isl_version}.tar.bz2
+ gcc-${_gcc_patchver}.tar.xz"
+
+case "$XBPS_DISTFILES_FALLBACK" in
+	*"repo-default.voidlinux.org/distfiles"*) ;;
+	*) XBPS_DISTFILES_FALLBACK+=" https://repo-default.voidlinux.org/distfiles" ;;
+esac
+
+nopie=yes
+lib32disabled=yes
+
+hostmakedepends="tar texinfo perl flex"
+makedepends="zlib-devel libzstd-devel"
+depends="binutils libgcc16-devel-${version}_${revision}
+ libstdc++16-devel-${version}_${revision} libatomic16-devel-${version}_${revision}"
+checkdepends="dejagnu"
+subpackages="libgcc16 libgomp16 libgomp16-devel libgcc16-devel libatomic16 libatomic16-devel libstdc++16 libstdc++16-devel"
+
+_triplet="x86_64-unknown-linux-gnu"
+
+post_extract() {
+	mkdir -p gmp mpfr mpc isl gentoo-patches
+	tar -x --strip-components=1 -C gmp \
+		--no-same-permissions --no-same-owner \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/gmp-${_gmp_version}.tar.xz"
+	tar -x --strip-components=1 -C mpfr \
+		--no-same-permissions --no-same-owner \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/mpfr-${_mpfr_version}.tar.xz"
+	tar -x --strip-components=1 -C mpc \
+		--no-same-permissions --no-same-owner \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/mpc-${_mpc_version}.tar.gz"
+	tar -x --strip-components=1 -C isl \
+		--no-same-permissions --no-same-owner \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/isl-${_isl_version}.tar.bz2"
+	tar -xJ --strip-components=1 -C gentoo-patches \
+		--no-same-permissions --no-same-owner \
+		-f "${XBPS_SRCDISTDIR}/${sourcepkg}-${version}/gcc-${_gcc_patchver}.tar.xz"
+}
+
+post_patch() {
+	# Apply Gentoo patchset in numerical order
+	for f in gentoo-patches/*.patch; do
+		[ -f "$f" ] || continue
+		patch -p1 -i "$f"
+	done
+	# Fix ac_cpp for configure: avoid warnings-as-errors in C++ preprocessor test
+	sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {gcc,libiberty}/configure
+	# Belt-and-suspenders: configure flag + Makefile override like Gentoo
+	sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+	# ISL C++17 compat: silence C++17 deprecation
+	sed -i 's/HAVE_CXX17=1/HAVE_CXX17=0/' isl/configure
+}
+
+do_configure() {
+	local _langs
+	local -a _args
+
+	_langs="c,c++,lto"
+	_args=( --prefix="${_opt_prefix}" )
+	_args+=( --libexecdir="${_opt_prefix}/libexec" )
+	_args+=( --libdir="${_opt_prefix}/lib64" )
+	_args+=( --mandir="${_opt_prefix}/share/man" )
+	_args+=( --infodir="${_opt_prefix}/share/info" )
+	_args+=( --build="${_triplet}" )
+	# Gentoo standard flags (toolchain.eclass)
+	_args+=( --enable-obsolete )
+	_args+=( --enable-secureplt )
+	_args+=( --disable-silent-rules )
+	_args+=( --disable-dependency-tracking )
+	_args+=( --disable-fixincludes )
+	_args+=( --disable-libunwind-exceptions )
+	_args+=( --enable-threads=posix )
+	_args+=( --enable-__cxa_atexit )
+	_args+=( --enable-clocale=gnu )
+	_args+=( --enable-libstdcxx-time=yes )
+	# Disable features we don't need / would cause memory issues
+	_args+=( --disable-multilib )
+	_args+=( --disable-bootstrap )
+	_args+=( --with-system-zlib )
+	_args+=( --with-zstd )
+	_args+=( --enable-shared )
+	_args+=( --enable-lto )
+	_args+=( --enable-plugins )
+	_args+=( --enable-linker-build-id )
+	_args+=( --with-tls=gnu2 )
+	_args+=( --disable-werror )
+	_args+=( --disable-nls )
+	_args+=( --disable-analyzer )
+	_args+=( --disable-libsanitizer )
+	_args+=( --disable-libitm )
+	_args+=( --disable-libvtv )
+	_args+=( --enable-gnu-unique-object )
+	_args+=( --enable-default-pie )
+	_args+=( --enable-default-ssp )
+	_args+=( --enable-checking=release )
+	_args+=( --disable-libstdcxx-pch )
+	_args+=( --with-isl )
+	_args+=( --with-linker-hash-style=gnu )
+	_args+=( --disable-sjlj-exceptions )
+	_args+=( --disable-target-libiberty )
+	_args+=( --disable-libssp )
+	_args+=( --with-pkgversion="Void GCC ${version}" )
+	_args+=( --with-bugurl="https://github.com/void-linux/void-packages/issues" )
+	_args+=( --with-gxx-libcxx-include-dir=/usr/include/c++/v1 )
+	_args+=( --enable-host-pie )
+	_args+=( --disable-offloading )
+	_args+=( --enable-languages="${_langs}" )
+
+	export ac_cv_have_x='have_x=yes ac_x_includes= ac_x_libraries='
+
+	export CFLAGS="${CFLAGS/-D_FORTIFY_SOURCE=2/}"
+	export CXXFLAGS="${CXXFLAGS/-D_FORTIFY_SOURCE=2/}"
+	export CFLAGS="${CFLAGS//-fno-PIE/}"
+	export CXXFLAGS="${CXXFLAGS//-fno-PIE/}"
+	export LDFLAGS="${LDFLAGS//-no-pie/}"
+
+	mkdir -p build
+	cd build
+	CONFIG_SHELL=/bin/bash \
+		${wrksrc}/configure "${_args[@]}"
+}
+
+do_build() {
+	ulimit -s unlimited
+	local _jobs=${makejobs#-j}
+	_jobs=${_jobs:-1}
+	[ "$_jobs" -gt 2 ] && _jobs=2
+	unset ADAFLAGS
+	make -C build -j${_jobs} --output-sync=line
+}
+
+do_install() {
+	make -C build DESTDIR=${DESTDIR} install
+
+	# Remove libiberty.a provided by binutils (Gentoo does this too)
+	find ${DESTDIR} -name libiberty.a -delete
+
+	# libstdc++_libbacktrace is a convenience library linked into libstdc++exp
+	# but not installed by make install.  Install it so -lstdc++_libbacktrace
+	# works for users that need it.
+	_btdest="${DESTDIR}${_opt_prefix}/lib64"
+	_btbuild="build/${_triplet}/libstdc++-v3/src/libbacktrace"
+	if [ -f "${_btbuild}/.libs/libstdc++_libbacktrace.a" ]; then
+		cp -a "${_btbuild}/.libs/libstdc++_libbacktrace.a" "${_btdest}/"
+		cp -a "${_btbuild}/libstdc++_libbacktrace.lai" "${_btdest}/" 2>/dev/null || true
+	fi
+
+	vmkdir usr/bin
+	ln -sf ${_opt_prefix}/bin/gcc ${DESTDIR}/usr/bin/gcc16
+	ln -sf ${_opt_prefix}/bin/g++ ${DESTDIR}/usr/bin/g++16
+	ln -sf ${_opt_prefix}/bin/cpp ${DESTDIR}/usr/bin/cpp16
+	ln -sf ${_opt_prefix}/bin/gcc-ar ${DESTDIR}/usr/bin/gcc16-ar
+	ln -sf ${_opt_prefix}/bin/gcc-nm ${DESTDIR}/usr/bin/gcc16-nm
+	ln -sf ${_opt_prefix}/bin/gcc-ranlib ${DESTDIR}/usr/bin/gcc16-ranlib
+	ln -sf gcc16 ${DESTDIR}/usr/bin/cc16
+	ln -sf g++16 ${DESTDIR}/usr/bin/c++16
+	# Make version a symlink of major version to make all versions
+	# from the same series work automagically.
+	mv ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_patchver} \
+		${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}
+	ln -sfr ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver} \
+		${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_patchver}
+
+	# Ditto for c++ headers.
+	mv ${DESTDIR}${_opt_prefix}/include/c++/${_patchver} \
+		${DESTDIR}${_opt_prefix}/include/c++/${_minorver}
+	ln -sfr ${DESTDIR}${_opt_prefix}/include/c++/${_minorver} \
+		${DESTDIR}${_opt_prefix}/include/c++/${_patchver}
+
+	# lto plugin symlink
+	vmkdir ${_opt_prefix}/lib64/bfd-plugins
+	ln -sfr ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_patchver}/liblto_plugin.so \
+		${DESTDIR}${_opt_prefix}/lib64/bfd-plugins
+
+	# rpcgen wants /lib/cpp
+	ln -sf ${_opt_prefix}/bin/cpp ${DESTDIR}/usr/lib/cpp
+
+	# Remove "fixed" header that overrides system kernel headers
+	rm -vf ${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include-fixed/bits/statx.h
+
+	rm -f ${DESTDIR}/usr/lib/libffi*
+	rm -f ${DESTDIR}/usr/share/man/man3/ffi*
+	rm -f ${DESTDIR}${_opt_prefix}/lib64/libffi*
+	mkdir -p ${DESTDIR}/usr/share/gdb/auto-load/opt/gcc16/lib64
+	mv ${DESTDIR}${_opt_prefix}/lib64/*.py ${DESTDIR}/usr/share/gdb/auto-load/opt/gcc16/lib64/
+
+	# GCC 16's -fopenmp unconditionally links crtoffloadbegin.o / crtoffloadend.o
+	# even with --disable-offloading.  Provide minimal stubs so -fopenmp works
+	# when offloading is not available.
+	_gcc_libdir="${DESTDIR}${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}"
+	as -o "${_gcc_libdir}/crtoffloadbegin.o" <<-ASM
+		.text
+		.globl _offload_init
+		_offload_init:
+		    ret
+		.section .init_array,"aw"
+		.quad _offload_init
+		.section .note.GNU-stack,"",@progbits
+	ASM
+	as -o "${_gcc_libdir}/crtoffloadend.o" <<-ASM
+		.text
+		.globl _offload_fini
+		_offload_fini:
+		    ret
+		.section .fini_array,"aw"
+		.quad _offload_fini
+		.section .note.GNU-stack,"",@progbits
+	ASM
+}
+
+libgcc16_package() {
+	short_desc+=" - GCC library"
+	noverifyrdeps=yes
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libgcc_s.so*"
+	}
+}
+
+libgcc16-devel_package() {
+	depends="libgcc16-${version}_${revision}"
+	short_desc+=" - GCC library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include-fixed"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/plugin"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/*.o"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/*.a"
+	}
+}
+
+libgomp16-devel_package() {
+	depends="libgomp16>=${_minorver}"
+	short_desc+=" - OpenMP v4.0 library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libgomp.so"
+		vmove "${_opt_prefix}/lib64/libgomp.a"
+		vmove "${_opt_prefix}/lib64/libgomp.spec"
+		vmove "${_opt_prefix}/share/info/libgomp.info"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include/omp.h"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include/openacc.h"
+		vmove "${_opt_prefix}/lib64/gcc/${_triplet}/${_minorver}/include/acc_prof.h"
+	}
+}
+
+libgomp16_package() {
+	short_desc+=" - OpenMP v4.0 library"
+	noverifyrdeps=yes
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libgomp*.so.*"
+	}
+}
+
+libatomic16-devel_package() {
+	depends="libatomic16>=${_minorver}"
+	short_desc+=" - Atomics library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libatomic.a"
+		vmove "${_opt_prefix}/lib64/libatomic.so"
+	}
+}
+
+libatomic16_package() {
+	short_desc+=" - Atomics library"
+	noverifyrdeps=yes
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libatomic.so.*"
+	}
+}
+
+libstdc++16-devel_package() {
+	depends="libstdc++16>=${_minorver}"
+	short_desc+=" - Standard C++ Library - development files"
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libstdc++*.a"
+		vmove "${_opt_prefix}/lib64/libsupc++.a"
+		vmove "${_opt_prefix}/include/c++"
+	}
+}
+
+libstdc++16_package() {
+	short_desc+=" - Standard C++ Library"
+	noverifyrdeps=yes
+	pkg_install() {
+		vmove "${_opt_prefix}/lib64/libstdc++.so*"
+	}
+}
