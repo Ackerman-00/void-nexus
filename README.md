@@ -27,15 +27,15 @@ echo 'repository=https://github.com/Ackerman-00/void-nexus/releases/download/rol
 
 **② Trust the signing key**
 
-Pre-download the public key so you're never prompted:
+Pre-download the key so sync is silent:
 
 ```bash
-sudo mkdir -p /var/db/xbps/keys && curl -L \
-  https://github.com/Ackerman-00/void-nexus/raw/main/public.pem \
-  | sudo tee /var/db/xbps/keys/b9:f2:38:0f:3f:a7:76:be:5f:ad:01:b9:ef:b5:55:77.pub >/dev/null
+sudo mkdir -p /var/db/xbps/keys && sudo curl -L \
+  -o /var/db/xbps/keys/b9:f2:38:0f:3f:a7:76:be:5f:ad:01:b9:ef:b5:55:77.plist \
+  https://github.com/Ackerman-00/void-nexus/raw/main/signing-key.plist
 ```
 
-Or just run `sudo xbps-install -S` and press `y` when prompted.
+Or run `sudo xbps-install -S` and press `y` when prompted.
 
 **③ Sync and install**
 
@@ -115,9 +115,9 @@ repository=https://github.com/Ackerman-00/void-nexus/releases/download/rolling
 Place the public key manually:
 
 ```bash
-sudo mkdir -p /var/db/xbps/keys
-curl -L https://github.com/Ackerman-00/void-nexus/raw/main/public.pem \
-  | sudo tee /var/db/xbps/keys/b9:f2:38:0f:3f:a7:76:be:5f:ad:01:b9:ef:b5:55:77.pub >/dev/null
+sudo mkdir -p /var/db/xbps/keys && sudo curl -L \
+  -o /var/db/xbps/keys/b9:f2:38:0f:3f:a7:76:be:5f:ad:01:b9:ef:b5:55:77.plist \
+  https://github.com/Ackerman-00/void-nexus/raw/main/signing-key.plist
 ```
 </details>
 
