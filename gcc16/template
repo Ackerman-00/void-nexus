@@ -5,7 +5,7 @@
 
 pkgname=gcc16
 version=16.1.1+20260502
-revision=2
+revision=3
 archs="x86_64*"
 # nobootstrap: parallel install doesn't need 3-stage self-verification
 nobootstrap=yes
@@ -140,7 +140,7 @@ do_configure() {
 	_args+=( --disable-sjlj-exceptions )
 	_args+=( --disable-target-libiberty )
 	_args+=( --disable-libssp )
-	_args+=( --with-pkgversion="Void GCC ${version} Gentoo patches-3" )
+	_args+=( --with-pkgversion="Void GCC ${version}" )
 	_args+=( --with-bugurl="https://github.com/void-linux/void-packages/issues" )
 	_args+=( --with-gxx-libcxx-include-dir=/usr/include/c++/v1 )
 	_args+=( --enable-host-pie )
@@ -175,6 +175,16 @@ do_install() {
 
 	# Remove libiberty.a provided by binutils (Gentoo does this too)
 	find ${DESTDIR} -name libiberty.a -delete
+
+	# libstdc++_libbacktrace is a convenience library linked into libstdc++exp
+	# but not installed by make install.  Install it so -lstdc++_libbacktrace
+	# works for users that need it.
+	_btdest="${DESTDIR}${_opt_prefix}/lib64"
+	_btbuild="build/${_triplet}/libstdc++-v3/src/libbacktrace"
+	if [ -f "${_btbuild}/.libs/libstdc++_libbacktrace.a" ]; then
+		cp -a "${_btbuild}/.libs/libstdc++_libbacktrace.a" "${_btdest}/"
+		cp -a "${_btbuild}/libstdc++_libbacktrace.lai" "${_btdest}/" 2>/dev/null || true
+	fi
 
 	vmkdir usr/bin
 	ln -sf ${_opt_prefix}/bin/gcc ${DESTDIR}/usr/bin/gcc16
