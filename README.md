@@ -32,7 +32,7 @@ Pre-download the public key so you're never prompted:
 ```bash
 sudo mkdir -p /var/db/xbps/keys && curl -L \
   https://github.com/Ackerman-00/void-nexus/raw/main/public.pem \
-  | sudo tee /var/db/xbps/keys/60:e2:6a:be:49:a8:08:c9:fc:94:ea:d8:7a:14:bc:0d.pub >/dev/null
+  | sudo tee /var/db/xbps/keys/44:bd:4b:20:ba:01:98:05:12:7d:1f:e7:ec:ed:6e:3c.pub >/dev/null
 ```
 
 Or just run `sudo xbps-install -S` and press `y` when prompted.
@@ -117,7 +117,7 @@ Place the public key manually:
 ```bash
 sudo mkdir -p /var/db/xbps/keys
 curl -L https://github.com/Ackerman-00/void-nexus/raw/main/public.pem \
-  | sudo tee /var/db/xbps/keys/60:e2:6a:be:49:a8:08:c9:fc:94:ea:d8:7a:14:bc:0d.pub >/dev/null
+  | sudo tee /var/db/xbps/keys/44:bd:4b:20:ba:01:98:05:12:7d:1f:e7:ec:ed:6e:3c.pub >/dev/null
 ```
 </details>
 

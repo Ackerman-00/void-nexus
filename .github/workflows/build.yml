@@ -357,7 +357,10 @@ jobs:
 
           echo "Generating fresh RSA signatures for all packages..."
           rm -f *.sig2
-          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/private.pem
+          # Use heredoc to avoid bash mangling multiline secrets
+          cat > /tmp/private.pem << 'KEYEOF'
+${{ secrets.XBPS_PRIVATE_KEY }}
+KEYEOF
           chmod 600 /tmp/private.pem
           for pkg in *.xbps; do
             xbps-rindex --privkey /tmp/private.pem --sign-pkg "$pkg" || true
@@ -365,9 +368,24 @@ jobs:
 
           echo "Generating repodata index..."
           xbps-rindex -f -a *.xbps || true
-          xbps-rindex --privkey /tmp/private.pem \
+          # Sign the repo — try --sign <dir> syntax first, then plain --sign
+          if xbps-rindex --privkey /tmp/private.pem \
             --signedby "Void Nexus Build Bot <actions@github.com>" \
-            --sign . || true
+            --sign . 2>&1; then
+            echo ">>> --sign . succeeded"
+          elif xbps-rindex --privkey /tmp/private.pem \
+            --signedby "Void Nexus Build Bot <actions@github.com>" \
+            --sign 2>&1; then
+            echo ">>> --sign (flag only) succeeded"
+          else
+            echo "::warning::xbps-rindex --sign failed. Repo will lack signature."
+          fi
+          # Verify the sig2 was actually created
+          if [ -f "x86_64-repodata.sig2" ]; then
+            echo ">>> Repodata signed OK: x86_64-repodata.sig2"
+          else
+            echo "::warning::x86_64-repodata.sig2 was NOT created. Repo will lack signature."
+          fi
 
           echo "Generating packages.json for the website..."
           # Extract name and version from props.plist inside each .xbps for accuracy —
