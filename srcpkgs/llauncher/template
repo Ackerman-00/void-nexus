@@ -1,0 +1,44 @@
+# Template file for 'llauncher'
+pkgname=llauncher
+version=0.2.3
+revision=1
+archs="x86_64"
+build_style=fetch
+short_desc="Linux launcher for Arknights: Endfield (Native Tauri app)"
+maintainer="Quietcraft <ackerman-00@users.noreply.github.com>"
+license="MIT"
+homepage="https://github.com/AugustLigh/LLauncher"
+
+distfiles="https://github.com/AugustLigh/LLauncher/releases/download/${version}/LLauncher_${version}_amd64.deb"
+checksum="4b4c0494d0be72c62290f4f772d8eceab77085ba46f52dd6526e916b10dba760"
+
+depends="libwebkit2gtk41 libayatana-appindicator gtk+3 p7zip hicolor-icon-theme desktop-file-utils"
+
+hostmakedepends="bsdtar"
+
+do_extract() {
+	bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LLauncher_${version}_amd64.deb data.tar.gz
+	bsdtar xf data.tar.gz -C .
+}
+
+do_install() {
+	vbin usr/bin/llauncher
+
+	vmkdir usr/share/applications
+	cat > ${DESTDIR}/usr/share/applications/llauncher.desktop <<-DESKTOP
+	[Desktop Entry]
+	Type=Application
+	Name=LLauncher
+	Comment=Linux Launcher for Arknights: Endfield
+	Icon=llauncher
+	Exec=llauncher
+	Terminal=false
+	Categories=Game;
+	StartupWMClass=llauncher
+	DESKTOP
+
+	for size in 32x32 128x128 256x256@2; do
+		vinstall usr/share/icons/hicolor/${size}/apps/llauncher.png 644 \
+			usr/share/icons/hicolor/${size}/apps llauncher.png
+	done
+}
