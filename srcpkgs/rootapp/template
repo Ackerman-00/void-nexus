@@ -1,8 +1,8 @@
 # Template file for 'rootapp'
 pkgname=rootapp
 version=0.9.117
-revision=1
-depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core icu"
+revision=2
+depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core icu xorg-server-xwayland"
 short_desc="Discord alternative for gaming communities and large online groups"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="custom"
@@ -36,7 +36,7 @@ do_install() {
 Type=Application
 Name=Root
 Comment=Root App is a new Discord alternative, designed for gaming communities and large online groups
-Exec=env AVALONIA_PLATFORM=wayland rootapp %U
+Exec=rootapp %U
 Icon=rootapp
 Terminal=false
 StartupWMClass=Root
