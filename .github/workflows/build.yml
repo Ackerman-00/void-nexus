@@ -287,7 +287,7 @@ jobs:
 
             # Also handle subpackages — read subpackages= from the template
             # and copy+purge each one.
-            SUBPKGS=$(grep '^subpackages=' "$tmpl" | head -1 | sed "s/^subpackages=//" | tr -d '"')
+            SUBPKGS=$(grep '^subpackages=' "$tmpl" 2>/dev/null | head -1 | sed "s/^subpackages=//" | tr -d '"') || true
             if [ -n "$SUBPKGS" ]; then
               for sub in $SUBPKGS; do
                 SUB_PKG="${sub}-${ver}_${rev}.x86_64.xbps"
