@@ -285,6 +285,43 @@ jobs:
             cp "hostdir/binpkgs/$EXPECTED_PKG" public/x86_64/
             echo ">>> Copied $EXPECTED_PKG to public/x86_64/"
 
+            # Also handle subpackages — read subpackages= from the template
+            # and copy+purge each one.
+            SUBPKGS=$(grep '^subpackages=' "$tmpl" | head -1 | sed "s/^subpackages=//" | tr -d '"')
+            if [ -n "$SUBPKGS" ]; then
+              for sub in $SUBPKGS; do
+                SUB_PKG="${sub}-${ver}_${rev}.x86_64.xbps"
+                if [ -f "hostdir/binpkgs/$SUB_PKG" ]; then
+                  cp "hostdir/binpkgs/$SUB_PKG" public/x86_64/
+                  echo ">>> Copied subpackage $SUB_PKG to public/x86_64/"
+                else
+                  echo ">>> Subpackage $SUB_PKG not found, skipping."
+                  continue
+                fi
+                # Purge old subpackage versions
+                OLD_SUB=$(gh release view rolling --json assets \
+                  --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
+                  | awk -v pkg="${sub}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps$/' \
+                  || true)
+                for asset in $OLD_SUB; do
+                  if [ "$asset" != "$SUB_PKG" ]; then
+                    echo "  Deleting old subpackage: $asset"
+                    gh release delete-asset rolling "$asset" --repo "$REPO" -y 2>/dev/null || true
+                  fi
+                done
+                OLD_SUB_SIGS=$(gh release view rolling --json assets \
+                  --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
+                  | awk -v pkg="${sub}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps\.sig2$/' \
+                  || true)
+                for sig in $OLD_SUB_SIGS; do
+                  if [ "$sig" != "${SUB_PKG}.sig2" ]; then
+                    echo "  Deleting old subpackage sig: $sig"
+                    gh release delete-asset rolling "$sig" --repo "$REPO" -y 2>/dev/null || true
+                  fi
+                done
+              done
+            fi
+
             # PURGE OLD ASSETS: use awk for literal matching — safe against regex special chars
             # in package names (e.g. c++, libstdc++)
             echo ">>> Purging old versions of $pkg_name from GitHub Release..."
