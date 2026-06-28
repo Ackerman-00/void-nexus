@@ -376,11 +376,11 @@ jobs:
           branch = os.environ.get('GITHUB_REF_NAME', 'main')
           subprocess.run(['git', 'checkout', '-B', branch], check=True)
 
-          # ---------- Discover templates ----------
+          # ---------- Discover templates in srcpkgs/ ----------
           templates = []
-          for d in os.listdir('.'):
-              tp = os.path.join(d, 'template')
-              if os.path.isdir(d) and os.path.isfile(tp):
+          for d in os.listdir('srcpkgs'):
+              tp = os.path.join('srcpkgs', d, 'template')
+              if os.path.isfile(tp):
                   templates.append(Path(tp))
 
           changed_packages = []
@@ -748,7 +748,7 @@ jobs:
 
           check_pkg() {
             local PKG="$1"
-            local TMPL="${PKG}/template"
+            local TMPL="srcpkgs/${PKG}/template"
             if [ ! -f "$TMPL" ]; then
               return
             fi
@@ -773,14 +773,15 @@ jobs:
           done
 
           # 2. Check ALL other packages for missing binaries
-          for DIR in */; do
+          for DIR in srcpkgs/*/; do
             DIRNAME="${DIR%/}"
-            [ "$DIRNAME" = ".github" ] && continue
-            [ "$DIRNAME" = "gcc16" ] && continue
-            [ -f "${DIRNAME}/template" ] || continue
+            PKGNAME=$(basename "$DIRNAME")
+            [ "$PKGNAME" = ".github" ] && continue
+            [ "$PKGNAME" = "gcc16" ] && continue
+            [ -f "srcpkgs/${PKGNAME}/template" ] || continue
             # Skip if already checked above
-            echo "$UPDATED_PKGS" | tr ' ' '\n' | grep -qFx "$DIRNAME" && continue
-            check_pkg "$DIRNAME"
+            echo "$UPDATED_PKGS" | tr ' ' '\n' | grep -qFx "$PKGNAME" && continue
+            check_pkg "$PKGNAME"
           done
 
           NEEDS_BUILD=$(echo "$NEEDS_BUILD" | xargs)
