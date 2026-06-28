@@ -169,7 +169,7 @@ jobs:
         run: |
           set -e
           PACKAGES=""
-          for pkg_dir in /tmp/void-packages/srcpkgs/*/; do
+          for pkg_dir in custom-templates-temp/srcpkgs/*/; do
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
             PACKAGES="$PACKAGES $pkg_name"
@@ -181,7 +181,7 @@ jobs:
           done
 
           for pkg in $PACKAGES; do
-            tmpl="/tmp/void-packages/srcpkgs/$pkg/template"
+            tmpl="custom-templates-temp/srcpkgs/$pkg/template"
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'")
             rev=$(grep '^revision=' "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'")
