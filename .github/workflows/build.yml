@@ -98,10 +98,11 @@ jobs:
       - name: Inject custom templates
         run: |
           set -e
-          find custom-templates-temp -maxdepth 2 -name "template" | while read -r tmpl; do
+          find custom-templates-temp -maxdepth 3 -name "template" | while read -r tmpl; do
             pkg_dir=$(dirname "$tmpl")
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
+            [ "$pkg_name" = "srcpkgs" ] && continue
             mkdir -p "srcpkgs/$pkg_name"
             cp -a "$pkg_dir/." "srcpkgs/$pkg_name/"
           done
@@ -112,7 +113,7 @@ jobs:
           mkdir -p srcpkgs
           # Only process templates from our repo — avoid void-packages' own templates
           # whose subpackages already have symlinks in the upstream repo.
-          find custom-templates-temp -maxdepth 2 -name template | while read -r tmpl; do
+          find custom-templates-temp -maxdepth 3 -name template | while read -r tmpl; do
             pkg_name=$(basename "$(dirname "$tmpl")")
             [ "$pkg_name" = ".github" ] && continue
             [ ! -d "srcpkgs/$pkg_name" ] && continue
@@ -268,9 +269,9 @@ jobs:
           mkdir -p public/x86_64
 
           # Copy newly built packages and purge old versions of each from the release
-          ls -1 custom-templates-temp/ | while read -r pkg_name; do
-            [ ! -d "custom-templates-temp/$pkg_name" ] && continue
-            tmpl="custom-templates-temp/$pkg_name/template"
+          ls -1 custom-templates-temp/srcpkgs/ | while read -r pkg_name; do
+            [ ! -d "custom-templates-temp/srcpkgs/$pkg_name" ] && continue
+            tmpl="custom-templates-temp/srcpkgs/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
 
             ver=$(get_evaluated_version "$tmpl")
@@ -394,12 +395,13 @@ jobs:
           done
           echo -e "\n]" >> packages.json
 
-          # Create release if it doesn't exist yet
+          # Create release if it doesn't exist yet; ensure it's always prerelease
           gh release view rolling -R "$REPO" 2>/dev/null \
             || gh release create rolling -R "$REPO" \
                  --title "Void Nexus Rolling Binaries" \
                  --notes "Automated XBPS Repository" \
                  --prerelease
+          gh release edit rolling -R "$REPO" --prerelease 2>/dev/null || true
 
           echo "Uploading XBPS repo files to GitHub Release..."
 

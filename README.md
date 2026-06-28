@@ -10,7 +10,7 @@
 &nbsp;
 [![Updates](https://img.shields.io/github/actions/workflow/status/Ackerman-00/void-nexus/check-updates.yml?style=for-the-badge&label=AUTO-UPDATE&logo=github&logoColor=white)](https://github.com/Ackerman-00/void-nexus/actions)
 
-<p><sup>Packages built nightly · Signed & indexed automatically · Drop-in native xbps repo</sup></p>
+<p><sup>Packages built on-demand · Signed & indexed automatically · Drop-in native xbps repo</sup></p>
 
 </div>
 
@@ -25,17 +25,22 @@ echo 'repository=https://github.com/Ackerman-00/void-nexus/releases/download/rol
   | sudo tee /etc/xbps.d/10-nexus.conf
 ```
 
-**② Sync and trust the signing key**
+**② Trust the signing key**
+
+Pre-download the public key so you're never prompted:
+
+```bash
+sudo mkdir -p /var/db/xbps/keys && curl -L \
+  https://github.com/Ackerman-00/void-nexus/raw/main/public.pem \
+  | sudo tee /var/db/xbps/keys/60:e2:6a:be:49:a8:08:c9:fc:94:ea:d8:7a:14:bc:0d.pub >/dev/null
+```
+
+Or just run `sudo xbps-install -S` and press `y` when prompted.
+
+**③ Sync and install**
 
 ```bash
 sudo xbps-install -S
-```
-
-> You'll be asked to import the RSA key for **`Void Nexus Build Bot <actions@github.com>`** — press `y` to continue.
-
-**③ Install anything**
-
-```bash
 sudo xbps-install <package-name>
 ```
 
@@ -53,14 +58,30 @@ sudo xbps-install <package-name>
 
 | Package | Description | Type |
 |---------|-------------|:----:|
-| `hyprland` | Tiling wayland compositor | No longer maintained |
-| `zen-browser` | Privacy-focused Firefox-based browser | Stable |
-| `vesktop` | Vencord-bundled Discord client | Stable |
-| `rootapp` | Discord alternative for gaming communities | Stable |
-| `dank-material-shell` | Material Design shell for niri / Hyprland | Stable |
-| `noctalia-v5` | Lightweight Wayland shell built on Wayland and OpenGL ES | Git |
+| `blender-bin` | 3D creation suite (official binary) | Stable |
+| `brave-browser` | Privacy-focused web browser | Stable |
+| `brave-origin-bin` | Brave Origin browser binary | Stable |
+| `dank-material-shell` | Material Design shell for niri | Stable |
+| `dgop` | D言語用パッケージマネージャー | Stable |
+| `dsearch` | Desktop search utility | Stable |
+| `faugus-launcher` | Game launcher for Linux | Stable |
+| `gcc16` | GNU Compiler Collection 16 (parallel install) | Snapshot |
+| `helium-browser-bin` | Helium browser binary | Stable |
+| `heroic-games-launcher` | Epic/GOG games launcher | Stable |
+| `libspng` | Simple PNG library | Stable |
 | `niri-git` | Scrollable-tiling Wayland compositor | Git |
-| `xwayland-satellite-git` | Rootless Xwayland for any Wayland compositor | Git |
+| `noctalia-qs` | Quick Settings extension for GNOME | Stable |
+| `noctalia-shell` | GNOME Shell theme & extensions | Stable |
+| `noctalia-v5` | Lightweight Wayland shell | Git |
+| `protonplus` | Proton management tool | Stable |
+| `quickshell-git` | Quick script launcher | Git |
+| `rootapp` | Discord alternative for gaming communities | Stable |
+| `sdbus-cpp` | High-level C++ D-Bus library | Stable |
+| `tomlplusplus` | Header-only TOML parser for C++ | Stable |
+| `vesktop` | Vencord-bundled Discord client | Stable |
+| `xwayland-satellite-git` | Rootless Xwayland for any compositor | Git |
+| `zed` | High-performance code editor | Stable |
+| `zen-browser` | Privacy-focused Firefox-based browser | Stable |
 
 > `Git` packages track upstream HEAD and rebuild on every new commit.
 
@@ -73,16 +94,6 @@ No extra steps — packages update with your system:
 ```bash
 sudo xbps-install -Su
 ```
-
----
-
-## 🤝 Contributing
-
-Want a package added, or spotted something broken?
-
-- **[Open an issue](https://github.com/Ackerman-00/void-nexus/issues/new)** — request a new package or report a build failure
-- **[Submit a PR](https://github.com/Ackerman-00/void-nexus/pulls)** — add your own template following the existing structure (one directory per package, containing a `template` file)
-- **Package updates** are handled automatically by the workflow — no need to bump versions manually
 
 ---
 
@@ -101,7 +112,13 @@ repository=https://github.com/Ackerman-00/void-nexus/releases/download/rolling
 <details>
 <summary><b>Key import failed or was declined</b></summary>
 <br />
-Place the public <code>.plist</code> key file manually into <code>/var/db/xbps/keys/</code>. The key is available in the root of this repository.
+Place the public key manually:
+
+```bash
+sudo mkdir -p /var/db/xbps/keys
+curl -L https://github.com/Ackerman-00/void-nexus/raw/main/public.pem \
+  | sudo tee /var/db/xbps/keys/60:e2:6a:be:49:a8:08:c9:fc:94:ea:d8:7a:14:bc:0d.pub >/dev/null
+```
 </details>
 
 <details>
@@ -109,6 +126,16 @@ Place the public <code>.plist</code> key file manually into <code>/var/db/xbps/k
 <br />
 Only <code>x86_64</code> glibc is currently supported. musl and other architectures are not built.
 </details>
+
+---
+
+## 🤝 Contributing
+
+Want a package added, or spotted something broken?
+
+- **[Open an issue](https://github.com/Ackerman-00/void-nexus/issues/new)** — request a new package or report a build failure
+- **[Submit a PR](https://github.com/Ackerman-00/void-nexus/pulls)** — add your own template under `srcpkgs/<name>/template`
+- **Package updates** are handled automatically by the workflow — no need to bump versions manually
 
 ---
 
