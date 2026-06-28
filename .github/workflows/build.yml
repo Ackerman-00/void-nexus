@@ -337,34 +337,12 @@ jobs:
           done
 
           echo "Generating repodata index..."
-          echo "### Files before rindex:"
-          ls -la *.xbps 2>/dev/null | head -5
           xbps-rindex -f -a *.xbps
-          echo "### Files after rindex:"
-          ls -la x86_64-repodata* 2>/dev/null || echo "(no repodata files)"
 
-          echo "### Signing repodata..."
-          if xbps-rindex --privkey /tmp/private.pem \
+          echo "Signing repodata..."
+          xbps-rindex --privkey /tmp/private.pem \
             --signedby "Void Nexus Build Bot <actions@github.com>" \
-            --sign . 2>&1; then
-            echo ">>> --sign . succeeded"
-          else
-            echo ">>> --sign . failed, trying --sign without dir..."
-            if xbps-rindex --privkey /tmp/private.pem \
-              --signedby "Void Nexus Build Bot <actions@github.com>" \
-              --sign 2>&1; then
-              echo ">>> --sign (no dir) succeeded"
-            else
-              echo "::warning::xbps-rindex --sign failed entirely"
-            fi
-          fi
-          echo "### Files after signing:"
-          ls -la x86_64-repodata* 2>/dev/null || echo "(no repodata files)"
-          if [ -f "x86_64-repodata.sig2" ]; then
-            echo ">>> Repodata signed OK: x86_64-repodata.sig2"
-          else
-            echo "::warning::x86_64-repodata.sig2 was NOT created. Repo will lack signature."
-          fi
+            --sign .
 
           echo "Generating packages.json for the website..."
           echo "[" > packages.json
