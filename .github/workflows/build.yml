@@ -49,10 +49,11 @@ jobs:
         run: |
           set -e
           git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
-          ln -s / masterdir
+          ln -s / /tmp/void-packages/masterdir
           echo "x86_64" > /.xbps_chroot_init
           echo "XBPS_CHROOT_CMD=ethereal" >> /tmp/void-packages/etc/conf
           echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> /tmp/void-packages/etc/conf
+          echo "repository=/tmp/void-packages/hostdir/binpkgs" >> /tmp/void-packages/etc/conf
 
       - name: Clone self (our templates)
         run: |
@@ -70,7 +71,7 @@ jobs:
           echo "PACKAGE_LIST=$LIST" >> $GITHUB_ENV
           echo "FORCE_REBUILD=${{ github.event.inputs.force_rebuild }}" >> $GITHUB_ENV
 
-      - name: Inject custom templates
+      - name: Inject custom templates into void-packages
         run: |
           set -e
           find custom-templates-temp -maxdepth 3 -name "template" | while read -r tmpl; do
@@ -78,18 +79,17 @@ jobs:
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
             [ "$pkg_name" = "srcpkgs" ] && continue
-            mkdir -p "srcpkgs/$pkg_name"
-            cp -a "$pkg_dir/." "srcpkgs/$pkg_name/"
+            mkdir -p "/tmp/void-packages/srcpkgs/$pkg_name"
+            cp -a "$pkg_dir/." "/tmp/void-packages/srcpkgs/$pkg_name/"
           done
 
       - name: Create subpackage symlinks
         run: |
           set -e
-          mkdir -p srcpkgs
           find custom-templates-temp -maxdepth 3 -name template | while read -r tmpl; do
             pkg_name=$(basename "$(dirname "$tmpl")")
             [ "$pkg_name" = ".github" ] && continue
-            [ ! -d "srcpkgs/$pkg_name" ] && continue
+            [ ! -d "/tmp/void-packages/srcpkgs/$pkg_name" ] && continue
             subpkgs=$(awk '
               /^subpackages=/ {
                 val = $0
@@ -108,7 +108,9 @@ jobs:
             ' "$tmpl" 2>/dev/null || true)
             if [ -n "$subpkgs" ]; then
               for sub in $subpkgs; do
-                [ -n "$sub" ] && [ ! -e "srcpkgs/$sub" ] && ln -sf "$pkg_name" "srcpkgs/$sub"
+                if [ -n "$sub" ] && [ ! -e "/tmp/void-packages/srcpkgs/$sub" ]; then
+                  ln -sf "$pkg_name" "/tmp/void-packages/srcpkgs/$sub"
+                fi
               done
             fi
           done
@@ -117,23 +119,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p hostdir/binpkgs
+          mkdir -p /tmp/void-packages/hostdir/binpkgs
           echo "Downloading existing packages from rolling release..."
-          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} --dir hostdir/binpkgs 2>/dev/null || echo "First run or no packages found."
-          if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
-            cd hostdir/binpkgs
+          gh release download rolling -p "*.xbps" --repo ${{ github.repository }} \
+            --dir /tmp/void-packages/hostdir/binpkgs 2>/dev/null \
+            || echo "First run or no packages found."
+          if ls /tmp/void-packages/hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
+            cd /tmp/void-packages/hostdir/binpkgs
             xbps-rindex -a *.xbps || true
-            cd ../..
           fi
-          echo "repository=/__w/void-nexus/void-nexus/hostdir/binpkgs" >> etc/conf
 
       - name: Build self-healing shlibs map
         run: |
           echo "Generating shlibs map by directly extracting props.plist from binaries..."
-          touch common/shlibs
+          touch /tmp/void-packages/common/shlibs
           TMP_SHLIBS=$(mktemp)
-          if ls hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
-            for file in hostdir/binpkgs/*.xbps; do
+          if ls /tmp/void-packages/hostdir/binpkgs/*.xbps 1>/dev/null 2>&1; then
+            for file in /tmp/void-packages/hostdir/binpkgs/*.xbps; do
               bsdtar xOf "$file" props.plist 2>/dev/null \
                 | awk -F'[><]' '
                   /<key>shlib-provides<\/key>/ { in_provides=1; next }
@@ -156,7 +158,7 @@ jobs:
             done
           fi
           if [ -s "$TMP_SHLIBS" ]; then
-            sort -u "$TMP_SHLIBS" >> common/shlibs
+            sort -u "$TMP_SHLIBS" >> /tmp/void-packages/common/shlibs
             echo "Appended $(wc -l < "$TMP_SHLIBS") shlib mappings"
           fi
           rm -f "$TMP_SHLIBS"
@@ -166,46 +168,38 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          # Build list of all relevant packages (skip gcc16 subpkgs — they're handled via subpackages=)
           PACKAGES=""
-          for pkg_dir in srcpkgs/*/; do
+          for pkg_dir in /tmp/void-packages/srcpkgs/*/; do
             pkg_name=$(basename "$pkg_dir")
             [ "$pkg_name" = ".github" ] && continue
             PACKAGES="$PACKAGES $pkg_name"
           done
 
-          # Exclude gcc16 subpkgs from target list
           SUBPKGS_OF_GCC16="libatomic16 libatomic16-devel libgcc16 libgcc16-devel libgomp16 libgomp16-devel libstdc++16 libstdc++16-devel"
           for skip in $SUBPKGS_OF_GCC16; do
             PACKAGES=${PACKAGES/ $skip / }
           done
 
-          SKIP_CHECK=""
           for pkg in $PACKAGES; do
-            tmpl="srcpkgs/$pkg/template"
+            tmpl="/tmp/void-packages/srcpkgs/$pkg/template"
             [ ! -f "$tmpl" ] && continue
             ver=$(grep '^version=' "$tmpl" | head -1 | sed 's/^version=//' | tr -d '"'"'")
-            rev_re='^revision='
-            rev=$(grep "$rev_re" "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'")
+            rev=$(grep '^revision=' "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'")
             EXPECTED="${pkg}-${ver}_${rev}.x86_64.xbps"
-            if [ -f "hostdir/binpkgs/$EXPECTED" ]; then
+            if [ -f "/tmp/void-packages/hostdir/binpkgs/$EXPECTED" ]; then
               echo "✓ $EXPECTED exists locally"
-            elif gh release view rolling --json assets --jq '.assets[].name' --repo ${{ github.repository }} 2>/dev/null | grep -qFx "$EXPECTED"; then
+            elif gh release view rolling --json assets --jq '.assets[].name' \
+              --repo ${{ github.repository }} 2>/dev/null | grep -qFx "$EXPECTED"; then
               echo "✓ $EXPECTED exists in rolling release"
             else
               echo "✗ $EXPECTED not found — will build"
-              SKIP_CHECK="$SKIP_CHECK $pkg"
             fi
           done
 
-          # If force_rebuild=true, build everything regardless
           FORCE="${{ github.event.inputs.force_rebuild }}"
           if [ "$FORCE" = "true" ]; then
-            TARGET=${{ env.TARGET_PKG }}
-            echo "TARGET_PKG=$TARGET" >> $GITHUB_ENV
+            echo "TARGET_PKG=${{ env.TARGET_PKG }}" >> $GITHUB_ENV
             echo "FORCE_REBUILD=true" >> $GITHUB_ENV
-          else
-            echo "TARGET_PKG=$TARGET_PKG" >> $GITHUB_ENV
           fi
 
       - name: Build package
@@ -219,7 +213,7 @@ jobs:
         if: env.TARGET_PKG != ''
         run: |
           echo "=== Built packages in hostdir/binpkgs ==="
-          ls -la hostdir/binpkgs/*.xbps 2>/dev/null || echo "(none yet)"
+          ls -la /tmp/void-packages/hostdir/binpkgs/*.xbps 2>/dev/null || echo "(none yet)"
 
       - name: Build and Upload Signed Repo to GitHub Release
         env:
@@ -250,6 +244,7 @@ jobs:
             echo "$ver"
           }
 
+          BINPKGS=/tmp/void-packages/hostdir/binpkgs
           mkdir -p public/x86_64
 
           ls -1 custom-templates-temp/srcpkgs/ | while read -r pkg_name; do
@@ -261,20 +256,20 @@ jobs:
             rev=$(grep '^revision=' "$tmpl" | head -1 | sed 's/^revision=//' | tr -d '"'"'" | xargs)
             EXPECTED_PKG="${pkg_name}-${ver}_${rev}.x86_64.xbps"
 
-            if [ ! -f "hostdir/binpkgs/$EXPECTED_PKG" ]; then
+            if [ ! -f "$BINPKGS/$EXPECTED_PKG" ]; then
               echo ">>> $pkg_name: expected binary $EXPECTED_PKG not found, skipping."
               continue
             fi
 
-            cp "hostdir/binpkgs/$EXPECTED_PKG" public/x86_64/
+            cp "$BINPKGS/$EXPECTED_PKG" public/x86_64/
             echo ">>> Copied $EXPECTED_PKG to public/x86_64/"
 
             SUBPKGS=$(grep '^subpackages=' "$tmpl" 2>/dev/null | head -1 | sed "s/^subpackages=//" | tr -d '"') || true
             if [ -n "$SUBPKGS" ]; then
               for sub in $SUBPKGS; do
                 SUB_PKG="${sub}-${ver}_${rev}.x86_64.xbps"
-                if [ -f "hostdir/binpkgs/$SUB_PKG" ]; then
-                  cp "hostdir/binpkgs/$SUB_PKG" public/x86_64/
+                if [ -f "$BINPKGS/$SUB_PKG" ]; then
+                  cp "$BINPKGS/$SUB_PKG" public/x86_64/
                   echo ">>> Copied subpackage $SUB_PKG to public/x86_64/"
                 else
                   echo ">>> Subpackage $SUB_PKG not found, skipping."
@@ -343,7 +338,6 @@ jobs:
 
           echo "Generating repodata index..."
           xbps-rindex -f -a *.xbps || true
-          # Sign the repo
           if xbps-rindex --privkey /tmp/private.pem \
             --signedby "Void Nexus Build Bot <actions@github.com>" \
             --sign . 2>&1; then
