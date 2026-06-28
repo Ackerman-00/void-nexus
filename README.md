@@ -36,11 +36,8 @@ sudo xbps-install <package-name>
 
 ## 📦 Packages
 
-<div align="center">
-
-<sub>Full package list with versions, descriptions, and changelogs.</sub>
-
-</div>
+<details>
+<summary>Click to expand — 24 packages</summary>
 
 <br />
 
@@ -50,7 +47,7 @@ sudo xbps-install <package-name>
 | `brave-browser` | Privacy-focused web browser | Stable |
 | `brave-origin-bin` | Brave Origin browser binary | Stable |
 | `dank-material-shell` | Material Design shell for niri | Stable |
-| `dgop` | D言語用パッケージマネージャー | Stable |
+| `dgop` | D language package manager | Stable |
 | `dsearch` | Desktop search utility | Stable |
 | `faugus-launcher` | Game launcher for Linux | Stable |
 | `gcc16` | GNU Compiler Collection 16 (parallel install) | Snapshot |
@@ -72,6 +69,8 @@ sudo xbps-install <package-name>
 | `zen-browser` | Privacy-focused Firefox-based browser | Stable |
 
 > `Git` packages track upstream HEAD and rebuild on every new commit.
+
+</details>
 
 ---
 
