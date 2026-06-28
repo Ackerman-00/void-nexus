@@ -5,7 +5,7 @@ revision=1
 build_style=gnu-makefile
 make_build_args="PREFIX=/usr BINDIR=/usr/bin DATADIR=/usr/share SYSCONFDIR=/etc/xdg STATEDIR=/var/lib"
 make_install_args="PREFIX=/usr BINDIR=/usr/bin DATADIR=/usr/share SYSCONFDIR=/etc/xdg STATEDIR=/var/lib"
-depends="grim slurp wl-clipboard libnotify gpu-screen-recorder ffmpeg"
+depends="grim slurp wl-clipboard libnotify gpu-screen-recorder ffmpeg jq"
 short_desc="Screenshot and screencast utility for mango"
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="MIT"
