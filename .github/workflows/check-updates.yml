@@ -776,6 +776,7 @@ jobs:
           for DIR in */; do
             DIRNAME="${DIR%/}"
             [ "$DIRNAME" = ".github" ] && continue
+            [ "$DIRNAME" = "gcc16" ] && continue
             [ -f "${DIRNAME}/template" ] || continue
             # Skip if already checked above
             echo "$UPDATED_PKGS" | tr ' ' '\n' | grep -qFx "$DIRNAME" && continue

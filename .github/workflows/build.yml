@@ -11,41 +11,14 @@ on:
         type: boolean
         required: false
         default: false
-      runner:
-        description: 'Runner label (auto, ubuntu-latest, self-hosted)'
-        required: false
-        default: 'auto'
 
 env:
   NODE_OPTIONS: '--no-warnings'
 
 jobs:
-  resolve-runner:
-    name: Resolve Runner
-    runs-on: ubuntu-latest
-    outputs:
-      runner: ${{ steps.resolve.outputs.runner }}
-    steps:
-      - name: Resolve runner label
-        id: resolve
-        run: |
-          INPUT_RUNNER="${{ inputs.runner }}"
-          if [ "$INPUT_RUNNER" != "auto" ]; then
-            echo "runner=$INPUT_RUNNER" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          FIRST_PKG="${{ github.event.inputs.package_list }}"
-          FIRST_PKG="${FIRST_PKG%% *}"
-          if [ "$FIRST_PKG" = "gcc16" ]; then
-            echo "runner=self-hosted" >> "$GITHUB_OUTPUT"
-          else
-            echo "runner=ubuntu-latest" >> "$GITHUB_OUTPUT"
-          fi
-
   build:
     name: Build and Index
-    needs: resolve-runner
-    runs-on: ${{ needs.resolve-runner.outputs.runner }}
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/void-linux/void-glibc-full:latest
       options: --privileged

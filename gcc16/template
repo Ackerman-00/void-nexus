@@ -93,55 +93,61 @@ post_patch() {
 }
 
 do_configure() {
-	local _langs _args
+	local _langs
+	local -a _args
 
 	_langs="c,c++,lto"
-	_args=" --prefix=${_opt_prefix}"
-	_args+=" --libexecdir=${_opt_prefix}/libexec"
-	_args+=" --libdir=${_opt_prefix}/lib64"
-	_args+=" --mandir=${_opt_prefix}/share/man"
-	_args+=" --infodir=${_opt_prefix}/share/info"
-	_args+=" --build=${_triplet}"
+	_args=( --prefix="${_opt_prefix}" )
+	_args+=( --libexecdir="${_opt_prefix}/libexec" )
+	_args+=( --libdir="${_opt_prefix}/lib64" )
+	_args+=( --mandir="${_opt_prefix}/share/man" )
+	_args+=( --infodir="${_opt_prefix}/share/info" )
+	_args+=( --build="${_triplet}" )
 	# Gentoo standard flags (toolchain.eclass)
-	_args+=" --enable-obsolete"
-	_args+=" --enable-secureplt"
-	_args+=" --disable-silent-rules"
-	_args+=" --disable-dependency-tracking"
-	_args+=" --disable-fixincludes"
-	_args+=" --disable-libunwind-exceptions"
-	_args+=" --enable-threads=posix"
-	_args+=" --enable-__cxa_atexit"
-	_args+=" --enable-clocale=gnu"
-	_args+=" --enable-libstdcxx-time=yes"
+	_args+=( --enable-obsolete )
+	_args+=( --enable-secureplt )
+	_args+=( --disable-silent-rules )
+	_args+=( --disable-dependency-tracking )
+	_args+=( --disable-fixincludes )
+	_args+=( --disable-libunwind-exceptions )
+	_args+=( --enable-threads=posix )
+	_args+=( --enable-__cxa_atexit )
+	_args+=( --enable-clocale=gnu )
+	_args+=( --enable-libstdcxx-time=yes )
 	# Disable features we don't need / would cause memory issues
-	_args+=" --disable-multilib"
-	_args+=" --disable-bootstrap"
-	_args+=" --with-system-zlib"
-	_args+=" --with-zstd"
-	_args+=" --enable-shared"
-	_args+=" --enable-lto"
-	_args+=" --enable-plugins"
-	_args+=" --enable-linker-build-id"
-	_args+=" --with-tls=gnu2"
-	_args+=" --disable-werror"
-	_args+=" --disable-nls"
-	_args+=" --disable-analyzer"
-	_args+=" --disable-libsanitizer"
-	_args+=" --disable-libitm"
-	_args+=" --disable-libvtv"
-	_args+=" --enable-gnu-unique-object"
-	_args+=" --enable-default-pie"
-	_args+=" --enable-default-ssp"
-	_args+=" --enable-checking=release"
-	_args+=" --disable-libstdcxx-pch"
-	_args+=" --with-isl"
-	_args+=" --with-linker-hash-style=gnu"
-	_args+=" --disable-sjlj-exceptions"
-	_args+=" --disable-target-libiberty"
-	_args+=" --disable-libssp"
-	_args+=" --with-pkgversion=\"Void GCC ${version} Gentoo patches-3\""
-	_args+=" --with-bugurl=\"https://github.com/void-linux/void-packages/issues\""
-	_args+=" --enable-languages=${_langs}"
+	_args+=( --disable-multilib )
+	_args+=( --disable-bootstrap )
+	_args+=( --with-system-zlib )
+	_args+=( --with-zstd )
+	_args+=( --enable-shared )
+	_args+=( --enable-lto )
+	_args+=( --enable-plugins )
+	_args+=( --enable-linker-build-id )
+	_args+=( --with-tls=gnu2 )
+	_args+=( --disable-werror )
+	_args+=( --disable-nls )
+	_args+=( --disable-analyzer )
+	_args+=( --disable-libsanitizer )
+	_args+=( --disable-libitm )
+	_args+=( --disable-libvtv )
+	_args+=( --enable-gnu-unique-object )
+	_args+=( --enable-default-pie )
+	_args+=( --enable-default-ssp )
+	_args+=( --enable-checking=release )
+	_args+=( --disable-libstdcxx-pch )
+	_args+=( --with-isl )
+	_args+=( --with-linker-hash-style=gnu )
+	_args+=( --disable-sjlj-exceptions )
+	_args+=( --disable-target-libiberty )
+	_args+=( --disable-libssp )
+	_args+=( --with-pkgversion="Void GCC ${version} Gentoo patches-3" )
+	_args+=( --with-bugurl="https://github.com/void-linux/void-packages/issues" )
+	_args+=( --with-gxx-libcxx-include-dir=/usr/include/c++/v1 )
+	_args+=( --enable-host-pie )
+	_args+=( --disable-offloading )
+	_args+=( --enable-languages="${_langs}" )
+
+	export ac_cv_have_x='have_x=yes ac_x_includes= ac_x_libraries='
 
 	export CFLAGS="${CFLAGS/-D_FORTIFY_SOURCE=2/}"
 	export CXXFLAGS="${CXXFLAGS/-D_FORTIFY_SOURCE=2/}"
@@ -152,7 +158,7 @@ do_configure() {
 	mkdir -p build
 	cd build
 	CONFIG_SHELL=/bin/bash \
-		${wrksrc}/configure ${_args}
+		${wrksrc}/configure "${_args[@]}"
 }
 
 do_build() {
@@ -160,7 +166,8 @@ do_build() {
 	local _jobs=${makejobs#-j}
 	_jobs=${_jobs:-1}
 	[ "$_jobs" -gt 2 ] && _jobs=2
-	make -C build -j${_jobs}
+	unset ADAFLAGS
+	make -C build -j${_jobs} --output-sync=line
 }
 
 do_install() {
