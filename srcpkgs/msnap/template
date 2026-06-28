@@ -1,0 +1,19 @@
+# Template file for 'msnap'
+pkgname=msnap
+version=0.4.0
+revision=1
+build_style=gnu-makefile
+make_build_args="PREFIX=/usr BINDIR=/usr/bin DATADIR=/usr/share SYSCONFDIR=/etc/xdg STATEDIR=/var/lib"
+make_install_args="PREFIX=/usr BINDIR=/usr/bin DATADIR=/usr/share SYSCONFDIR=/etc/xdg STATEDIR=/var/lib"
+depends="grim slurp wl-clipboard libnotify gpu-screen-recorder ffmpeg"
+short_desc="Screenshot and screencast utility for mango"
+maintainer="Ackerman <https://github.com/Ackerman-00>"
+license="MIT"
+homepage="https://github.com/xtheeq/msnap"
+distfiles="https://github.com/xtheeq/msnap/archive/refs/tags/v${version}.tar.gz"
+checksum="bb9caaf80fdba467e70aa966ce6549b920f475349d97b09311b9ec3f9a076a35"
+
+# Optional runtime deps:
+#  - quickshell-git: GUI mode (from void-nexus)
+#  - wayfreeze: screen freeze before capture (not yet in Void)
+#  - satty: annotation after screenshot (not yet in Void)
