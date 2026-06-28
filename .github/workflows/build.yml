@@ -1,5 +1,4 @@
-name: Build and Deploy Custom XBPS
-
+name: Build Nexus XBPS
 on:
   workflow_dispatch:
     inputs:
