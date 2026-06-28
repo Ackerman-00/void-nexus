@@ -1,61 +1,48 @@
 # Template file for 'heroic-games-launcher'
 pkgname=heroic-games-launcher
 version=2.22.0
-revision=1
+revision=2
 archs="x86_64"
-build_style=fetch
 short_desc="Open source launcher for GOG, Epic, and Amazon Games"
 maintainer="Quietcraft <ackerman-00@users.noreply.github.com>"
 license="GPL-3.0-or-later"
 homepage="https://heroicgameslauncher.com"
 
-distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-amd64.deb"
-checksum="4c8585ad7c7a76bd3c8058aa995b9064f457603f3b6afbd9114433cf4af7ecd2"
+distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-x64.tar.xz"
+checksum="5aa127f204ca793181ec33d15b5f556c2f27b5734698ab0436a6590a73974571"
 
 depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm \
  libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
 
-hostmakedepends="bsdtar"
-
-_helper_path="opt/Heroic/resources/app.asar.unpacked/build/bin/x64/linux"
-nopie_files="
- /opt/Heroic/heroic
- /opt/Heroic/chrome-sandbox
- /${_helper_path}/gogdl
- /${_helper_path}/legendary
- /${_helper_path}/nile
- /${_helper_path}/comet
- /${_helper_path}/vulkan-helper"
-
-nostrip_files="${nopie_files}"
-
-do_extract() {
-    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/Heroic-${version}-linux-amd64.deb data.tar.*
-    bsdtar xf data.tar.* -C .
-}
+nostrip=yes
 
 do_install() {
-    vmkdir opt
-    cp -a opt/Heroic ${DESTDIR}/opt/
+	vmkdir opt/heroic
+	vcopy "*" opt/heroic
 
-    vmkdir usr/share
-    cp -a usr/share/applications ${DESTDIR}/usr/share/
-    cp -a usr/share/icons ${DESTDIR}/usr/share/
+	vmkdir usr/bin
+	ln -sf /opt/heroic/heroic ${DESTDIR}/usr/bin/heroic
 
-    vmkdir usr/bin
-    cat <<'HEREDOC_EOF' > ${DESTDIR}/usr/bin/heroic
-#!/bin/sh
-if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
-    export ELECTRON_OZONE_PLATFORM_HINT="auto"
-fi
-exec /opt/Heroic/heroic "$@"
-HEREDOC_EOF
-    chmod 755 ${DESTDIR}/usr/bin/heroic
+	vmkdir usr/share/applications
+	cat > ${DESTDIR}/usr/share/applications/heroic.desktop <<-DESKTOP
+	[Desktop Entry]
+	Type=Application
+	Name=Heroic Games Launcher
+	Comment=Open source launcher for GOG, Epic, and Amazon Games
+	Icon=heroic
+	Exec=heroic %u
+	Terminal=false
+	Categories=Game;
+	MimeType=x-scheme-handler/heroic;
+	StartupWMClass=heroic
+	DESKTOP
 
-    find ${DESTDIR}/opt/Heroic -type f -name "*.a" -delete
+	vmkdir usr/share/icons/hicolor/512x512/apps
+	vinstall resources/app.asar.unpacked/build/icon.png 644 \
+		usr/share/icons/hicolor/512x512/apps heroic.png
 
-    chmod 755 ${DESTDIR}/opt/Heroic/heroic
-    if [ -f ${DESTDIR}/opt/Heroic/chrome-sandbox ]; then
-        chmod 4755 ${DESTDIR}/opt/Heroic/chrome-sandbox
-    fi
+	chmod 755 ${DESTDIR}/opt/heroic/heroic
+	if [ -f ${DESTDIR}/opt/heroic/chrome-sandbox ]; then
+		chmod 4755 ${DESTDIR}/opt/heroic/chrome-sandbox
+	fi
 }
