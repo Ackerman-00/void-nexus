@@ -14,7 +14,7 @@ license="GPL-3.0-or-later"
 homepage="https://github.com/mangowm/mango"
 changelog="https://github.com/mangowm/mango/releases"
 distfiles="https://github.com/mangowm/mango/archive/refs/tags/${version}.tar.gz"
-checksum=e37e732ff3b0db309fc616cec5ed9699e972f2969f82c1bbc3c5a298168401f8
+checksum="e37e732ff3b0db309fc616cec5ed9699e972f2969f82c1bbc3c5a298168401f8"
 
 build_options="xwayland"
 build_options_default="xwayland"
