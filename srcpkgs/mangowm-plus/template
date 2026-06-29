@@ -1,14 +1,13 @@
 # Template file for 'mangowm-plus'
 pkgname=mangowm-plus
 version=0.14.4
-revision=3
+revision=4
 conf_files="/etc/mango/config.conf"
 build_style=meson
 hostmakedepends="pkg-config wayland-devel"
 makedepends="cJSON-devel wlroots0.19-devel pcre2-devel scenefx-devel"
 depends="$(vopt_if xwayland xorg-server-xwayland)"
 replaces="mangowc>=0 mangowm>=0"
-provides="mangowc mangowm"
 short_desc="Dwl-based wayland compositor using scenefx (xwayland enabled)"
 maintainer="Quietcraft <ackerman-00@users.noreply.github.com>"
 license="GPL-3.0-or-later"
