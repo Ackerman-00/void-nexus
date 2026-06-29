@@ -1,5 +1,5 @@
-# Template file for 'mangowm-git'
-pkgname=mangowm-git
+# Template file for 'mangowm-plus'
+pkgname=mangowm-plus
 version=0.14.4
 revision=2
 conf_files="/etc/mango/config.conf"
