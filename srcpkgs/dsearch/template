@@ -1,6 +1,6 @@
 # Template file for 'dsearch'
 pkgname=dsearch
-version=0.3.1
+version=0.3.2
 revision=1
 build_style=go
 go_import_path="github.com/AvengeMedia/danksearch"
@@ -12,7 +12,7 @@ homepage="https://danklinux.com/docs/danksearch"
 changelog="https://github.com/AvengeMedia/danksearch/releases"
 
 distfiles="https://github.com/AvengeMedia/danksearch/archive/refs/tags/v${version}.tar.gz"
-checksum="d6e34db26bb3a48eae6fb86164bd6745f4539e9ba62064a99adf6a58038253a1"
+checksum="9454a2935c149ca3eb64106d59c266f513daff90438bac8b58e3a66b477521a9"
 
 wrksrc="danksearch-${version}"
 system_accounts="dsearch"
