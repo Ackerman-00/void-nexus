@@ -1,6 +1,6 @@
 # Template file for 'llauncher'
 pkgname=llauncher
-version=0.2.3
+version=0.2.4
 revision=1
 archs="x86_64"
 build_style=fetch
@@ -10,7 +10,7 @@ license="MIT"
 homepage="https://github.com/AugustLigh/LLauncher"
 
 distfiles="https://github.com/AugustLigh/LLauncher/releases/download/${version}/LLauncher_${version}_amd64.deb"
-checksum="4b4c0494d0be72c62290f4f772d8eceab77085ba46f52dd6526e916b10dba760"
+checksum="e15c5c188f7b5a8795e9be3f634f885b564993614b02a9562fa534924b105e61"
 
 depends="libwebkit2gtk41 libayatana-appindicator gtk+3 p7zip hicolor-icon-theme desktop-file-utils"
 
