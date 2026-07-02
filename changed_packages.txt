@@ -1,2 +1,3 @@
 noctalia-v5
-llauncher
+zed
+helium-browser-bin
