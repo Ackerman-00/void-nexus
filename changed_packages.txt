@@ -1,5 +1,2 @@
 noctalia-v5
-zen-browser
-brave-origin-bin
-brave-browser
-msnap
+helium-browser-bin
