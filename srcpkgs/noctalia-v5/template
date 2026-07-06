@@ -5,14 +5,14 @@ _commit=2be5e68b202a37037330a90765ea76a63b6a3421
 _shortcommit=2be5e68
 _gitdate=20260705090247
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=1
+revision=2
 
 _gitbranch="main"
 wrksrc="noctalia-${_commit}"
 
 build_style=meson
 buildtype=release
-configure_args="-Db_ndebug=true"
+configure_args="-Db_ndebug=true -Dtests=disabled"
 short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
 maintainer="Noctalia <team@noctalia.dev>"
 license="MIT"
@@ -31,7 +31,7 @@ hostmakedepends="meson ninja pkg-config git curl"
 makedepends="
  wayland-devel wayland-protocols MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
- pipewire-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
+ pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
  polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
 "
 
