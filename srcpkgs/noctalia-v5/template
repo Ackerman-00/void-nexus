@@ -14,7 +14,7 @@ build_style=meson
 buildtype=release
 configure_args="-Db_ndebug=true -Dtests=disabled"
 short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
-maintainer="Noctalia <team@noctalia.dev>"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia"
 
