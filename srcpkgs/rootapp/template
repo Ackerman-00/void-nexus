@@ -1,7 +1,7 @@
 # Template file for 'rootapp'
 pkgname=rootapp
-version=0.9.117
-revision=3
+version=0.9.118
+revision=1
 depends="gtk+3 nss libnotify alsa-lib xdg-utils at-spi2-core icu xorg-server-xwayland"
 short_desc="Discord alternative for gaming communities and large online groups"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"

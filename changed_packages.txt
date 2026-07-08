@@ -1,3 +1,4 @@
-faugus-launcher
 noctalia-v5
+niri-git
+rootapp
 quickshell-git
