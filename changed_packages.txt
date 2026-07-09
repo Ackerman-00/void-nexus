@@ -1,4 +1,10 @@
 noctalia-v5
 niri-git
-rootapp
-quickshell-git
+zen-browser
+brave-origin-bin
+mangowm-plus
+zed
+helium-browser-bin
+brave-browser
+dank-material-shell
+msnap
