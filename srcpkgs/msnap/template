@@ -1,6 +1,6 @@
 # Template file for 'msnap'
 pkgname=msnap
-version=0.5.0
+version=0.5.1
 revision=1
 build_style=gnu-makefile
 make_build_args="PREFIX=/usr BINDIR=/usr/bin DATADIR=/usr/share SYSCONFDIR=/etc/xdg STATEDIR=/var/lib"
@@ -11,7 +11,7 @@ maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/xtheeq/msnap"
 distfiles="https://github.com/xtheeq/msnap/archive/refs/tags/v${version}.tar.gz"
-checksum="01d5e5f5688ce353f99e0689e304090db58c0010e9c00ea258425ec3f5065ea9"
+checksum="39f561f916095822052f79716bbf56e92b19c21663a230bbe32479d15966630e"
 
 # Optional runtime deps:
 #  - quickshell-git: GUI mode (from void-nexus)

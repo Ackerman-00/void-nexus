@@ -1,10 +1,8 @@
 noctalia-v5
-niri-git
-zen-browser
 brave-origin-bin
+quickshell-git
 mangowm-plus
 zed
 helium-browser-bin
 brave-browser
-dank-material-shell
 msnap
