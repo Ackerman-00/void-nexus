@@ -33,7 +33,7 @@ makedepends="
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
  pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
  polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
- libmd4c-devel json-c++ tomlplusplus-devel
+ libmd4c-devel json-c++ tomlplusplus-devel stb
 "
 
 post_install() {
