@@ -37,7 +37,7 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <details>
-<summary>Click to expand — 20 packages</summary>
+<summary>Click to expand — 22 packages</summary>
 
 <br />
 
@@ -47,6 +47,9 @@ sudo xbps-install <package-name>
 | `brave-browser` | Secure, fast and private web browser with ad blocker | Stable |
 | `brave-origin-bin` | Minimalist browser from the makers of Brave (binary release) | Stable |
 | `faugus-launcher` | Simple and lightweight app for running Windows games using UMU-Launcher | Stable |
+| `llauncher` | Linux launcher for Arknights: Endfield (Native Tauri app) | Stable |
+| `mangowm-plus` | Dwl-based wayland compositor using scenefx (xwayland enabled) | Stable |
+| `msnap` | Screenshot and screencast utility for mango | Stable |
 | `gcc16` | GNU Compiler Collection 16 (parallel install) | Snapshot |
 | `helium-browser-bin` | Private, fast, and honest web browser based on Chromium | Stable |
 | `heroic-games-launcher` | Open source launcher for GOG, Epic, and Amazon Games | Stable |
@@ -58,7 +61,6 @@ sudo xbps-install <package-name>
 | `protonplus` | Compatibility tools manager for GNOME (Wine/Proton) | Stable |
 | `rootapp` | Discord alternative for gaming communities and large online groups | Stable |
 | `sdbus-cpp` | High-level C++ D-Bus library | Stable |
-| `tomlplusplus` | Header-only TOML config file parser and serializer for C++ | Stable |
 | `vesktop` | Custom Discord desktop client with Vencord preinstalled | Stable |
 | `xwayland-satellite-git` | Xwayland outside your Wayland compositor (Git Snapshot) | Git |
 | `zed` | High-performance, multiplayer code editor from the creators of Atom | Stable |
