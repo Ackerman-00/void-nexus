@@ -37,7 +37,7 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <details>
-<summary>Click to expand — 24 packages</summary>
+<summary>Click to expand — 20 packages</summary>
 
 <br />
 
@@ -46,9 +46,6 @@ sudo xbps-install <package-name>
 | `blender-bin` | 3D graphics creation suite (binary build) | Stable |
 | `brave-browser` | Secure, fast and private web browser with ad blocker | Stable |
 | `brave-origin-bin` | Minimalist browser from the makers of Brave (binary release) | Stable |
-| `dank-material-shell` | A Material You inspired shell for Wayland | Stable |
-| `dgop` | Stateless, cursor-based system and process monitoring tool | Stable |
-| `dsearch` | Fast configurable filesystem search service | Stable |
 | `faugus-launcher` | Simple and lightweight app for running Windows games using UMU-Launcher | Stable |
 | `gcc16` | GNU Compiler Collection 16 (parallel install) | Snapshot |
 | `helium-browser-bin` | Private, fast, and honest web browser based on Chromium | Stable |
@@ -59,7 +56,6 @@ sudo xbps-install <package-name>
 | `noctalia-shell` | Noctalia Shell - GNOME Shell theme and extensions | Stable |
 | `noctalia-v5` | Lightweight Wayland shell built directly on Wayland and OpenGL ES | Git |
 | `protonplus` | Compatibility tools manager for GNOME (Wine/Proton) | Stable |
-| `quickshell-git` | Flexible QtQuick-based desktop shell toolkit (Git Snapshot) | Git |
 | `rootapp` | Discord alternative for gaming communities and large online groups | Stable |
 | `sdbus-cpp` | High-level C++ D-Bus library | Stable |
 | `tomlplusplus` | Header-only TOML config file parser and serializer for C++ | Stable |
