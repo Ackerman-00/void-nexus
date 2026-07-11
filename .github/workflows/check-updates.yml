@@ -505,29 +505,29 @@ jobs:
                           if not nv:
                               print("  → ERROR: Could not extract AppImage version")
                               continue
-            nh = sha256_file(fp)
-                            print(f"  → {curr_ver} → {nv}")
-                            curr_chksum_m = re.search(r'^checksum=["\']?([a-f0-9]+)', raw, re.MULTILINE)
-                            curr_chksum = curr_chksum_m.group(1) if curr_chksum_m else None
-                            if version_is_newer(nv, curr_ver):
-                                c = raw
-                                c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
-                                c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
-                                c = re.sub(r'^checksum=["\']?[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
-                                tpath.write_text(c, encoding='utf-8')
-                                changed_packages.append(pkgname)
-                                print(f"  → Updated {pkgname}")
-                            elif curr_chksum and nh != curr_chksum:
-                                print("  → Silent checksum change detected")
-                                c = raw
-                                c = re.sub(r'^checksum=["\']?[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
-                                def _bump(m): return m.group(1) + str(int(m.group(2)) + 1)
-                                c = re.sub(r'^(revision=)(\d+)', _bump, c, flags=re.MULTILINE)
-                                tpath.write_text(c, encoding='utf-8')
-                                changed_packages.append(pkgname)
-                                print(f"  → Updated {pkgname} (revision bumped)")
-                            else:
-                                print("  → No update")
+                          nh = sha256_file(fp)
+                          print(f"  → {curr_ver} → {nv}")
+                          curr_chksum_m = re.search(r'^checksum=["\']?([a-f0-9]+)', raw, re.MULTILINE)
+                          curr_chksum = curr_chksum_m.group(1) if curr_chksum_m else None
+                          if version_is_newer(nv, curr_ver):
+                              c = raw
+                              c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
+                              c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
+                              c = re.sub(r'^checksum=["\']?[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
+                              tpath.write_text(c, encoding='utf-8')
+                              changed_packages.append(pkgname)
+                              print(f"  → Updated {pkgname}")
+                          elif curr_chksum and nh != curr_chksum:
+                              print("  → Silent checksum change detected")
+                              c = raw
+                              c = re.sub(r'^checksum=["\']?[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
+                              def _bump(m): return m.group(1) + str(int(m.group(2)) + 1)
+                              c = re.sub(r'^(revision=)(\d+)', _bump, c, flags=re.MULTILINE)
+                              tpath.write_text(c, encoding='utf-8')
+                              changed_packages.append(pkgname)
+                              print(f"  → Updated {pkgname} (revision bumped)")
+                          else:
+                              print("  → No update")
                       else:
                           print("  → ERROR: download failed")
                   continue
