@@ -1,8 +1,1 @@
 noctalia-v5
-brave-origin-bin
-quickshell-git
-mangowm-plus
-zed
-helium-browser-bin
-brave-browser
-msnap
