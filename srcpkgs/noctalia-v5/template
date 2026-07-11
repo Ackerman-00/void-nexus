@@ -26,14 +26,14 @@ provides="noctalia-${version}_${revision}"
 
 CXXFLAGS="-std=c++23 -Wno-unused-result"
 
-hostmakedepends="meson ninja pkg-config git curl"
+hostmakedepends="meson ninja pkg-config git curl cmake"
 
 makedepends="
  wayland-devel wayland-protocols MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
  pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
  polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
- libmd4c-devel
+ libmd4c-devel json-c++ tomlplusplus-devel
 "
 
 post_install() {
