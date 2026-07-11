@@ -37,7 +37,7 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <details>
-<summary>Click to expand — 21 packages</summary>
+<summary>Click to expand — 20 packages</summary>
 
 <br />
 
@@ -47,7 +47,6 @@ sudo xbps-install <package-name>
 | `brave-browser` | Secure, fast and private web browser with ad blocker | Stable |
 | `brave-origin-bin` | Minimalist browser from the makers of Brave (binary release) | Stable |
 | `faugus-launcher` | Simple and lightweight app for running Windows games using UMU-Launcher | Stable |
-| `mangowm-plus` | Dwl-based wayland compositor using scenefx (xwayland enabled) | Stable |
 | `msnap` | Screenshot and screencast utility for mango | Stable |
 | `gcc16` | GNU Compiler Collection 16 (parallel install) | Snapshot |
 | `helium-browser-bin` | Private, fast, and honest web browser based on Chromium | Stable |
