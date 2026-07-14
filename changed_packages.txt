@@ -1,3 +1,2 @@
 noctalia-v5
-zed
-xwayland-satellite-git
+blender-bin
