@@ -1,6 +1,6 @@
 # Template file for 'brave-origin-bin'
 pkgname=brave-origin-bin
-version=1.92.139
+version=1.92.140
 revision=1
 archs="x86_64"
 hostmakedepends="unzip"
@@ -12,7 +12,7 @@ homepage="https://brave.com/origin/download"
 nostrip=yes
 
 distfiles="https://github.com/brave/brave-browser/releases/download/v${version}/brave-origin-${version}-linux-amd64.zip"
-checksum="132d5290c8c997526deef89962489ddde5703cf98dcc8733547cd9d5ab6ec8a7"
+checksum="c9dd36a24e3b9cbf3688aeb117fc38a0c333adbd073308df6a6b052b74463c5f"
 
 do_extract() {
 	mkdir -p ${wrksrc}

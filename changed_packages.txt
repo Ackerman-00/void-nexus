@@ -1,1 +1,6 @@
 noctalia-v5
+zen-browser
+brave-origin-bin
+zed
+helium-browser-bin
+brave-browser
