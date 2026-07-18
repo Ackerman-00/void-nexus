@@ -1,2 +1,6 @@
-zen-browser
+brave-browser
+brave-origin-bin
+msnap
+rootapp
+helium-browser-bin
 noctalia-v5
