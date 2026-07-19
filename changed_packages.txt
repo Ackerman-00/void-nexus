@@ -1,6 +1,2 @@
-brave-browser
-brave-origin-bin
-msnap
-rootapp
-helium-browser-bin
+niri-git
 noctalia-v5
