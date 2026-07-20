@@ -1,2 +1,3 @@
-niri-git
+faugus-launcher
+msnap
 noctalia-v5
