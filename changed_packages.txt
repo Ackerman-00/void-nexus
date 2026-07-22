@@ -1,3 +1,2 @@
-niri-git
-faugus-launcher
+xwayland-satellite-git
 noctalia-v5
