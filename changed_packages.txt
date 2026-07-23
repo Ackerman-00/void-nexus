@@ -1,2 +1,6 @@
-xwayland-satellite-git
+brave-browser
+brave-origin-bin
+faugus-launcher
+helium-browser-bin
+zed
 noctalia-v5
