@@ -1,6 +1,3 @@
-brave-browser
-brave-origin-bin
-faugus-launcher
-helium-browser-bin
-zed
+protonplus
+rootapp
 noctalia-v5
