@@ -1,3 +1,4 @@
-protonplus
-rootapp
+brave-browser
+brave-origin-bin
+helium-browser-bin
 noctalia-v5
