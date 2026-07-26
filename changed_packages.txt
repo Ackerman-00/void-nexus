@@ -1,4 +1,2 @@
-brave-browser
-brave-origin-bin
-helium-browser-bin
+zen-browser
 noctalia-v5
