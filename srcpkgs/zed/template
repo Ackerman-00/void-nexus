@@ -1,6 +1,6 @@
 # Template file for 'zed'
 pkgname=zed
-version=1.12.0
+version=1.12.1
 revision=1
 archs="x86_64* aarch64*"
 build_style=cargo
@@ -37,7 +37,7 @@ license="GPL-3.0-or-later, Apache-2.0"
 homepage="https://zed.dev"
 changelog="https://github.com/zed-industries/zed/releases"
 distfiles="https://github.com/zed-industries/zed/archive/refs/tags/v${version}.tar.gz"
-checksum="808cd839242f29d35ff09ba69795c0a5be9bc3af97c547c61d423e3da2a5ee84"
+checksum="a11463ff8b79bef358ef6f3d7d57b21accefc5730311b7802c20731eb75e25da"
 
 pre_build() {
     printf "stable" > crates/zed/RELEASE_CHANNEL
