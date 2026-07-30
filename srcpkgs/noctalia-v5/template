@@ -7,33 +7,41 @@ _gitdate=20260729133711
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 
+# Use the repository directory name (upstream builds from a 'noctalia' folder when using git)
 _gitbranch="main"
-wrksrc="noctalia-${_commit}"
+wrksrc="noctalia"
 
 build_style=meson
 buildtype=release
-configure_args="-Db_ndebug=true -Dtests=disabled"
+# Add native optimizations to match upstream meson flags and keep tests disabled
+configure_args="-Db_ndebug=true -Dtests=disabled -Dnative_optimizations=true"
 short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia"
 
+# Keep distfile pinned to a commit tarball (existing workflow). If you prefer
+# building from git like upstream AUR PKGBUILD, switch source to a git+ URL.
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
 checksum="71604c7ca807d22302ff461cd0d30a6de1b31e4442061ff2bd7e674c2e0b608d"
 
 conflicts="noctalia>=0"
 provides="noctalia-${version}_${revision}"
 
+# Ensure newer C++ flags used upstream are present
 CXXFLAGS="-std=c++23 -Wno-unused-result"
 
+# Host build tools
 hostmakedepends="meson ninja pkg-config git curl cmake"
 
+# Makedeps updated to match upstream additions (nlohmann-json, pkgconf/stb, wayland-protocols already present)
 makedepends="
  wayland-devel wayland-protocols MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
  pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
  polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
- libmd4c-devel json-c++ tomlplusplus-devel stb
+ libmd4c-devel json-c++ tomlplusplus-devel stb-devel nlohmann-json-devel pkgconf-devel
+ libjxl-devel libsndfile-devel libsodium-devel libsecret-devel
 "
 
 post_install() {
