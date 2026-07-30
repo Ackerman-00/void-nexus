@@ -15,8 +15,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MPL-2.0"
 homepage="https://github.com/Supreeeme/xwayland-satellite"
 
-conflicts="xwayland-satellite"
-provides="xwayland-satellite"
+conflicts="xwayland-satellite>=0"
+provides="xwayland-satellite-${version}_${revision}"
 
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
 checksum="4ce9e47b359627e0407fcdc3651b1de51f27209056a1d8356acb181268819367"
