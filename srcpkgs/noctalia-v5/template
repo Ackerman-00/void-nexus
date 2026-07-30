@@ -1,9 +1,9 @@
 # Template file for 'noctalia-v5'
 pkgname=noctalia-v5
 _basever=5.0.0
-_commit=c77109726b1f2b5fc9483a93d4615f73868e5896
-_shortcommit=c771097
-_gitdate=20260729133711
+_commit=b72f49f42a9934712657a8b56eafbe06692b3790
+_shortcommit=b72f49f
+_gitdate=20260730042300
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 
@@ -23,7 +23,7 @@ homepage="https://github.com/noctalia-dev/noctalia"
 # Keep distfile pinned to a commit tarball (existing workflow). If you prefer
 # building from git like upstream AUR PKGBUILD, switch source to a git+ URL.
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
-checksum="71604c7ca807d22302ff461cd0d30a6de1b31e4442061ff2bd7e674c2e0b608d"
+checksum="1f295ce0f77f40737032608c5f6f20f38dd76b8767bfa8c3d2263623f3e542dd"
 
 conflicts="noctalia>=0"
 provides="noctalia-${version}_${revision}"
