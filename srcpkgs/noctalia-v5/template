@@ -34,14 +34,13 @@ CXXFLAGS="-std=c++23 -Wno-unused-result"
 # Host build tools
 hostmakedepends="meson ninja pkg-config git curl cmake"
 
-# Makedeps updated to match upstream additions (nlohmann-json, pkgconf/stb, wayland-protocols already present)
+# Makedeps mapped to Void package names (use -devel where Void splits headers/libs)
 makedepends="
  wayland-devel wayland-protocols MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
  pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
  polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
- libmd4c-devel json-c++ tomlplusplus-devel stb nlohmann-json pkgconf
- libjxl-devel libsndfile-devel libsodium-devel libsecret-devel
+ libmd4c-devel json-c++ tomlplusplus-devel stb libjxl-devel libsndfile-devel libsodium-devel libsecret-devel
 "
 
 post_install() {
