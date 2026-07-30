@@ -5,42 +5,31 @@ _commit=b72f49f42a9934712657a8b56eafbe06692b3790
 _shortcommit=b72f49f
 _gitdate=20260730042300
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=1
-
-# Use the repository directory name (upstream builds from a 'noctalia' folder when using git)
-_gitbranch="main"
-wrksrc="noctalia"
+revision=2
 
 build_style=meson
 buildtype=release
-# Add native optimizations to match upstream meson flags and keep tests disabled
-configure_args="-Db_ndebug=true -Dtests=disabled -Dnative_optimizations=true"
-short_desc="Lightweight Wayland shell built directly on Wayland and OpenGL ES"
+configure_args="-Db_ndebug=true -Dtests=disabled"
+short_desc="A sleek, customizable desktop shell crafted for Wayland"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia"
 
-# Keep distfile pinned to a commit tarball (existing workflow). If you prefer
-# building from git like upstream AUR PKGBUILD, switch source to a git+ URL.
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
 checksum="1f295ce0f77f40737032608c5f6f20f38dd76b8767bfa8c3d2263623f3e542dd"
 
-conflicts="noctalia>=0"
+conflicts="noctalia"
 provides="noctalia-${version}_${revision}"
 
-# Ensure newer C++ flags used upstream are present
-CXXFLAGS="-std=c++23 -Wno-unused-result"
+hostmakedepends="meson ninja pkg-config wayland-protocols"
 
-# Host build tools
-hostmakedepends="meson ninja pkg-config git curl cmake"
-
-# Makedeps mapped to Void package names (use -devel where Void splits headers/libs)
 makedepends="
- wayland-devel wayland-protocols MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
+ wayland-devel MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
- pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel basu-devel sdbus-c++-devel
- polkit-devel librsvg-devel jemalloc-devel glib-devel libqalculate-devel libxml2-devel
- libmd4c-devel json-c++ tomlplusplus-devel stb libjxl-devel libsndfile-devel libsodium-devel libsecret-devel
+ pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel
+ basu-devel sdbus-c++-devel polkit-devel librsvg-devel jemalloc-devel
+ glib-devel libqalculate-devel libxml2-devel libmd4c-devel nlohmann-json
+ tomlplusplus-devel stb libjxl-devel libsndfile-devel libsodium-devel libsecret-devel
 "
 
 post_install() {
