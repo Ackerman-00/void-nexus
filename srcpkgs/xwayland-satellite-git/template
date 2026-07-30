@@ -5,18 +5,18 @@ _commit=8d135d3b2854b30fd01ea6cd6c27e523dd50a839
 _shortcommit=8d135d3
 _gitdate=20260722002452
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=1
+revision=2
 build_style=cargo
 hostmakedepends="pkg-config clang"
-makedepends="xcb-util-cursor-devel"
+makedepends="libxcb-devel xcb-util-cursor-devel"
 depends="xorg-server-xwayland"
 short_desc="Xwayland outside your Wayland compositor (Git Snapshot)"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MPL-2.0"
 homepage="https://github.com/Supreeeme/xwayland-satellite"
 
-conflicts="xwayland-satellite>=0"
-provides="xwayland-satellite-${version}_${revision}"
+conflicts="xwayland-satellite"
+provides="xwayland-satellite"
 
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
 checksum="4ce9e47b359627e0407fcdc3651b1de51f27209056a1d8356acb181268819367"

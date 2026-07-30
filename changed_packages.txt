@@ -1,2 +1,4 @@
 noctalia
+niri-git
+xwayland-satellite-git
 zed

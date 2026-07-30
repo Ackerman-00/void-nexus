@@ -5,14 +5,14 @@ _commit=7f26c3ee804fb6ed458ef7fb0e3c794f14e0b3bc
 _shortcommit=7f26c3e
 _gitdate=20260720180526
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=1
+revision=2
 build_style=cargo
 build_helper="qemu"
 configure_args="--no-default-features --features dbus,xdp-gnome-screencast"
-hostmakedepends="pkg-config clang19-devel"
-makedepends="eudev-libudev-devel libxkbcommon-devel libinput-devel libgbm-devel
- libdisplay-info-devel pipewire-devel pango-devel libseat-devel clang19-devel
- gdk-pixbuf-devel graphene-devel gtk4-devel libadwaita-devel"
+hostmakedepends="pkg-config"
+makedepends="cairo-devel eudev-libudev-devel glib-devel libdisplay-info-devel
+ libgbm-devel libinput-devel libseat-devel libxkbcommon-devel MesaLib-devel
+ pango-devel pipewire-devel pixman-devel clang19-devel"
 depends="wayland xwayland-satellite-git"
 checkdepends="wayland"
 short_desc="Scrollable-tiling Wayland compositor (Git Snapshot)"
@@ -20,8 +20,8 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/niri-wm/niri"
 changelog="https://github.com/niri-wm/niri/releases"
-conflicts="niri>=0"
-provides="niri-${version}_${revision}"
+conflicts="niri"
+provides="niri"
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
 checksum="395cab3ddae7abdc94877584d38254574ad01d4bba360070754c451de3069862"
 pre_check() {
