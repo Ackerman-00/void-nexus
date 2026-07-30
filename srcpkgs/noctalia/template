@@ -1,11 +1,11 @@
-# Template file for 'noctalia-v5'
-pkgname=noctalia-v5
+# Template file for 'noctalia'
+pkgname=noctalia
 _basever=5.0.0
 _commit=b72f49f42a9934712657a8b56eafbe06692b3790
 _shortcommit=b72f49f
 _gitdate=20260730042300
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=2
+revision=1
 
 build_style=meson
 buildtype=release
@@ -18,18 +18,22 @@ homepage="https://github.com/noctalia-dev/noctalia"
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
 checksum="1f295ce0f77f40737032608c5f6f20f38dd76b8767bfa8c3d2263623f3e542dd"
 
-conflicts="noctalia"
-provides="noctalia-${version}_${revision}"
+replaces="noctalia-v5>=0 noctalia-beta>=0"
 
-hostmakedepends="meson ninja pkg-config wayland-protocols"
+hostmakedepends="meson ninja pkg-config"
 
 makedepends="
- wayland-devel MesaLib-devel libglvnd-devel libepoxy-devel cairo-devel
- pango-devel fontconfig-devel freetype-devel harfbuzz-devel libxkbcommon-devel
- pipewire-devel wireplumber-devel libcurl-devel pam-devel libwebp-devel
- basu-devel sdbus-c++-devel polkit-devel librsvg-devel jemalloc-devel
- glib-devel libqalculate-devel libxml2-devel libmd4c-devel nlohmann-json
- tomlplusplus-devel stb libjxl-devel libsndfile-devel libsodium-devel libsecret-devel
+ wayland-devel wayland-protocols libepoxy-devel
+ MesaLib-devel libglvnd-devel cairo-devel
+ pango-devel fontconfig-devel freetype-devel
+ harfbuzz-devel libxkbcommon-devel pipewire-devel wireplumber-devel
+ libsecret-devel libsodium-devel
+ libcurl-devel pam-devel libwebp-devel libjxl-devel libsndfile-devel
+ basu-devel sdbus-c++-devel
+ libmd4c-devel tomlplusplus-devel
+ json-c++ stb
+ polkit-devel librsvg-devel libqalculate-devel libxml2-devel jemalloc-devel
+ glib-devel
 "
 
 post_install() {

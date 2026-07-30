@@ -37,7 +37,7 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <details>
-<summary>Click to expand — 20 packages</summary>
+<summary>Click to expand — 18 packages</summary>
 
 <br />
 
@@ -53,9 +53,7 @@ sudo xbps-install <package-name>
 | `heroic-games-launcher` | Open source launcher for GOG, Epic, and Amazon Games | Stable |
 | `libspng` | Simple, modern libpng alternative | Stable |
 | `niri-git` | Scrollable-tiling Wayland compositor (Git Snapshot) | Git |
-| `noctalia-qs` | Noctalia Quick Settings - GNOME Shell quick settings extension | Stable |
-| `noctalia-shell` | Noctalia Shell - GNOME Shell theme and extensions | Stable |
-| `noctalia-v5` | Lightweight Wayland shell built directly on Wayland and OpenGL ES | Git |
+| `noctalia` | A sleek, customizable desktop shell crafted for Wayland | Git |
 | `protonplus` | Compatibility tools manager for GNOME (Wine/Proton) | Stable |
 | `rootapp` | Discord alternative for gaming communities and large online groups | Stable |
 | `sdbus-cpp` | High-level C++ D-Bus library | Stable |
