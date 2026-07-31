@@ -1,2 +1,5 @@
+brave-browser
+zen-browser
 noctalia
-faugus-launcher
+rootapp
+brave-origin-bin
