@@ -513,14 +513,14 @@ jobs:
                               c = raw
                               c = re.sub(r'^version=.*', f'version={nv}', c, flags=re.MULTILINE)
                               c = re.sub(r'^revision=.*', 'revision=1', c, flags=re.MULTILINE)
-                              c = re.sub(r'^checksum=["\']?[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
+                              c = re.sub(r'^checksum=["\']?[a-f0-9]+["\']?', f'checksum="{nh}"', c, flags=re.MULTILINE)
                               tpath.write_text(c, encoding='utf-8')
                               changed_packages.append(pkgname)
                               print(f"  → Updated {pkgname}")
                           elif curr_chksum and nh != curr_chksum:
                               print("  → Silent checksum change detected")
                               c = raw
-                              c = re.sub(r'^checksum=["\']?[a-f0-9]+', f'checksum={nh}', c, flags=re.MULTILINE)
+                              c = re.sub(r'^checksum=["\']?[a-f0-9]+["\']?', f'checksum="{nh}"', c, flags=re.MULTILINE)
                               def _bump(m): return m.group(1) + str(int(m.group(2)) + 1)
                               c = re.sub(r'^(revision=)(\d+)', _bump, c, flags=re.MULTILINE)
                               tpath.write_text(c, encoding='utf-8')

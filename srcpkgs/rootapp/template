@@ -8,7 +8,7 @@ maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="custom"
 homepage="https://www.rootapp.com"
 distfiles="https://installer.rootapp.com/installer/Linux/X64/Root.AppImage>Root-${version}-x86_64.AppImage"
-checksum=86ed0d76bcd92b574c651ea37ebaa392f47f543ecf11c61ed6080f9653a73444"
+checksum="86ed0d76bcd92b574c651ea37ebaa392f47f543ecf11c61ed6080f9653a73444"
 nostrip=yes
 
 do_extract() {
