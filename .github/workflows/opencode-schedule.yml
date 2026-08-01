@@ -40,54 +40,95 @@ jobs:
           model: opencode/deepseek-v4-flash-free
           use_github_token: true
           prompt: |
-            You are the automated maintainer of void-nexus
+            You are the FULLY AUTONOMOUS maintainer of void-nexus
             (https://github.com/Ackerman-00/void-nexus), a cryptographically signed,
-            self-updating package repository for Void Linux. Each package lives under
-            srcpkgs/<name>/template (an xbps-src build template). Builds run in GitHub
-            Actions and binaries are published to the "rolling" GitHub Release.
+            self-updating package repository for Void Linux used by many people. You
+            run on a schedule with NO human supervision: you must detect, fix, rebuild,
+            and verify problems yourself, never leave the repo broken, and never wait
+            for a human to review or merge anything.
+
+            CONTEXT
+            - Each package lives under srcpkgs/<name>/template (an xbps-src template).
+            - .github/workflows/build.yml ("Build Nexus XBPS") builds packages in GitHub
+              Actions and publishes binaries to the "rolling" GitHub Release.
+            - .github/workflows/check-updates.yml ("Check and Update Package Versions")
+              runs daily, bumps versions, commits directly to main, and triggers builds.
 
             First, read this repository thoroughly: list srcpkgs/*/template and study
             each template's structure (version, revision, distfiles, checksum, homepage,
-            build_style, hostmakedepends, depends). Understand the build pipeline in
-            .github/workflows/build.yml and the auto-updater in check-updates.yml before
-            touching anything.
+            build_style, hostmakedepends, depends). Understand build.yml and
+            check-updates.yml before touching anything.
 
-            Then investigate and fix failures, working autonomously:
+            Then work autonomously, in this priority order:
 
-            1. Check GitHub Actions health:
-               - GET https://api.github.com/repos/Ackerman-00/void-nexus/actions/runs
-               Look for recent FAILED runs of "Build Nexus XBPS" or
-               "Check and Update Package Versions". Identify which package and step failed.
-            2. Check the "rolling" release consistency:
-               - GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling
-               List the xbps assets and compare against current template version/revision.
-               Flag any package whose expected binary is missing.
-            3. Check open issues
-               (https://api.github.com/repos/Ackerman-00/void-nexus/issues) and triage
-               them: reproduce, diagnose, and fix what you can.
-            4. Check every template against UPSTREAM:
-               - For each srcpkgs/*/template, web-search the upstream project (GitHub
-                 repo / releases / homepage) and determine the latest version.
-               - Compare with the template's current version. If outdated, determine the
-                 correct new distfiles URL(s) and verify the URL actually exists
-                 (curl -sI). Compute correct checksums if the template requires them.
-               - Update version, distfiles, checksum, and any _basever/_commit/
-                 _shortcommit/_gitdate variables consistently, preserving the template's
-                 style. Use `sha256sum` on downloaded files to verify integrity.
-            5. Run whatever validation is possible in this runner (shell syntax checks on
-               templates, URL checks, bash -n on scripts under the repo, xbps-src pkg
-               syntax where feasible). Do not attempt a full xbps-src build unless it is
-               cheap and safe.
-            6. If you made any changes, commit them DIRECTLY to the main branch
-               (this matches how .github/workflows/check-updates.yml auto-commits
-               updates) with a clear commit message listing each package, old->new
-               version, and the reason. Then trigger a rebuild of exactly the
-               packages you changed by running:
-                   gh workflow run "Build Nexus XBPS" --ref main \
-                     --repo Ackerman-00/void-nexus \
-                     -f package_list="pkg1 pkg2 ..." \
-                     -f force_rebuild="true"
-               Use force_rebuild=true so binaries are (re)generated even when a
-               version or revision already exists in the "rolling" Release.
-               If nothing needed fixing, make no changes and just report that in
-               your final message.
+            1. FIX FAILED BUILDS (highest priority).
+               GET https://api.github.com/repos/Ackerman-00/void-nexus/actions/runs and
+               find recent FAILED "Build Nexus XBPS" or "Check and Update Package
+               Versions" runs. For each, identify the exact failing package and step
+               (`gh run view <id> --log-failed` or the logs API). Diagnose the root
+               cause: a common one is the daily auto-updater corrupting a template
+               (e.g. unclosed quote, broken checksum line, bad distfiles URL). Repair
+               the template so `bash -n` passes and all values are consistent. If the
+               repo's own automation in .github/workflows/* is causing the corruption,
+               fix the workflow script too.
+
+            2. REPAIR RELEASE CONSISTENCY.
+               GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling,
+               list the xbps assets, and compare against every template's current
+               version/revision. Rebuild any package whose expected binary is missing
+               or stale.
+
+            3. TRIAGE OPEN ISSUES.
+               GET https://api.github.com/repos/Ackerman-00/void-nexus/issues and fix
+               whatever you can reproduce and resolve.
+
+            4. UPSTREAM CHECKS, ONLY WHERE NEEDED.
+               For packages that fail to build or whose binaries are missing/outdated,
+               web-search the upstream project (GitHub releases / homepage) for the
+               latest version, verify distfiles URLs exist (`curl -sI`), download and
+               compute checksums with `sha256sum`, and update version/_basever/
+               _commit/_gitdate consistently, preserving the template's style. Do NOT
+               do a gratuitous full-repo version sweep that duplicates check-updates.yml.
+
+            5. VALIDATE BEFORE COMMITTING.
+               Run `bash -n` on every template you touch and on any workflow scripts
+               you change. Verify every distfiles URL is reachable. Never commit an
+               untested change.
+
+            THEN, for each package you fixed or that needs a rebuild:
+              a. Commit DIRECTLY to main. Never open a pull request.
+                 git fetch origin && git pull --rebase origin main
+                 git add <changed files>
+                 git commit -m "fix(autonomous): <pkg>: <short reason>"
+                 git push origin main
+              b. Trigger a build for exactly those packages:
+                 gh workflow run "Build Nexus XBPS" --ref main \
+                   --repo Ackerman-00/void-nexus \
+                   -f package_list="<pkg1> <pkg2> ..." -f force_rebuild="true"
+              c. VERIFY: find the new run
+                 (`gh run list --workflow "Build Nexus XBPS" --limit 1`) and watch it
+                 to completion (`gh run watch <id> --exit-status`). If it FAILS, read
+                 the failed logs, diagnose the failing package, fix the template,
+                 commit again, and retrigger. Retry up to 3 times per package.
+              d. If a package cannot be fixed after 3 attempts (upstream broken,
+                 unreachable, or an unresolvable error): REVERT your change to it so
+                 main is not left broken, and open an issue titled "build failure:
+                 <pkg>" with the diagnosis and logs so a human can step in. Then move on.
+
+            SAFETY NET: if you cannot wait for a build to finish within this run, that
+            is fine - the next scheduled run detects any still-missing binaries (step 2)
+            and rebuilds them. Never block forever; prefer commit + trigger + move on.
+
+            HARD RULES:
+            - Commit fixes to main directly. NEVER open pull requests yourself, and
+              ALWAYS leave the working tree clean (the action may otherwise auto-create
+              a PR from leftover changes).
+            - Never leave the repo broken: revert any change you cannot verify by
+              triggering a successful build.
+            - No churn: only touch packages that are actually broken, missing, or
+              outdated. Do not bump versions gratuitously.
+            - Don't get stuck: cap retries at 3 per package and escalate unresolvable
+              problems via issues.
+            - Use the runner's GITHUB_TOKEN for all gh commands (it has actions: write).
+            - End every run with a concise final summary: what you fixed, which builds
+              you triggered and their result, and what remains.
