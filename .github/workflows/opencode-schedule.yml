@@ -1,0 +1,80 @@
+name: opencode-schedule
+
+on:
+  schedule:
+    - cron: '15 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: opencode-schedule
+  cancel-in-progress: true
+
+jobs:
+  opencode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run opencode
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          prompt: |
+            You are the automated maintainer of void-nexus
+            (https://github.com/Ackerman-00/void-nexus), a cryptographically signed,
+            self-updating package repository for Void Linux. Each package lives under
+            srcpkgs/<name>/template (an xbps-src build template). Builds run in GitHub
+            Actions and binaries are published to the "rolling" GitHub Release.
+
+            First, read this repository thoroughly: list srcpkgs/*/template and study
+            each template's structure (version, revision, distfiles, checksum, homepage,
+            build_style, hostmakedepends, depends). Understand the build pipeline in
+            .github/workflows/build.yml and the auto-updater in check-updates.yml before
+            touching anything.
+
+            Then investigate and fix failures, working autonomously:
+
+            1. Check GitHub Actions health:
+               - GET https://api.github.com/repos/Ackerman-00/void-nexus/actions/runs
+               Look for recent FAILED runs of "Build Nexus XBPS" or
+               "Check and Update Package Versions". Identify which package and step failed.
+            2. Check the "rolling" release consistency:
+               - GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling
+               List the xbps assets and compare against current template version/revision.
+               Flag any package whose expected binary is missing.
+            3. Check open issues
+               (https://api.github.com/repos/Ackerman-00/void-nexus/issues) and triage
+               them: reproduce, diagnose, and fix what you can.
+            4. Check every template against UPSTREAM:
+               - For each srcpkgs/*/template, web-search the upstream project (GitHub
+                 repo / releases / homepage) and determine the latest version.
+               - Compare with the template's current version. If outdated, determine the
+                 correct new distfiles URL(s) and verify the URL actually exists
+                 (curl -sI). Compute correct checksums if the template requires them.
+               - Update version, distfiles, checksum, and any _basever/_commit/
+                 _shortcommit/_gitdate variables consistently, preserving the template's
+                 style. Use `sha256sum` on downloaded files to verify integrity.
+            5. Run whatever validation is possible in this runner (shell syntax checks on
+               templates, URL checks, bash -n on scripts under the repo, xbps-src pkg
+               syntax where feasible). Do not attempt a full xbps-src build unless it is
+               cheap and safe.
+            6. If you made any changes, commit them on a new branch and open a Pull
+               Request titled "fix: repair builds/updates" listing each package changed,
+               old->new version, and the reason. If nothing needed fixing, make no
+               changes and just report that in your final message.
