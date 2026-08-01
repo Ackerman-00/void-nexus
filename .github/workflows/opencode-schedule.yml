@@ -9,6 +9,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write
   id-token: write
 
 concurrency:
@@ -23,6 +24,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      actions: write
       id-token: write
     steps:
       - uses: actions/checkout@v6
@@ -33,8 +35,10 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/deepseek-v4-flash-free
+          use_github_token: true
           prompt: |
             You are the automated maintainer of void-nexus
             (https://github.com/Ackerman-00/void-nexus), a cryptographically signed,
@@ -74,7 +78,16 @@ jobs:
                templates, URL checks, bash -n on scripts under the repo, xbps-src pkg
                syntax where feasible). Do not attempt a full xbps-src build unless it is
                cheap and safe.
-            6. If you made any changes, commit them on a new branch and open a Pull
-               Request titled "fix: repair builds/updates" listing each package changed,
-               old->new version, and the reason. If nothing needed fixing, make no
-               changes and just report that in your final message.
+            6. If you made any changes, commit them DIRECTLY to the main branch
+               (this matches how .github/workflows/check-updates.yml auto-commits
+               updates) with a clear commit message listing each package, old->new
+               version, and the reason. Then trigger a rebuild of exactly the
+               packages you changed by running:
+                   gh workflow run "Build Nexus XBPS" --ref main \
+                     --repo Ackerman-00/void-nexus \
+                     -f package_list="pkg1 pkg2 ..." \
+                     -f force_rebuild="true"
+               Use force_rebuild=true so binaries are (re)generated even when a
+               version or revision already exists in the "rolling" Release.
+               If nothing needed fixing, make no changes and just report that in
+               your final message.

@@ -15,10 +15,11 @@ jobs:
       startsWith(github.event.comment.body, '/opencode')
     runs-on: ubuntu-latest
     permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
       id-token: write
-      contents: read
-      pull-requests: read
-      issues: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -29,5 +30,7 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/deepseek-v4-flash-free
+          use_github_token: true
