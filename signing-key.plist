@@ -7,6 +7,6 @@
 	<key>public-key-size</key>
 	<integer>4096</integer>
 	<key>signature-by</key>
-	<string>Void Nexus Build Bot <actions@github.com></string>
+	<string>Void Nexus Build Bot &lt;actions@github.com&gt;</string>
 </dict>
 </plist>
