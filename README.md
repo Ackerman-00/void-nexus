@@ -59,7 +59,6 @@ sudo xbps-install <package-name>
 | `sdbus-cpp` | High-level C++ D-Bus library | Stable |
 | `vesktop` | Custom Discord desktop client with Vencord preinstalled | Stable |
 | `xwayland-satellite-git` | Xwayland outside your Wayland compositor (Git Snapshot) | Git |
-| `zed` | High-performance, multiplayer code editor from the creators of Atom | Stable |
 | `zen-browser` | Welcome to a calmer internet | Stable |
 
 > `Git` packages track upstream HEAD and rebuild on every new commit.
