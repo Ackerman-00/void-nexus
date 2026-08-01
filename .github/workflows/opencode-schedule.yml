@@ -130,7 +130,16 @@ jobs:
                  what is wrong and what to fix, and keep the PR open. Only close a PR
                  outright if it is clearly broken or abandoned with no reasonable fix.
 
-            5. VALIDATE BEFORE COMMITTING.
+            5. MAINTAIN DOCUMENTATION & GENERAL REPO HEALTH.
+               You have FULL control over this repository: you may edit any file that
+               needs fixing or updating - templates, workflows, other code/config, and
+               documentation. Review README.md and other docs for anything stale or
+               incorrect (package lists, versions, install instructions, links, usage
+               examples) and update them to match the actual state of the repo after
+               any changes you or others made. Web-search to verify every fact before
+               editing docs, and keep your edits accurate and minimal.
+
+            6. VALIDATE BEFORE COMMITTING.
                Run `bash -n` on every template you touch and on any workflow scripts
                you change. Verify every distfiles URL is reachable. Never commit an
                untested change.
@@ -161,11 +170,14 @@ jobs:
             forever; prefer commit + trigger + move on.
 
             HARD RULES:
+            - You have FULL control: edit any file in the repo (packages, workflows,
+              configs, README/docs) whenever it needs fixing or updating - but always
+              web-search and verify first, then validate before committing.
             - Commit fixes to main directly. NEVER open pull requests yourself, and
               ALWAYS leave the working tree clean (the action may otherwise auto-create
               a PR from leftover changes).
-            - Web-search FIRST, then act. Verify every version, URL, and checksum
-              online; do not rely on memory.
+            - Web-search FIRST, then act. Deeply verify every version, URL, and
+              checksum online before touching anything; do not rely on memory.
             - Close issues only AFTER the fix is verified by a passing build.
             - Merge PRs only AFTER verifying correctness (web search) AND a passing
               build; use squash merge.
