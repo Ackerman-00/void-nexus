@@ -37,7 +37,7 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <details>
-<summary>Click to expand — 18 packages</summary>
+<summary>Click to expand — 17 packages</summary>
 
 <br />
 
