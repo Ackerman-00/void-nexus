@@ -10,7 +10,6 @@ permissions:
   pull-requests: write
   issues: write
   actions: write
-  workflows: write
   id-token: write
 
 concurrency:
@@ -26,7 +25,6 @@ jobs:
       pull-requests: write
       issues: write
       actions: write
-      workflows: write
       id-token: write
     steps:
       - uses: actions/checkout@v6
@@ -40,7 +38,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/deepseek-v4-flash-free
-          use_github_token: true
           prompt: |
             You are the FULLY AUTONOMOUS maintainer of void-nexus
             (https://github.com/Ackerman-00/void-nexus), a cryptographically signed,
@@ -56,10 +53,12 @@ jobs:
               Actions and publishes binaries to the "rolling" GitHub Release.
             - .github/workflows/check-updates.yml ("Check and Update Package Versions")
               runs daily, bumps versions, commits directly to main, and triggers builds.
-            - You have these GitHub permissions: contents (push to main), pull-requests
-              (review/merge PRs), issues (open/close issues), actions (trigger & watch
-              builds), workflows (edit .github/workflows/*). Use the runner's
-              GITHUB_TOKEN for all gh commands.
+            - TOKENS: `git push` authenticates with the OpenCode App token, which has
+              contents + workflows write, so you CAN modify .github/workflows/* and push
+              straight to main. `gh` commands use the runner's GITHUB_TOKEN, which has
+              actions write (trigger/watch builds), pull-requests write (merge), and
+              issues write (open/close). Just use `gh` normally - no extra flags needed.
+              Always `git fetch origin && git pull --rebase origin main` before pushing.
 
             First, read this repository thoroughly: list srcpkgs/*/template and study
             each template's structure (version, revision, distfiles, checksum, homepage,

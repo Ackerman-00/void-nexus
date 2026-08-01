@@ -19,7 +19,6 @@ jobs:
       pull-requests: write
       issues: write
       actions: write
-      workflows: write
       id-token: write
     steps:
       - name: Checkout repository
@@ -34,4 +33,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/deepseek-v4-flash-free
-          use_github_token: true
