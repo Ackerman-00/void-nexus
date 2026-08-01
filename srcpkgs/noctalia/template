@@ -27,7 +27,7 @@ makedepends="
  MesaLib-devel libglvnd-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel
  harfbuzz-devel libxkbcommon-devel pipewire-devel wireplumber-devel
- libsecret-devel libsodium-devel
+ libsecret-devel libsodium-devel libical-devel
  libcurl-devel pam-devel libwebp-devel libjxl-devel libsndfile-devel
  basu-devel sdbus-c++-devel
  libmd4c-devel tomlplusplus-devel
