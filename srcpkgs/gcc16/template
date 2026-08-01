@@ -46,6 +46,12 @@ case "$XBPS_DISTFILES_FALLBACK" in
 	*"repo-default.voidlinux.org/distfiles"*) ;;
 	*) XBPS_DISTFILES_FALLBACK+=" https://repo-default.voidlinux.org/distfiles" ;;
 esac
+# distfiles.gentoo.org served an untrusted Let's Encrypt chain (intermediate YR2)
+# as of 2026-08; mirror the small patchset in-repo until upstream is fixed.
+case "$XBPS_DISTFILES_FALLBACK" in
+	*"raw.githubusercontent.com/Ackerman-00/void-nexus/main/distfiles"*) ;;
+	*) XBPS_DISTFILES_FALLBACK+=" https://raw.githubusercontent.com/Ackerman-00/void-nexus/main/distfiles" ;;
+esac
 
 nopie=yes
 lib32disabled=yes
