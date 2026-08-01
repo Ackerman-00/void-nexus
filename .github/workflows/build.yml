@@ -249,6 +249,7 @@ jobs:
 
           ls -1 custom-templates-temp/srcpkgs/ | while read -r pkg_name; do
             [ ! -d "custom-templates-temp/srcpkgs/$pkg_name" ] && continue
+            [ -L "custom-templates-temp/srcpkgs/$pkg_name" ] && continue
             tmpl="custom-templates-temp/srcpkgs/$pkg_name/template"
             [ ! -f "$tmpl" ] && continue
 
@@ -277,7 +278,7 @@ jobs:
                 fi
                 OLD_SUB=$(gh release view rolling --json assets \
                   --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
-                  | awk -v pkg="${sub}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps$/' \
+                  | awk -v pkg="${sub}-" 'substr($0,1,length(pkg)) == pkg && substr($0,length(pkg)+1) !~ /-/ && $0 ~ /\.x86_64\.xbps$/' \
                   || true)
                 for asset in $OLD_SUB; do
                   if [ "$asset" != "$SUB_PKG" ]; then
@@ -287,7 +288,7 @@ jobs:
                 done
                 OLD_SUB_SIGS=$(gh release view rolling --json assets \
                   --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
-                  | awk -v pkg="${sub}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps\.sig2$/' \
+                  | awk -v pkg="${sub}-" 'substr($0,1,length(pkg)) == pkg && substr($0,length(pkg)+1) !~ /-/ && $0 ~ /\.x86_64\.xbps\.sig2$/' \
                   || true)
                 for sig in $OLD_SUB_SIGS; do
                   if [ "$sig" != "${SUB_PKG}.sig2" ]; then
@@ -301,7 +302,7 @@ jobs:
             echo ">>> Purging old versions of $pkg_name from GitHub Release..."
             OLD_XBPS=$(gh release view rolling --json assets \
               --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
-              | awk -v pkg="${pkg_name}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps$/' \
+              | awk -v pkg="${pkg_name}-" 'substr($0,1,length(pkg)) == pkg && substr($0,length(pkg)+1) !~ /-/ && $0 ~ /\.x86_64\.xbps$/' \
               || true)
             for asset in $OLD_XBPS; do
               if [ "$asset" != "$EXPECTED_PKG" ]; then
@@ -312,7 +313,7 @@ jobs:
 
             OLD_SIGS=$(gh release view rolling --json assets \
               --jq '.assets[].name' --repo "$REPO" 2>/dev/null \
-              | awk -v pkg="${pkg_name}-" 'index($0, pkg) == 1 && /\.x86_64\.xbps\.sig2$/' \
+              | awk -v pkg="${pkg_name}-" 'substr($0,1,length(pkg)) == pkg && substr($0,length(pkg)+1) !~ /-/ && $0 ~ /\.x86_64\.xbps\.sig2$/' \
               || true)
             for sig in $OLD_SIGS; do
               if [ "$sig" != "${EXPECTED_PKG}.sig2" ]; then
