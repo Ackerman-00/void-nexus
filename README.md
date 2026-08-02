@@ -37,7 +37,7 @@ sudo xbps-install <package-name>
 ## 📦 Packages
 
 <details>
-<summary>Click to expand — 17 packages</summary>
+<summary>Click to expand — 18 packages</summary>
 
 <br />
 
@@ -54,6 +54,7 @@ sudo xbps-install <package-name>
 | `libspng` | Simple, modern libpng alternative | Stable |
 | `niri-git` | Scrollable-tiling Wayland compositor (Git Snapshot) | Git |
 | `noctalia` | A sleek, customizable desktop shell crafted for Wayland | Git |
+| `noctalia-greeter` | Minimal login greeter for greetd matching the look of Noctalia Shell | Stable |
 | `protonplus` | Compatibility tools manager for GNOME (Wine/Proton) | Stable |
 | `rootapp` | Discord alternative for gaming communities and large online groups | Stable |
 | `sdbus-cpp` | High-level C++ D-Bus library | Stable |

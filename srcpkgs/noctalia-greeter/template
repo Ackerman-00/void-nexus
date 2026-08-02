@@ -1,0 +1,23 @@
+# Template file for 'noctalia-greeter'
+pkgname=noctalia-greeter
+version=1.1.0
+revision=1
+build_style=meson
+hostmakedepends="meson ninja pkg-config wayland-devel"
+makedepends="wayland-devel wayland-protocols libxkbcommon-devel
+ freetype-devel fontconfig-devel cairo-devel pango-devel librsvg-devel
+ glib-devel tomlplusplus-devel json-c++ wlroots0.20-devel libinput-devel
+ MesaLib-devel libwebp-devel stb"
+depends="greetd dbus polkit"
+short_desc="A minimal login greeter for greetd that matches the look and feel of Noctalia Shell"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="MIT"
+homepage="https://github.com/noctalia-dev/noctalia-greeter"
+changelog="https://github.com/noctalia-dev/noctalia-greeter/releases"
+distfiles="https://github.com/noctalia-dev/noctalia-greeter/archive/refs/tags/v${version}.tar.gz"
+checksum="771d21b811cca5c8da965da11bacd972ae5ed57419947c9b8bfdafcfcf628f9b"
+
+post_install() {
+    vlicense LICENSE
+    vdoc README.md
+}
