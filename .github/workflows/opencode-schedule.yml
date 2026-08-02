@@ -133,6 +133,15 @@ jobs:
                If wrong or stale, update the template version + distfiles + checksum and
                bump revision.
 
+               KNOWN PACKAGE-SPECIFIC NOTE (rootapp): for the rootapp package, the
+               authoritative reference is fedora-nexus (github.com/Ackerman-00/fedora-nexus,
+               rootapp/rootapp.spec, currently 0.9.125). The fedora-nexus packaging was
+               personally tested and patched by the repo owner, so it is the source of
+               truth for this package. Do NOT trust the AUR rootapp-bin version (it lags),
+               and do NOT trust "19.2.5" (a bogus string extracted from the AppImage).
+               Verify by comparing the AppImage sha256 with fedora-nexus and keep the
+               version in sync with it.
+
                STEP D - CROSS-REPO CONSISTENCY CHECK (OPTIONAL, NEVER AUTHORITATIVE).
                The AUTHORITATIVE version of any package is its REAL upstream project
                (the project's own GitHub releases/tags, official homepage/changelog, or
