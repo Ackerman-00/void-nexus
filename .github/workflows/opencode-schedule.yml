@@ -139,16 +139,19 @@ jobs:
                  - Python: pyproject.toml / setup.py / requirements.txt
                  - Go: go.mod
                  - Anything else: install docs, Dockerfile, CI workflows.
-                 For AppImage-based packages (rootapp, vesktop, zen-browser,
-                 ...) tear the AppImage apart EXACTLY like the rootapp note
-                 below describes - run it with --appimage-extract (the same
-                 way the templates' do_extract does) or unsquashfs with the
-                 ELF section-header offset, then read version + dependencies
-                 from inside (X-AppImage-Version in the .desktop, bundled
-                 package.json / app.asar / lib64/*.so, AppRun scripts). For
-                 .deb-sourced packages, extract with `ar x` + `tar -xf
-                 data.tar.*` and inspect the payload the same way. NEVER guess
-                 what is inside a binary package - open it.
+                 For ALL binary-distributed packages - AppImage (rootapp,
+                 vesktop, zen-browser, ...), .deb, .rpm, prebuilt tarballs,
+                 self-contained/static binaries, CDN installers - tear the
+                 artifact apart EXACTLY like the rootapp note below describes:
+                 AppImages with --appimage-extract (the same way the templates'
+                 do_extract does) or unsquashfs with the ELF section-header
+                 offset, .deb with `ar x` + `tar -xf data.tar.*`, .rpm with
+                 `rpm2cpio <file> | cpio -idm`, tarballs by plain extraction -
+                 then read version + dependencies from inside
+                 (X-AppImage-Version in the .desktop, bundled package.json /
+                 app.asar / lib64/*.so, AppRun scripts). NEVER guess what is
+                 inside a binary package, and NEVER trust a binary's filename,
+                 version string, or claimed dependencies without opening it.
               b. DERIVE THE TRUE BUILD DEPENDENCY LIST from those files.
                  Every direct dependency the upstream build needs MUST have a
                  matching hostmakedepends/makedepends/depends (or be satisfied
@@ -182,7 +185,20 @@ jobs:
                  finished. State confidence (high/medium/low) for anything
                  not fully verified, and why.
 
-            KNOWN PACKAGE-SPECIFIC NOTE (rootapp): rootapp is a proprietary
+            KNOWN PACKAGE-SPECIFIC NOTES - THE RIGOR BELOW APPLIES TO EVERY
+            PACKAGE, NOT JUST THE EXAMPLE NAMED. For EVERY package, establish
+            the authoritative reference chain: (1) this repo's template, (2) an
+            owner-tested sibling-repo packaging if one exists, (3) the upstream
+            project itself, and (4) the actual source/binary artifact, opened
+            and inspected (see the DEEP AUDIT above). Never special-case only
+            rootapp - treat EVERY prebuilt-binary package in this repo the same
+            way (blender-bin, brave-browser, brave-origin-bin, faugus-launcher,
+            helium-browser-bin, heroic-games-launcher, msnap, protonplus,
+            vesktop, zen-browser, ...): tear the artifact apart, read the real
+            version from inside, and verify sha256 against the template's
+            checksum. rootapp below is the canonical worked example.
+
+            WORKED EXAMPLE (rootapp): rootapp is a proprietary
             AppImage from https://installer.rootapp.com/installer/Linux/X64/Root.AppImage
             (no GitHub releases/tags - the version comes from INSIDE the
             AppImage). Authoritative references, in priority order:
@@ -317,11 +333,17 @@ jobs:
 
                STEP B - FOR EACH PACKAGE, FIND THE AUTHORITATIVE LATEST UPSTREAM
                VERSION. NEVER trust memory or the template's current version:
-               - Identify the true upstream from the template's homepage/distfiles. If
-                 the source is NOT a GitHub release (e.g. a CDN installer like
-                 installer.rootapp.com), find where the real version lives: the project
-                 homepage, its changelog page, or the AUR package
-                 (e.g. aur.archlinux.org/packages/rootapp-bin).
+               - Identify the true upstream from the template's homepage/distfiles.
+               - If the source is a prebuilt binary or CDN installer (AppImage,
+                 .deb, .rpm, tarball - e.g. installer.rootapp.com), the real
+                 version lives INSIDE the artifact: download it, tear it apart
+                 exactly as the DEEP AUDIT and the KNOWN PACKAGE-SPECIFIC NOTES
+                 section describe (X-AppImage-Version in the .desktop, bundled
+                 package.json / changelog / binary version strings), and
+                 cross-check against the project homepage, changelog, repology,
+                 and the AUR package (e.g. aur.archlinux.org/packages/rootapp-bin).
+                 This applies to EVERY binary-distributed package, not just
+                 rootapp - never trust a filename or homepage string alone.
                - For GitHub projects, use the API and reconcile results:
                      curl -s https://api.github.com/repos/<owner>/<repo>/releases/latest
                      curl -s https://api.github.com/repos/<owner>/<repo>/tags
@@ -342,8 +364,9 @@ jobs:
                  (see STEP D) - but resolve any disagreement against the real upstream,
                  never against a sibling repo.
                 If wrong or stale, update the template version + distfiles + checksum and
-                bump revision. (See the global KNOWN PACKAGE-SPECIFIC NOTE (rootapp)
-                section above for rootapp - fedora-nexus is its source of truth.)
+                bump revision. (See the global KNOWN PACKAGE-SPECIFIC NOTES
+                section above - it applies to EVERY package; rootapp is just the
+                worked example.)
 
                 STEP D - CROSS-REPO CONSISTENCY CHECK (OPTIONAL, NEVER AUTHORITATIVE).
                The AUTHORITATIVE version of any package is its REAL upstream project
