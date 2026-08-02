@@ -2,7 +2,7 @@ name: opencode-schedule
 
 on:
   schedule:
-    - cron: '15 */2 * * *'
+    - cron: '30 */4 * * *'   # Every 4 hours (30 min after updater)
   workflow_dispatch:
 
 permissions:
