@@ -128,21 +128,24 @@ jobs:
                  not from guessing).
                - It is NEWER than the actual latest upstream release.
                - It disagrees with the version of the SAME package in a sibling repo
-                 (see STEP D).
+                 (see STEP D) - but resolve any disagreement against the real upstream,
+                 never against a sibling repo.
                If wrong or stale, update the template version + distfiles + checksum and
                bump revision.
 
-               STEP D - CROSS-REPO CONSISTENCY CHECK (critical).
-               The same packages exist in three sibling repos, all owned by you:
-                   https://github.com/Ackerman-00/fedora-nexus   (RPM, COPR)
-                   https://github.com/Ackerman-00/opensuse-nexus (RPM, OBS)
-                   https://github.com/Ackerman-00/void-nexus     (XBPS templates)
-               For each package, fetch the same package's version from the other two
-               repos' main branches via raw.githubusercontent.com (fedora: *.spec,
-               opensuse: *.spec, void: srcpkgs/<name>/template) and compare. They must
-               AGREE. A discrepancy means at least one repo is wrong or stale - find out
-               which via web search and fix it here, then note the needed fix in the
-               other repos in your final summary.
+               STEP D - CROSS-REPO CONSISTENCY CHECK (OPTIONAL, NEVER AUTHORITATIVE).
+               The AUTHORITATIVE version of any package is its REAL upstream project
+               (the project's own GitHub releases/tags, official homepage/changelog, or
+               repology/AUR as INDEPENDENT trackers) as established in STEP B - never
+               one of your own sibling repos. Your sibling repos are just copies that
+               may themselves be wrong; they must NEVER be used to decide a version.
+               Only after STEP B has confirmed the true upstream version, you MAY briefly
+               compare how the other two sibling repos package the same project
+               (github.com/Ackerman-00/fedora-nexus, opensuse-nexus, void-nexus) purely
+               to spot an obvious packaging mistake. If they disagree, the answer is
+               ALWAYS what the real upstream says, never what a sibling repo contains.
+               Never copy a sibling repo's version blindly - fix only what you have
+               verified against the actual upstream.
 
                STEP E - VERIFY DISTFILES URL + CHECKSUM.
                `curl -sI` the distfiles URL (substituting the new version if versioned);
