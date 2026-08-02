@@ -7,7 +7,7 @@ _gitdate=20260727063718
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cmake
-configure_args="-DCRASH_HANDLER=OFF -DINSTALL_QML_PREFIX=/usr/lib/qt6/qml -DDISTRIBUTOR=Void"
+configure_args="-DCRASH_HANDLER=OFF -DINSTALL_QML_PREFIX=lib/qt6/qml -DDISTRIBUTOR=Void"
 hostmakedepends="cmake ninja pkg-config qt6-base qt6-declarative-host-tools qt6-shadertools"
 makedepends="qt6-base-private-devel qt6-declarative-devel qt6-declarative-private-devel
  qt6-wayland-devel qt6-wayland-private-devel qt6-shadertools-devel qt6-svg-devel
