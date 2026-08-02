@@ -88,23 +88,85 @@ jobs:
                own automation in .github/workflows/* is causing the corruption, fix the
                workflow script too (you have workflows: write).
 
-            2. CHECK UPSTREAM FOR NEW RELEASES & MISSING PACKAGES.
-               For EVERY template in this repo, check its upstream project (the GitHub
-               repo/URL in its template) for the LATEST release, and compare against
-               what is packaged here:
-               - Web-search each upstream project (releases/tags/homepage, repology)
-                 and confirm what the current latest version actually is. NEVER trust
-                 memory.
-               - If upstream has a newer version/revision than the template produces,
-                 update the template (version, distfiles URL, checksums) and verify the
-                 new source URL returns 200 (curl -sI) and checksums match before
-                 committing.
-               - Watch for NEW packages: if an upstream project relevant to this repo
-                 (Wayland compositor, gaming tool, or a package type this repo is known
-                 for) has a new component/binary that is missing here, web-search verify
-                 it, add a correct template under srcpkgs/<name> following the repo
-                 conventions, and push it (which triggers a build).
-               - Do not churn: only add or bump what is genuinely new or outdated.
+            2. VERIFY VERSION ACCURACY OF EVERY PACKAGE - FULL INVENTORY SWEEP.
+               This step is MANDATORY and must cover 100% of packages in this repo, one
+               by one. Do NOT skip any package, do NOT trust the current template, and
+               do NOT assume "nothing changed since last time". A package whose version
+               is stale or outright WRONG (see below) is the top priority after failed
+               builds.
+
+               STEP A - BUILD THE COMPLETE PACKAGE INVENTORY.
+               - List every package: `ls srcpkgs/` at the repo root. That list is your
+                 master checklist. You must verify every entry.
+               - Read README.md's package table and flag ANY discrepancy: a package in
+                 the README but missing under srcpkgs/, or a template missing from the
+                 README - both are bugs to fix.
+               - Record the checklist as a working note. Nothing may be added to it
+                 later; you are done with this step only when every row is resolved.
+
+               STEP B - FOR EACH PACKAGE, FIND THE AUTHORITATIVE LATEST UPSTREAM
+               VERSION. NEVER trust memory or the template's current version:
+               - Identify the true upstream from the template's homepage/distfiles. If
+                 the source is NOT a GitHub release (e.g. a CDN installer like
+                 installer.rootapp.com), find where the real version lives: the project
+                 homepage, its changelog page, or the AUR package
+                 (e.g. aur.archlinux.org/packages/rootapp-bin).
+               - For GitHub projects, use the API and reconcile results:
+                     curl -s https://api.github.com/repos/<owner>/<repo>/releases/latest
+                     curl -s https://api.github.com/repos/<owner>/<repo>/tags
+                 Web-search too (incl. repology); if API and search disagree, dig until
+                 certain.
+               - For -git/-snapshot packages, compare the pinned commit against the
+                 current upstream default-branch HEAD; if upstream has new commits,
+                 refresh commit + version together.
+
+               STEP C - DETECT WRONG VERSIONS, NOT JUST STALE ONES. A version is WRONG
+               if ANY of these hold:
+               - It matches no real upstream release/tag (e.g. a bogus string extracted
+                 from a binary: rootapp packaged as "19.2.5" while real releases are
+                 0.9.x - the correct version must come from the official changelog/AUR,
+                 not from guessing).
+               - It is NEWER than the actual latest upstream release.
+               - It disagrees with the version of the SAME package in a sibling repo
+                 (see STEP D).
+               If wrong or stale, update the template version + distfiles + checksum and
+               bump revision.
+
+               STEP D - CROSS-REPO CONSISTENCY CHECK (critical).
+               The same packages exist in three sibling repos, all owned by you:
+                   https://github.com/Ackerman-00/fedora-nexus   (RPM, COPR)
+                   https://github.com/Ackerman-00/opensuse-nexus (RPM, OBS)
+                   https://github.com/Ackerman-00/void-nexus     (XBPS templates)
+               For each package, fetch the same package's version from the other two
+               repos' main branches via raw.githubusercontent.com (fedora: *.spec,
+               opensuse: *.spec, void: srcpkgs/<name>/template) and compare. They must
+               AGREE. A discrepancy means at least one repo is wrong or stale - find out
+               which via web search and fix it here, then note the needed fix in the
+               other repos in your final summary.
+
+               STEP E - VERIFY DISTFILES URL + CHECKSUM.
+               `curl -sI` the distfiles URL (substituting the new version if versioned);
+               it must return 200. Download the source and `sha256sum` must equal the
+               checksum in the template. Update the checksum whenever the version
+               changes.
+
+               STEP F - SANITY-CHECK DEPENDENCIES. Web-search the latest release notes
+               for changed hostmakedepends/makedepends/depends and update the template
+               if needed. Update the README.md version column too.
+
+               FINAL OUTPUT REQUIREMENT: your final summary MUST include a full
+               verification table with one row per package:
+                   | package | packaged version | upstream latest | status |
+               where status is one of: up-to-date / UPDATED / FIXED-WRONG-VERSION /
+               needs-build. The table must cover 100% of the inventory from STEP A. If
+               any package is missing from the table, you have not finished this step.
+
+               ALSO watch for NEW packages: if an upstream project relevant to this repo
+               (Wayland compositor, gaming tool, or a package type this repo is known
+               for) has a new component/binary missing here, web-search verify it, add a
+               correct template under srcpkgs/<name> following repo conventions, and
+               push it (which triggers a build). Do not churn: only add or bump what is
+               genuinely new or outdated.
 
             3. REPAIR RELEASE CONSISTENCY.
                GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling,
