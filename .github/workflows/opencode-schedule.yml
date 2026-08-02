@@ -88,13 +88,31 @@ jobs:
                own automation in .github/workflows/* is causing the corruption, fix the
                workflow script too (you have workflows: write).
 
-            2. REPAIR RELEASE CONSISTENCY.
+            2. CHECK UPSTREAM FOR NEW RELEASES & MISSING PACKAGES.
+               For EVERY template in this repo, check its upstream project (the GitHub
+               repo/URL in its template) for the LATEST release, and compare against
+               what is packaged here:
+               - Web-search each upstream project (releases/tags/homepage, repology)
+                 and confirm what the current latest version actually is. NEVER trust
+                 memory.
+               - If upstream has a newer version/revision than the template produces,
+                 update the template (version, distfiles URL, checksums) and verify the
+                 new source URL returns 200 (curl -sI) and checksums match before
+                 committing.
+               - Watch for NEW packages: if an upstream project relevant to this repo
+                 (Wayland compositor, gaming tool, or a package type this repo is known
+                 for) has a new component/binary that is missing here, web-search verify
+                 it, add a correct template under srcpkgs/<name> following the repo
+                 conventions, and push it (which triggers a build).
+               - Do not churn: only add or bump what is genuinely new or outdated.
+
+            3. REPAIR RELEASE CONSISTENCY.
                GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling,
                list the xbps assets, and compare against every template's current
                version/revision. Rebuild any package whose expected binary is missing
                or stale.
 
-            3. REVIEW ALL OPEN ISSUES like a human maintainer.
+            4. REVIEW ALL OPEN ISSUES like a human maintainer.
                GET https://api.github.com/repos/Ackerman-00/void-nexus/issues (state=open,
                no pull requests). For each issue:
                - Read it fully, reproduce or diagnose it, and web-search for context
@@ -107,7 +125,7 @@ jobs:
                - If you cannot fix it yet, leave a detailed diagnosis comment and keep
                  the issue open.
 
-            4. REVIEW ALL OPEN PULL REQUESTS like a human maintainer.
+            5. REVIEW ALL OPEN PULL REQUESTS like a human maintainer.
                GET https://api.github.com/repos/Ackerman-00/void-nexus/pulls (state=open).
                For each PR:
                - Read the full diff (`gh pr diff <n>`, plus the files/comments API) and
@@ -129,7 +147,7 @@ jobs:
                  what is wrong and what to fix, and keep the PR open. Only close a PR
                  outright if it is clearly broken or abandoned with no reasonable fix.
 
-            5. MAINTAIN DOCUMENTATION & GENERAL REPO HEALTH.
+            6. MAINTAIN DOCUMENTATION & GENERAL REPO HEALTH.
                You have FULL control over this repository: you may edit any file that
                needs fixing or updating - templates, workflows, other code/config, and
                documentation. Review README.md and other docs for anything stale or
@@ -138,7 +156,7 @@ jobs:
                any changes you or others made. Web-search to verify every fact before
                editing docs, and keep your edits accurate and minimal.
 
-            6. VALIDATE BEFORE COMMITTING.
+            7. VALIDATE BEFORE COMMITTING.
                Run `bash -n` on every template you touch and on any workflow scripts
                you change. Verify every distfiles URL is reachable. Never commit an
                untested change.
