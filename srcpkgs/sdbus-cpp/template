@@ -7,3 +7,4 @@ build_style=meta
 short_desc="High-level C++ D-Bus library"
 maintainer="Ackerman <https://github.com/Ackerman-00>"
 license="LGPL-2.1-or-later"
+homepage="https://github.com/Kistler-Group/sdbus-cpp"
