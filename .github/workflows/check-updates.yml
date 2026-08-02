@@ -348,6 +348,14 @@ jobs:
               return content
 
           def extract_appimage_version(appimage_path):
+              """Extract the authoritative version from a .NET/Avalonia AppImage.
+
+              sq.version (the NuSpec XML bundled by the publishing toolchain) is the
+              ONLY trustworthy source for these apps. X-AppImage-Version from a
+              .desktop file may be absent, and recursive greps pick up dependency
+              versions (e.g. the bogus '19.2.5' from a billing SDK). See the
+              fedora-nexus rootapp update.sh for the same hardened logic.
+              """
               try:
                   os.chmod(appimage_path, 0o755)
                   with tempfile.TemporaryDirectory() as tmpdir:
@@ -355,7 +363,23 @@ jobs:
                           [appimage_path, '--appimage-extract'],
                           cwd=tmpdir, capture_output=True, timeout=300
                       )
-                      for d in Path(tmpdir).rglob('*.desktop'):
+                      # 1) Authoritative: usr/bin/sq.version (NuSpec XML)
+                      sq_ver = Path(tmpdir) / 'squashfs-root' / 'usr' / 'bin' / 'sq.version'
+                      if sq_ver.is_file():
+                          try:
+                              import xml.etree.ElementTree as ET
+                              root = ET.parse(sq_ver).getroot()
+                              ns = {'ns': 'http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd'}
+                              m = root.find('.//ns:metadata/ns:version', ns)
+                              if m is not None and m.text:
+                                  return m.text.strip()
+                              m2 = root.find('.//metadata/version')
+                              if m2 is not None and m2.text:
+                                  return m2.text.strip()
+                          except Exception:
+                              pass
+                      # 2) Fallback: X-AppImage-Version from a top-level .desktop
+                      for d in Path(tmpdir).glob('squashfs-root/*.desktop'):
                           c = d.read_text('utf-8', errors='ignore')
                           m = re.search(r'^X-AppImage-Version=(.+)', c, re.MULTILINE)
                           if m:
@@ -502,10 +526,37 @@ jobs:
                       fp = os.path.join(tmpdir, "Root.AppImage")
                       if fetch_file(url, fp):
                           nv = extract_appimage_version(fp)
-                          if not nv:
-                              print("  → ERROR: Could not extract AppImage version")
-                              continue
                           nh = sha256_file(fp)
+                          # The authoritative reference for rootapp is fedora-nexus
+                          # (rootapp/rootapp.spec); the AppImage's X-AppImage-Version /
+                          # sq.version is only trusted when it looks like a real release.
+                          fed_ver = None
+                          try:
+                              fr = requests.get(
+                                  'https://raw.githubusercontent.com/Ackerman-00/fedora-nexus/master/rootapp/rootapp.spec',
+                                  timeout=20
+                              )
+                              if fr.status_code == 200:
+                                  mver = re.search(r'^Version:\s*([0-9.]+)', fr.text, re.MULTILINE)
+                                  if mver:
+                                      fed_ver = mver.group(1).strip()
+                          except Exception:
+                              pass
+                          if fed_ver:
+                              nv = fed_ver
+                              print(f"  → (version from fedora-nexus spec: {nv})")
+                          if not nv:
+                              print("  → ERROR: Could not extract rootapp version")
+                              continue
+                          # Sanity check: reject implausible major versions (dependency
+                          # strings like '19.2.5' are NOT Root release versions).
+                          try:
+                              major = int(nv.split('.')[0])
+                              if major > 5:
+                                  print(f"  → ERROR: implausible version {nv} rejected")
+                                  continue
+                          except Exception:
+                              pass
                           print(f"  → {curr_ver} → {nv}")
                           curr_chksum_m = re.search(r'^checksum=["\']?([a-f0-9]+)', raw, re.MULTILINE)
                           curr_chksum = curr_chksum_m.group(1) if curr_chksum_m else None
