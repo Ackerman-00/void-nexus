@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '30 */4 * * *'   # Every 4 hours (30 min after updater)
   workflow_dispatch:
+    inputs:
+      relay:
+        description: 'Relay continuation run - pick up unfinished work from .opencode-relay.md'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: write
@@ -19,7 +25,7 @@ concurrency:
 jobs:
   opencode:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 330
     permissions:
       contents: write
       pull-requests: write
@@ -36,6 +42,7 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELAY: ${{ github.event.inputs.relay || 'false' }}
         with:
           model: opencode/deepseek-v4-flash-free
           prompt: |
@@ -481,10 +488,47 @@ jobs:
                  main is not left broken, and open an issue titled "build failure:
                  <pkg>" with the diagnosis and logs. Then move on.
 
+            RELAY / LONG-RUN HANDOFF (MANDATORY): a run may last up to ~5.5 hours
+            (timeout-minutes: 330). NEVER let a run die with work unfinished or
+            unrecorded - hand it over to the next runner.
+              a. PICKUP ON START: if the relay state file .opencode-relay.md exists
+                 on main with status "unfinished", or this run was started with the
+                 relay=true input (env RELAY=1), READ IT FIRST: it lists exactly
+                 what the previous run completed, what it left unfinished (package,
+                 template change, triggered build run ids), and the exact next
+                 steps. Continue that work FIRST, before anything else, and mark
+                 items done as you go. Never ignore an unfinished relay state.
+              b. KEEP STATE CURRENT: as you work, keep .opencode-relay.md updated
+                 (what changed, which builds were triggered and their run ids, what
+                 remains, any traps found). Commit + push it together with your
+                 fixes - it is the handoff record and your lifeline if this run is
+                 cancelled.
+              c. HANDOFF TRIGGER: when the run has been going ~4.5-5 hours (check
+                 elapsed time: `gh run view <id> --json startedAt`, or the
+                 workflow clock), STOP starting new work. Finish and push
+                 everything in progress, set .opencode-relay.md to status
+                 "unfinished" with the precise continuation plan, commit + push
+                 (git fetch origin && git pull --rebase origin main first), then
+                 trigger the relay run BEFORE the timeout kills you:
+                   gh workflow run "opencode-schedule" --ref main \
+                     --repo Ackerman-00/void-nexus -f relay=true
+                 The new run gets a fresh runner and picks up from the state file.
+                 Your run ending after that is fine.
+              d. TIMEOUT SAFETY: if the job timeout is near with work still
+                 pending, do the same handoff immediately (commit state + trigger
+                 relay) - even a partial record is better than losing context.
+                 Never leave the repo mid-edit: commit or revert everything first.
+                 If your run gets cancelled by the next scheduled run, your state
+                 file is what keeps the work alive - that is by design.
+              e. COMPLETION: when all work is done, delete .opencode-relay.md (or
+                 set status "complete") so the next run starts clean. No relay
+                 file = no pending work.
+
             SAFETY NET: if you cannot wait for a build to finish within this run, that
             is fine - the next scheduled run detects any still-missing binaries (step 2)
-            and rebuilds them, and re-verifies anything you left unfinished. Never block
-            forever; prefer commit + trigger + move on.
+            and rebuilds them, and the relay state file (.opencode-relay.md) preserves
+            your unfinished work and picks it up. Never block forever; prefer commit +
+            trigger + move on.
 
             HARD RULES:
             - You have FULL control: edit any file in the repo (packages, workflows,
@@ -505,6 +549,9 @@ jobs:
               revision already built in the "rolling" release or already in git log.
             - Never echo, print, commit, or paste OPENCODE_API_KEY /
               GITHUB_TOKEN values anywhere (terminal output, issues, files, logs).
+            - Relay, don't die: never let a run end with uncommitted work or
+              unrecorded progress - update .opencode-relay.md and trigger a
+              relay run before the timeout.
             - Don't get stuck: cap retries at 3 per package and escalate unresolvable
               problems via issues.
             - End every run with a concise final summary: what you fixed, which issues
