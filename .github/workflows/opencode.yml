@@ -26,6 +26,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Configure git auth for pushes
+        run: |
+          git config --global user.name "opencode-agent[bot]"
+          git config --global user.email "41898282+opencode-agent[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Run opencode
         uses: anomalyco/opencode/github@latest
         env:
