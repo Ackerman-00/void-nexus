@@ -32,10 +32,16 @@ jobs:
           git config --global user.email "41898282+opencode-agent[bot]@users.noreply.github.com"
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
+      - name: Install opencode (pinned)
+        shell: bash
+        run: curl -fsSL https://opencode.ai/install | bash -s -- -v 1.18.11
+
       - name: Run opencode
-        uses: anomalyco/opencode/github@latest
+        shell: bash
+        run: |
+          export PATH="$HOME/.opencode/bin:$PATH"
+          opencode github run
         env:
+          MODEL: opencode/deepseek-v4-flash-free
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: opencode/deepseek-v4-flash-free
