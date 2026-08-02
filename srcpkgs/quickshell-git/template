@@ -1,0 +1,25 @@
+# Template file for 'quickshell-git'
+pkgname=quickshell-git
+_basever=0.3.0
+_commit=43d4fa9e883cb03239b3d578c9c57070f4fbd281
+_shortcommit=43d4fa9
+_gitdate=20260727063718
+version="${_basever}+git${_gitdate}.${_shortcommit}"
+revision=1
+build_style=cmake
+configure_args="-DCRASH_HANDLER=OFF -DINSTALL_QML_PREFIX=/usr/lib/qt6/qml -DDISTRIBUTOR=Void"
+hostmakedepends="cmake ninja pkg-config qt6-base qt6-declarative-host-tools qt6-shadertools"
+makedepends="qt6-base-private-devel qt6-declarative-devel qt6-declarative-private-devel
+ qt6-wayland-devel qt6-wayland-private-devel qt6-shadertools-devel qt6-svg-devel
+ libdrm-devel libxcb-devel cli11 wayland-devel wayland-protocols
+ pipewire-devel polkit-devel glib-devel pam-devel jemalloc-devel"
+depends="qt6-base qt6-declarative qt6-svg qt6-wayland jemalloc polkit pipewire hicolor-icon-theme"
+short_desc="Flexible toolkit for making desktop shells with QtQuick (Git Snapshot)"
+maintainer="Quietcraft <https://github.com/Ackerman-00>"
+license="LGPL-3.0-only"
+homepage="https://git.outfoxxed.me/quickshell/quickshell"
+conflicts="quickshell>=0"
+provides="quickshell-${version}_${revision}"
+
+distfiles="https://github.com/quickshell-mirror/quickshell/archive/${_commit}.tar.gz"
+checksum="a3dc8dca33dfe37d926cdb72431c69c7c1f84d5408192e4057bd7a5281e433ae"
