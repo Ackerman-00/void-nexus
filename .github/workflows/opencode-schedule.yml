@@ -51,7 +51,13 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
-          opencode github run
+          for model in "opencode/deepseek-v4-flash-free" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free" "opencode/big-pickle"; do
+            echo "=== opencode run attempt with $model ==="
+            MODEL="$model" opencode github run && exit 0
+            echo "=== attempt with $model failed (exit $?) - trying next ==="
+            sleep 15
+          done
+          exit 1
         env:
           MODEL: opencode/deepseek-v4-flash-free
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
