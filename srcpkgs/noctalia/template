@@ -1,9 +1,9 @@
 # Template file for 'noctalia'
 pkgname=noctalia
 _basever=5.0.0
-_commit=50f0f095053a4b5c10874c4e7080f55dc15d3b38
-_shortcommit=50f0f09
-_gitdate=20260803143218
+_commit=72acad3eb20f1e1dcb65cee51584783b58f6d87c
+_shortcommit=72acad3
+_gitdate=20260804012454
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 
@@ -16,7 +16,7 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia"
 
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
-checksum="1dea748313544279568806996f277b81466d15fd4f4d733886a5498ebb546ded"
+checksum="a6a821929df4c88fbf534456521cc4344e824665ba3be11755f73c964f24f6c2"
 
 replaces="noctalia-v5>=0 noctalia-beta>=0"
 
