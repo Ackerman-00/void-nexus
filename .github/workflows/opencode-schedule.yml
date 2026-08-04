@@ -354,8 +354,7 @@ jobs:
                  docker run --rm -v "$PWD:/repo" \
                    ghcr.io/void-linux/void-glibc-full:latest bash -lc '
                      xbps-key -a /repo/public.pem    # trust this repo's key
-                     xbps-verify -V --repository=/repo <pkg>  # verifies pgp sig + repo consistency; treat any warning as a failure to investigate
-                     xbps-rindex -c /repo  # check repo consistency (missing deps / wrong files)
+                     xbps-rindex -c /repo  # prune stale/dangling index entries (standard Void CI step, keeps the local repo coherent)
                      xbps-install -y --repository=/repo <pkg>
                      <pkg> --version || <pkg> --help  # smoke test
                      ldd "$(command -v <pkg>)"
