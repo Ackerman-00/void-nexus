@@ -717,8 +717,18 @@ jobs:
           path: ~/.local/share/opencode/log/
           if-no-files-found: ignore
 
+  cleanup:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: opencode
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v6.1.0
+
       - name: Open failure issue
-        if: failure()
+        if: needs.opencode.result == 'failure'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -732,14 +742,10 @@ jobs:
           fi
 
       - name: Clean up stray opencode/schedule branches
-        if: always()
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch origin --prune
           for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/opencode/schedule-*'); do
             echo "Deleting stray branch: ${ref#origin/}"
-            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${ref#origin/}" || true
+            git push origin --delete "${ref#origin/}" || true
           done
