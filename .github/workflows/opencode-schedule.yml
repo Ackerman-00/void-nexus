@@ -2,7 +2,7 @@ name: opencode-schedule
 
 on:
   schedule:
-    - cron: '30 */4 * * *'   # Every 4 hours (30 min after updater)
+    - cron: '30 */15 * * *'   # Every 15 hours (30 min after updater)
   workflow_dispatch:
     inputs:
       relay:
@@ -78,7 +78,7 @@ jobs:
             - .github/workflows/build.yml ("Build Nexus XBPS") builds packages in GitHub
               Actions and publishes binaries to the "rolling" GitHub Release.
             - .github/workflows/check-updates.yml ("Check and Update Package Versions")
-              runs every 4 hours (cron '0 */4 * * *', 30 min before this run), bumps
+              runs every 15 hours (cron '0 */15 * * *', 30 min before this run), bumps
               versions, commits directly to main, and triggers builds.
             - TOKENS: `git push` authenticates with the OpenCode App token, which has
               contents + workflows write, so you CAN modify .github/workflows/* and push
