@@ -14,11 +14,9 @@ homepage="https://www.zen-browser.app/"
 case "${XBPS_TARGET_MACHINE}" in
 x86_64*)
     _upstream_arch=x86_64
-    _checksum=87978f0854fc279191b4f95a41bdb0c5b7df6f6b6c1d986c97ef75915cd6686c
     ;;
 aarch64*)
     _upstream_arch=aarch64
-    _checksum=78d45f75527146b59f49e806d220b7872091443965b727132703edd110661988
     ;;
 *) broken="No distfiles available for this target" ;;
 esac
