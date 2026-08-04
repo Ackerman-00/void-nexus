@@ -60,6 +60,7 @@ jobs:
           exit 1
         env:
           MODEL: opencode/deepseek-v4-flash-free
+          OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/deepseek-v4-flash-free"}'
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELAY: ${{ github.event.inputs.relay || 'false' }}
