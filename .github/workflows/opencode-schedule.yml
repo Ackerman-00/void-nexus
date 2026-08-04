@@ -143,6 +143,13 @@ jobs:
                  honest "not verified: <what and why>" line. A stated gap
                  beats a silent assumption - but never use a stated gap to
                  skip verification you were actually able to do.
+              f. ADVERSARIAL AUDIT. Before you declare anything done, force the
+                 contrarian pass: list 2-3 concrete reasons why your conclusion
+                 could be WRONG (missing assumption, wrong precondition, circular
+                 reasoning, contradiction with earlier evidence, overgeneralizing
+                 one success into "all packages fine"), then run a command that
+                 checks EACH one. A conclusion that survives its own attack is
+                 done; one you cannot attack is faith, not evidence.
 
             NO-CHURN VERIFICATION (MANDATORY, applies to every step below). You
             must NEVER push a version/revision bump if it was already pushed and
@@ -658,6 +665,11 @@ jobs:
             - No evidence, no completion: every claim costs a command you ran -
               paste the output. Verify the symptom is gone, not the change you
               made.
+            - The check is the boss: never delete, weaken, skip, or work
+              around a failing verification check to make it pass - a
+              failing install test / build / audit means the package is
+              broken. Fix the package, never the check; a justified,
+              named skip is allowed, a silent bypass is not.
             - Close issues only AFTER the fix is verified by a passing build.
             - Merge PRs only AFTER verifying correctness (web search) AND a passing
               build; use squash merge.
