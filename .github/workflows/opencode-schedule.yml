@@ -585,3 +585,13 @@ jobs:
               you closed, which PRs you merged/rejected, which builds you triggered and
               their result, the dependency audit table, the install-test table, and
               what remains.
+
+      - name: Clean up stray opencode/schedule branches
+        if: always()
+        shell: bash
+        run: |
+          git fetch origin --prune
+          for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/opencode/schedule-*'); do
+            echo "Deleting stray branch: ${ref#origin/}"
+            git push origin --delete "${ref#origin/}" || true
+          done
