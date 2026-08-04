@@ -106,8 +106,43 @@ jobs:
               limited to 60/hour - you will hit this in a long run. Always send
               `-H "Authorization: token $GITHUB_TOKEN"` on GitHub API calls, or
               prefer `gh api <path>` which authenticates automatically and gets
-              5000/hour. If a curl call starts returning 403 rate-limit JSON, switch
-              to `gh api` immediately.
+               5000/hour. If a curl call starts returning 403 rate-limit JSON, switch
+               to `gh api` immediately.
+
+            EVIDENCE & COMPLETION GATE (MANDATORY - "NO EVIDENCE, NO
+            COMPLETION"). Nothing in this run is "done" because you say so -
+            it is done only when it produced an artifact that can be
+            independently verified (a command output, a log, a checksum, a
+            commit SHA, a build run ID). Apply this to EVERYTHING below:
+              a. EVERY CLAIM COSTS A COMMAND. Every statement about repo
+                 state, builds, installs, dependencies, versions, or checksums
+                 must be backed by the actual output of a command you ran
+                 (curl -sI, sha256sum, docker run, xbps-install, xbps-query,
+                 gh api, git log). If you cannot paste the command output, you
+                 have not verified it - redo the check or mark the claim
+                 UNVERIFIED explicitly. "should work", "assumed fine", or
+                 "looks correct" are not conclusions.
+              b. VERIFY THE SYMPTOM, NOT THE CHANGE. A fix is not verified by
+                 the edit you made; it is verified by the failure you observed
+                 BEFORE and its absence AFTER. Capture both sides for every
+                 package you touch.
+              c. FRESH ENVIRONMENT, ALWAYS. The only proof that counts runs in
+                 a CLEAN Void container (fresh docker run, no mounted build
+                 state, no leftover repo state from the failed attempt).
+                 Never reuse a container, xbps repo state, or environment from
+                 a build that failed - the "fixed" version must install in the
+                 same clean state a user would be in.
+              d. FRESH-CHECKER PASS. After you finish fixing and install-
+                 testing everything you touched, re-run the install tests ONE
+                 more time from scratch (fresh container, fresh repoindex) as
+                 an independent checker - the agent that fixed the package
+                 cannot audit its own fix. When the relay/next run picks up
+                 your work, treat it as a fresh checker too: re-verify, do not
+                 trust the previous run's claims.
+              e. NAME THE GAPS. End every package's verification with an
+                 honest "not verified: <what and why>" line. A stated gap
+                 beats a silent assumption - but never use a stated gap to
+                 skip verification you were actually able to do.
 
             NO-CHURN VERIFICATION (MANDATORY, applies to every step below). You
             must NEVER push a version/revision bump if it was already pushed and
@@ -180,6 +215,20 @@ jobs:
                  app.asar / lib64/*.so, AppRun scripts). NEVER guess what is
                  inside a binary package, and NEVER trust a binary's filename,
                  version string, or claimed dependencies without opening it.
+
+                 RE-TEAR RULE: if the package's upstream changed AT ALL since
+                 the last audit (new version, new commit, new release notes,
+                 new build system), the previous dependency derivation is
+                 VOID. Re-download, re-extract, and re-derive from the NEW
+                 artifact. Never reuse an old audit for a changed package,
+                 even if the template still builds - "still builds" is not
+                 "deps still correct". For .xbps binary packages, tearing
+                 apart means: ar t <file>.xbps, extract and read
+                 files.plist* / properties.plist* (pkgver, run_depends,
+                 shlib-provides/requires) and reconcile run_depends against
+                 the template's depends (or against void-packages upstream).
+                 Verify the sha256 of every downloaded distfile against the
+                 template's checksum line.
               b. DERIVE THE TRUE BUILD DEPENDENCY LIST from those files.
                  Every direct dependency the upstream build needs MUST have a
                  matching hostmakedepends/makedepends/depends (or be satisfied
@@ -259,6 +308,17 @@ jobs:
             distros, outdated, or renamed upstream) build fine while users hit
             "failed to resolve transaction" or missing-shlib errors. Catch this
             BEFORE users do.
+              SCOPE & COVERAGE LEDGER: the goal is 100% coverage of every
+              binary the "rolling" release ships. Keep a per-package
+              install-test ledger in .opencode-relay.md (package | last
+              install-tested | result | smoke result). This run MUST
+              install-test: (1) every package you touched or rebuilt, (2)
+              every package whose binary changed since its last successful
+              install test (check the rolling release assets for new/changed
+              builds), and (3) as many still-uncovered packages as your time
+              budget allows, oldest-first. NEVER mark a package's install
+              test as done based on a previous run's result if the binary
+              changed since then.
               a. DOWNLOAD THE BUILT BINARY from the "rolling" release:
                  `gh release view rolling --json assets --jq '.assets[].name'`
                  to find `<pkg>-<ver>_<rev>.x86_64.xbps`, then download it
@@ -316,12 +376,16 @@ jobs:
                  and re-run the container install test until xbps-install is
                  clean AND the app launches (--version/--help; exit 0 =
                  smoke test passed).
-              e. SCOPE: install-test EVERY package you touched this run
-                 (mandatory before you consider the fix done) plus a rotating
-                 spot-check of untouched packages (>=5 per run, rotating
-                 until the whole repo is covered). Pure library or
-                 headless-only packages still get the install test; only the
-                 runtime smoke test may be skipped, with the reason recorded.
+                  e. SCOPE: this run MUST install-test, in priority order: every package you
+                  touched or rebuilt this run; every package whose binary
+                  changed since its last successful install test; then the
+                  oldest still-uncovered packages until your time budget is
+                  used up. Update the coverage ledger in .opencode-relay.md
+                  after every test. The run is NOT complete while any package
+                  whose binary changed since its last test remains untested.
+                  Pure library or headless-only packages still get the install
+                  test; only the runtime smoke test may be skipped, with the
+                  reason recorded.
               f. MANDATORY DELIVERABLE - install-test table in your final
                  summary, one row per package tested:
                  | package | build | xbps install test | smoke test | status |
@@ -551,6 +615,31 @@ jobs:
             your unfinished work and picks it up. Never block forever; prefer commit +
             trigger + move on.
 
+            PRE-COMPLETION GATE (MANDATORY - run this BEFORE your final
+            summary; you are not finished until every item passes with
+            evidence):
+              1. `git status --porcelain` is EMPTY and the working tree is
+                 clean.
+              2. Every package you touched this run has a passing install
+                 test in a CLEAN Void container, including the fresh-checker
+                 re-run, with before/after evidence recorded.
+              3. The install-test coverage ledger in .opencode-relay.md is
+                 updated with this run's results; every package whose binary
+                 changed since its last test has been tested; no install-test
+                 failure is left unaddressed (fixed + retested, or reverted +
+                 issue opened).
+              4. The dependency audit table covers 100% of the inventory,
+                 including re-derivation for every package whose upstream
+                 changed.
+              5. Every claim in your final summary is backed by command
+                 output (commit SHAs, build run IDs, docker/xbps logs,
+                 checksums).
+              6. You have stated what you did NOT verify and why - a named
+                 gap is a stated FAIL, not a silent skip.
+            Announce this checklist in your final summary with PASS/FAIL and
+            the evidence for every item. Any FAIL means: fix it, re-run the
+            gate, then finish.
+
             HARD RULES:
             - You have FULL control: edit any file in the repo (packages, workflows,
               configs, README/docs) whenever it needs fixing or updating - but always
@@ -566,6 +655,9 @@ jobs:
               finishing.
             - Web-search FIRST, then act. Deeply verify every version, URL, and
               checksum online before touching anything; do not rely on memory.
+            - No evidence, no completion: every claim costs a command you ran -
+              paste the output. Verify the symptom is gone, not the change you
+              made.
             - Close issues only AFTER the fix is verified by a passing build.
             - Merge PRs only AFTER verifying correctness (web search) AND a passing
               build; use squash merge.
@@ -584,7 +676,8 @@ jobs:
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
               their result, the dependency audit table, the install-test table, and
-              what remains.
+              what remains. Include the pre-completion gate checklist with
+              PASS/FAIL + evidence per item.
 
       - name: Clean up stray opencode/schedule branches
         if: always()
