@@ -734,9 +734,11 @@ jobs:
       - name: Clean up stray opencode/schedule branches
         if: always()
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git fetch origin --prune
           for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/opencode/schedule-*'); do
             echo "Deleting stray branch: ${ref#origin/}"
-            git push origin --delete "${ref#origin/}" || true
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${ref#origin/}" || true
           done
