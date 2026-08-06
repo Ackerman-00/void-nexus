@@ -36,14 +36,47 @@ jobs:
         shell: bash
         run: curl -fsSL https://opencode.ai/install | bash -s -- -v 1.18.11
 
+      - name: Build prompt from triggering issue/PR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMENT: ${{ github.event.comment.body }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          if [ -n "$ISSUE_NUMBER" ]; then
+            KIND="issue"
+            NUMBER="$ISSUE_NUMBER"
+            CONTEXT=$(gh issue view "$ISSUE_NUMBER" --json title,body,state,author --jq '"Author: \(.author.login)\nState: \(.state)\nTitle: \(.title)\n\n\(.body)"' 2>/dev/null || echo "(could not fetch issue)")
+          else
+            KIND="pull request"
+            NUMBER="$PR_NUMBER"
+            CONTEXT=$(gh pr view "$PR_NUMBER" --json title,body,state,author --jq '"Author: \(.author.login)\nState: \(.state)\nTitle: \(.title)\n\n\(.body)"' 2>/dev/null || echo "(could not fetch PR)")
+          fi
+          {
+            echo "PROMPT<<PROMPT_EOF"
+            printf 'You are the fully autonomous maintainer of void-nexus (https://github.com/Ackerman-00/void-nexus). A user invoked you with /oc. Handle %s #%s. The triggering comment was: %s\n\n--- CONTEXT ---\n%s\n--- END CONTEXT ---\n\nTASKS:\n1. INVESTIGATE: reproduce/diagnose the report. Web-search to verify every version, URL, and checksum - never trust the report or your memory alone.\n2. If it is a genuine packaging bug (missing dep, wrong version, broken build/install, broken template): fix the template/workflow directly, commit to main (git fetch origin && git pull --rebase origin main first), trigger the "Build Nexus XBPS" workflow for the affected packages (gh workflow run "Build Nexus XBPS" --ref main -f package_list="<pkgs>" -f force_rebuild="true"), and verify the build passes.\n3. If it is user error, already implemented, or a duplicate: say so clearly and kindly with evidence.\n4. ALWAYS leave a comment on %s #%s with your verdict and evidence (gh %s comment / gh %s close).\n5. NEVER create pull requests. Work directly on main. Never echo or paste any tokens.\n6. COMPLETION MARKER (MANDATORY): when done, rm -f any stale opencode-complete-*.md, write opencode-complete-%s.md at the repo root containing your summary + evidence, commit and push it. The workflow verifies this marker on main; without it your run is treated as failed.\n' \
+              "$KIND" "$NUMBER" "$COMMENT" "$CONTEXT" "$KIND" "$NUMBER" "$KIND" "$KIND" "$RUN_ID"
+            echo "PROMPT_EOF"
+          } >> "$GITHUB_ENV"
+
       - name: Run opencode
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
-          for model in "opencode/deepseek-v4-flash-free" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free" "opencode/big-pickle"; do
+          for model in "opencode/deepseek-v4-flash-free" "opencode/big-pickle" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free"; do
             echo "=== opencode run attempt with $model ==="
-            MODEL="$model" opencode github run && exit 0
-            echo "=== attempt with $model failed (exit $?) - trying next ==="
+            if MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT"; then
+              git fetch origin main >/dev/null 2>&1
+              if git ls-tree --name-only origin/main | grep -qx "opencode-complete-$RUN_ID.md"; then
+                echo "=== $model completed (completion marker committed to main) ==="
+                exit 0
+              fi
+              echo "=== $model exited 0 but left NO completion marker - run is INCOMPLETE, treating as failure ==="
+            else
+              echo "=== attempt with $model failed (exit $?) - trying next ==="
+            fi
             sleep 15
           done
           exit 1
@@ -51,3 +84,4 @@ jobs:
           MODEL: opencode/deepseek-v4-flash-free
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
