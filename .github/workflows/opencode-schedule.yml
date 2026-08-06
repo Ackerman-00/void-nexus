@@ -51,9 +51,9 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
-          for model in "opencode/deepseek-v4-flash-free" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free" "opencode/big-pickle"; do
+          for model in "opencode/deepseek-v4-flash-free" "opencode/big-pickle" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free"; do
             echo "=== opencode run attempt with $model ==="
-            MODEL="$model" opencode github run && exit 0
+            MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" && exit 0
             echo "=== attempt with $model failed (exit $?) - trying next ==="
             sleep 15
           done
@@ -82,10 +82,9 @@ jobs:
               versions, commits directly to main, and triggers builds.
             - TOKENS: `git push` authenticates with the OpenCode App token, which has
               contents + workflows write, so you CAN modify .github/workflows/* and push
-              straight to main (a workflow step also configures global git credentials, so ALL
-              git pushes - including the action's own end-of-run branch push -
-              authenticate with GITHUB_TOKEN). `gh` commands use the runner's
-              GITHUB_TOKEN, which has
+              straight to main (a workflow step also configures global git credentials, so
+              all git pushes authenticate with GITHUB_TOKEN). `gh` commands use the
+              runner's GITHUB_TOKEN, which has
               actions write (trigger/watch builds), pull-requests write (merge), and
               issues write (open/close). Just use `gh` normally - no extra flags needed.
               Always `git fetch origin && git pull --rebase origin main` before pushing.
@@ -513,40 +512,74 @@ jobs:
                version/revision. Rebuild any package whose expected binary is missing
                or stale.
 
-            4. REVIEW ALL OPEN ISSUES like a human maintainer.
+            4. REVIEW ALL OPEN ISSUES like a human maintainer - AND REPLY.
                GET https://api.github.com/repos/Ackerman-00/void-nexus/issues (state=open,
-               no pull requests). For each issue:
-               - Read it fully, reproduce or diagnose it, and web-search for context
-                 and upstream answers.
-               - Fix what you can: edit the template/workflow, commit to main, trigger
-                 a build, and verify it passes.
-               - When the fix is VERIFIED (build succeeded), CLOSE the issue with a
-                 comment summarizing the root cause, the fix (commit sha), and the
-                 passing build run, e.g. "Fixed by <sha>; build <run> succeeded.".
-               - If you cannot fix it yet, leave a detailed diagnosis comment and keep
-                 the issue open.
+               no pull requests). EVERY open issue MUST get a reply - silence
+               is not an option. For each issue:
+               - Read it fully, reproduce or diagnose it, and web-search for context.
+               - DETERMINE WHO IS RIGHT. If the issue is a genuine packaging bug
+                 (missing dep, wrong version, broken build, broken install, broken
+                 template, broken check-updates): fix it. If it is USER ERROR
+                 (missing system package, not using the repository/rolling release
+                 correctly, wrong config, misunderstanding of how the package works,
+                 feature request that is already implemented): say so clearly and
+                 kindly, explain what the user should do instead, and close the issue
+                 as completed/not-planned with the explanation. NEVER let a user-error
+                 issue rot open without an answer.
+               - When you fix a genuine bug: edit the template/workflow, commit
+                 directly to main, trigger the "Build Nexus XBPS" workflow for the
+                 affected packages, and verify the build succeeds. When VERIFIED
+                 (build run succeeded AND the container install test passes), CLOSE
+                 the issue with a comment summarizing the root cause, the fix
+                 (commit sha), and the passing build run id, e.g. "Fixed by <sha>;
+                 build <run> succeeded."
+               - If you cannot fix it yet, leave a detailed diagnosis comment
+                 (what you tried, what you found, what blocks the fix) and keep the
+                 issue open. State clearly whether it is a bug or user error.
+               - EVERY issue you close gets a closing comment with the verdict
+                 (fixed / not-a-bug / user error / duplicate) and the evidence.
+                 Use `gh issue close <n> --comment "<verdict and evidence>"`.
+               - Reply on issues WITH `gh issue comment <n>` even before any fix,
+                 so the reporter always gets a response from this run.
 
-            5. REVIEW ALL OPEN PULL REQUESTS like a human maintainer.
+            5. REVIEW ALL OPEN PULL REQUESTS like a human maintainer - AND DECIDE.
                GET https://api.github.com/repos/Ackerman-00/void-nexus/pulls (state=open).
-               For each PR:
-               - Read the full diff (`gh pr diff <n>`, plus the files/comments API) and
-                 the PR body. Understand what it changes and why.
+               For each PR: you are the maintainer - review it, test it, and
+               merge / request changes / close it. Do NOT leave it hanging for a
+               human. EVERY PR gets a comment with your verdict and reasoning.
+               - Read the full diff (`gh pr diff <n>`, plus the files/comments API)
+                 and the PR body.
                - VERIFY with web search: the new/updated version exists upstream,
-                 distfiles URLs are reachable, checksums are correct, build_style and
-                 dependencies are right, and there are no known issues with the change.
-               - TRIGGER A BUILD of the PR's packages to prove it works:
-                   gh workflow run "Build Nexus XBPS" --ref <pr-branch> \
-                     --repo Ackerman-00/void-nexus \
-                     -f package_list="<pkgs>" -f force_rebuild="true"
-                 Watch it to completion (`gh run watch <id> --exit-status`).
-               - MERGE the PR with a squash merge ONLY when the change is correct AND
-                 the build passes:
-                   gh pr merge <n> --squash --delete-branch
-                 Leave a thank-you / summary comment.
-               - If the build fails or the change is wrong, fix it yourself if it is a
-                 quick, safe fix; otherwise leave a clear comment explaining exactly
-                 what is wrong and what to fix, and keep the PR open. Only close a PR
-                 outright if it is clearly broken or abandoned with no reasonable fix.
+                 distfiles URLs are reachable, checksums are correct, and the
+                 template is well-formed (`bash -n` on it, xbps-src template syntax
+                 sanity check).
+               - SELF-TEST BEFORE DECIDING (MANDATORY): build the PR's changes
+                 yourself, exactly as the build workflow would - checkout the PR
+                 branch locally, trigger a "Build Nexus XBPS" run on the PR branch
+                 (`gh workflow run "Build Nexus XBPS" --ref <pr-branch>
+                 -f package_list="<pkgs>" -f force_rebuild="true"`) and watch it to
+                 completion, AND install-test the built .xbps in a CLEAN Void
+                 container per the INSTALL-VERIFICATION SWEEP below. The PR is only
+                 mergeable if the build AND install pass in your repro. Use
+                 `gh pr checkout <n>` (or fetch the head ref) to get the changes.
+               - MERGE: if the change is clearly correct, low-risk, builds cleanly
+                 and installs in your clean-container repro - merge with squash
+                 (`gh pr merge <n> --squash --delete-branch`). Then verify the
+                 binaries land in the "rolling" release (check-updates.yml or a
+                 follow-up build run picks it up). If that build then fails, fix it
+                 immediately in a follow-up commit.
+               - REQUEST CHANGES: if the change is mostly right but has issues
+                 (missing checksum, bad distfiles URL, missing depends/hostmakedepends,
+                 wrong version format, no revision bump), leave a precise comment
+                 listing exactly what to fix and keep the PR open.
+               - CLOSE: if the change is wrong, broken, duplicates an existing
+                 fix already on main, is based on a version that does not exist,
+                 or the author has abandoned it - close it with a clear comment
+                 explaining why (do not be rude; be factual).
+               - NEVER merge on "it probably builds". Evidence required: your
+                 clean-container build+install output, then the build run id after
+                 the merge. If you cannot test it for any reason, say so in the
+                 comment and do not merge.
 
             6. MAINTAIN DOCUMENTATION & GENERAL REPO HEALTH.
                You have FULL control over this repository: you may edit any file that
@@ -654,14 +687,11 @@ jobs:
               configs, README/docs) whenever it needs fixing or updating - but always
               web-search and verify first, then validate before committing.
             - Commit fixes to main directly. NEVER open pull requests yourself, and
-              ALWAYS leave the working tree clean (the action may otherwise auto-create
-              a PR from leftover changes).
+              ALWAYS leave the working tree clean.
             - CLEAN-TREE DISCIPLINE (MANDATORY): at the end of the run `git status
               --porcelain` MUST be empty. Download/extract test artifacts (source
               tarballs, .xbps, .sig2) into /tmp or $RUNNER_TEMP, NEVER into the repo
-              working tree - untracked files make the action try to push a stray
-              branch at the end and fail the whole run. Remove any leftovers before
-              finishing.
+              working tree. Remove any leftovers before finishing.
             - Web-search FIRST, then act. Deeply verify every version, URL, and
               checksum online before touching anything; do not rely on memory.
             - No evidence, no completion: every claim costs a command you ran -
@@ -741,6 +771,16 @@ jobs:
           else
             echo "failure issue for today already open - skipping"
           fi
+
+      - name: Close stale opencode/schedule-* PRs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for pr in $(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --jq '.[] | select(.head.ref | startswith("opencode/schedule-")) | .number'); do
+            echo "Closing stale PR #${pr} (opencode integration branch; changes land via direct pushes to main)"
+            gh pr close "$pr" --comment "Automatically closed: this PR came from the scheduled-run integration branch. Changes are delivered by direct pushes to main (builds are triggered directly via the Build Nexus XBPS workflow)." || true
+          done
 
       - name: Clean up stray opencode/schedule branches
         shell: bash
