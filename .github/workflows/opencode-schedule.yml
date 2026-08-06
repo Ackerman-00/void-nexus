@@ -53,8 +53,18 @@ jobs:
           export PATH="$HOME/.opencode/bin:$PATH"
           for model in "opencode/deepseek-v4-flash-free" "opencode/big-pickle" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free"; do
             echo "=== opencode run attempt with $model ==="
-            MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" && exit 0
-            echo "=== attempt with $model failed (exit $?) - trying next ==="
+            MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT"
+            exit_code=$?
+            if [ "$exit_code" -eq 0 ]; then
+              git fetch origin main >/dev/null 2>&1
+              if git ls-tree --name-only origin/main | grep -qx "opencode-complete-$RUN_ID.md"; then
+                echo "=== $model completed the full job (completion marker committed to main) ==="
+                exit 0
+              fi
+              echo "=== $model exited 0 but did NOT commit the completion marker - run is INCOMPLETE, treating as failure ==="
+            else
+              echo "=== attempt with $model failed (exit $exit_code) - trying next ==="
+            fi
             sleep 15
           done
           exit 1
@@ -64,6 +74,7 @@ jobs:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELAY: ${{ github.event.inputs.relay || 'false' }}
+          RUN_ID: ${{ github.run_id }}
           PROMPT: |
             You are the FULLY AUTONOMOUS maintainer of void-nexus
             (https://github.com/Ackerman-00/void-nexus), a cryptographically signed,
@@ -677,7 +688,17 @@ jobs:
                  output (commit SHAs, build run IDs, docker/xbps logs,
                  checksums).
               6. You have stated what you did NOT verify and why - a named
-                 gap is a stated FAIL, not a silent skip.
+                  gap is a stated FAIL, not a silent skip.
+              7. You have committed and pushed a file named
+                 `opencode-complete-$RUN_ID.md` (RUN_ID = the env var value,
+                 e.g. "opencode-complete-1234567890.md") at the repo root.
+                 This file MUST contain the full final summary (all tables,
+                 the gate checklist with PASS/FAIL + evidence per item, what
+                 remains). It is the ONLY proof this run finished its work -
+                 the workflow checks it is on main after your process exits;
+                 if it is missing, the run is treated as FAILED and a
+                 stronger model tries again from scratch. A run that ends
+                 without this marker has NOT completed.
             Announce this checklist in your final summary with PASS/FAIL and
             the evidence for every item. Any FAIL means: fix it, re-run the
             gate, then finish.
@@ -686,6 +707,14 @@ jobs:
             - You have FULL control: edit any file in the repo (packages, workflows,
               configs, README/docs) whenever it needs fixing or updating - but always
               web-search and verify first, then validate before committing.
+            - NEVER end the run after "diagnostics only". A run whose final
+              output is only "checked versions, everything is up to date"
+              has FAILED to do its job. You are done ONLY when the
+              pre-completion gate above is completed AND the
+              opencode-complete-$RUN_ID.md marker is committed + pushed.
+              If the repo has ANY failed build, ANY open issue or PR, or
+              ANY package whose inventory is unverified, your run is not
+              done - keep working regardless of how complete things look.
             - Commit fixes to main directly. NEVER open pull requests yourself, and
               ALWAYS leave the working tree clean.
             - CLEAN-TREE DISCIPLINE (MANDATORY): at the end of the run `git status
@@ -755,6 +784,7 @@ jobs:
     permissions:
       contents: write
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6.1.0
 
