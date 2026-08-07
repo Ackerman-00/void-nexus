@@ -8,7 +8,7 @@ makedepends="wayland-devel wayland-protocols libxkbcommon-devel
  freetype-devel fontconfig-devel cairo-devel pango-devel librsvg-devel
  glib-devel tomlplusplus-devel json-c++ wlroots0.20-devel libinput-devel
  MesaLib-devel libwebp-devel stb"
-depends="greetd dbus polkit"
+depends="greetd dbus polkit bash"
 short_desc="A minimal login greeter for greetd that matches the look and feel of Noctalia Shell"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
