@@ -57,11 +57,11 @@ jobs:
             exit_code=$?
             if [ "$exit_code" -eq 0 ]; then
               git fetch origin main >/dev/null 2>&1
-              if git ls-tree --name-only origin/main | grep -qx "opencode-complete-$RUN_ID.md"; then
-                echo "=== $model completed the full job (completion marker committed to main) ==="
+              if git show origin/main:.opencode-relay.md 2>/dev/null | grep -qx "run_id: $RUN_ID" && git show origin/main:.opencode-relay.md 2>/dev/null | grep -qi "status: complete"; then
+                echo "=== $model completed the full job (.opencode-relay.md on main confirms run $RUN_ID complete) ==="
                 exit 0
               fi
-              echo "=== $model exited 0 but did NOT commit the completion marker - run is INCOMPLETE, treating as failure ==="
+              echo "=== $model exited 0 but .opencode-relay.md on main does not confirm run $RUN_ID complete - run is INCOMPLETE, treating as failure ==="
             else
               echo "=== attempt with $model failed (exit $exit_code) - trying next ==="
             fi
@@ -658,9 +658,12 @@ jobs:
                  Never leave the repo mid-edit: commit or revert everything first.
                  If your run gets cancelled by the next scheduled run, your state
                  file is what keeps the work alive - that is by design.
-              e. COMPLETION: when all work is done, delete .opencode-relay.md (or
-                 set status "complete") so the next run starts clean. No relay
-                 file = no pending work.
+               e. COMPLETION: when all work is done, set the relay to
+                  `status: complete` and add a `run_id: $RUN_ID` line to
+                  .opencode-relay.md, then commit + push it. NEVER delete
+                  .opencode-relay.md - the workflow reads it from main to
+                  verify the run finished. Only handoffs set `status:
+                  unfinished` (see b. above).
 
             SAFETY NET: if you cannot wait for a build to finish within this run, that
             is fine - the next scheduled run detects any still-missing binaries (step 2)
@@ -689,16 +692,19 @@ jobs:
                  checksums).
               6. You have stated what you did NOT verify and why - a named
                   gap is a stated FAIL, not a silent skip.
-              7. You have committed and pushed a file named
-                 `opencode-complete-$RUN_ID.md` (RUN_ID = the env var value,
-                 e.g. "opencode-complete-1234567890.md") at the repo root.
-                 This file MUST contain the full final summary (all tables,
-                 the gate checklist with PASS/FAIL + evidence per item, what
-                 remains). It is the ONLY proof this run finished its work -
-                 the workflow checks it is on main after your process exits;
-                 if it is missing, the run is treated as FAILED and a
-                 stronger model tries again from scratch. A run that ends
-                 without this marker has NOT completed.
+              7. You updated and pushed `.opencode-relay.md` on main WITHIN
+                 this run, and it contains the line `run_id: $RUN_ID`
+                 (RUN_ID = the env var value, e.g. "run_id: 1234567890")
+                 and a terminal status - `status: complete` if the work is
+                 done, or `status: unfinished` ONLY if you are handing off
+                 to a relay (see RELAY / LONG-RUN HANDOFF below). This
+                 relay update IS the ONLY proof this run finished its
+                 deliberate work - the workflow fetches the relay from main
+                 after your process exits and checks it contains this run's
+                 run_id; if it does NOT, the run is treated as FAILED and a
+                 stronger model tries again from scratch. NEVER create
+                 separate opencode-complete-*.md files - the relay is the
+                 single completion record.
             Announce this checklist in your final summary with PASS/FAIL and
             the evidence for every item. Any FAIL means: fix it, re-run the
             gate, then finish.
@@ -710,8 +716,8 @@ jobs:
             - NEVER end the run after "diagnostics only". A run whose final
               output is only "checked versions, everything is up to date"
               has FAILED to do its job. You are done ONLY when the
-              pre-completion gate above is completed AND the
-              opencode-complete-$RUN_ID.md marker is committed + pushed.
+              pre-completion gate above is completed AND .opencode-relay.md
+              on main shows `status: complete` with `run_id: $RUN_ID`.
               If the repo has ANY failed build, ANY open issue or PR, or
               ANY package whose inventory is unverified, your run is not
               done - keep working regardless of how complete things look.
@@ -787,6 +793,25 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6.1.0
+
+      - name: Prune stray completion-marker files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin main >/dev/null 2>&1 || true
+          if git ls-tree --name-only origin/main | grep -q '^opencode-complete-.*\.md$'; then
+            git config user.name "opencode-agent[bot]"
+            git config user.email "41898282+opencode-agent[bot]@users.noreply.github.com"
+            for f in $(git ls-tree --name-only origin/main | grep '^opencode-complete-.*\.md$'); do
+              git rm --cached "$f" >/dev/null 2>&1 || true
+              echo "pruned stray marker: $f"
+            done
+            git commit -m "chore: remove obsolete opencode-complete-* marker files (relay is now the completion record)" || true
+            git push origin HEAD:main 2>&1 || true
+          else
+            echo "no stray opencode-complete-* files to prune"
+          fi
 
       - name: Open failure issue
         if: needs.opencode.result == 'failure'
