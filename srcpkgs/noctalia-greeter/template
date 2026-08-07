@@ -1,7 +1,7 @@
 # Template file for 'noctalia-greeter'
 pkgname=noctalia-greeter
 version=1.2.1
-revision=1
+revision=2
 build_style=meson
 hostmakedepends="meson ninja pkg-config wayland-devel"
 makedepends="wayland-devel wayland-protocols libxkbcommon-devel
