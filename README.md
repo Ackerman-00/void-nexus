@@ -98,7 +98,7 @@ Place the public key manually:
 
 ```bash
 sudo mkdir -p /var/db/xbps/keys && sudo curl -L \
-  -o /var/db/xbps/keys/b9:f2:38:0f:3f:a7:76:be:5f:ad:01:b9:ef:b5:55:77.plist \
+  -o /var/db/xbps/keys/44:bd:4b:20:ba:01:98:05:12:7d:1f:e7:ec:ed:6e:3c:be:a4:11:9c:ad:d5:1f:9e:3d:49:09:92:df:38:24:41.plist \
   https://github.com/Ackerman-00/void-nexus/raw/main/signing-key.plist
 ```
 </details>
