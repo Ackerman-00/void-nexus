@@ -1,7 +1,7 @@
 # Template file for 'heroic-games-launcher'
 pkgname=heroic-games-launcher
-version=2.22.0
-revision=2
+version=2.22.1
+revision=1
 archs="x86_64"
 short_desc="Open source launcher for GOG, Epic, and Amazon Games"
 maintainer="Quietcraft <ackerman-00@users.noreply.github.com>"
@@ -9,7 +9,7 @@ license="GPL-3.0-or-later"
 homepage="https://heroicgameslauncher.com"
 
 distfiles="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${version}/Heroic-${version}-linux-x64.tar.xz"
-checksum="5aa127f204ca793181ec33d15b5f556c2f27b5734698ab0436a6590a73974571"
+checksum="8a20af7b8ced2f0d895b1a8d9d013a41225113cbcfd12c8be873f03f0eeb8386"
 
 depends="desktop-file-utils hicolor-icon-theme nss atk alsa-lib libcups libdrm libgbm \
  libXcomposite libXdamage libXrandr libXScrnSaver gtk+3 libxcb"
