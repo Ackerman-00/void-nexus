@@ -1,0 +1,49 @@
+Replace Vala control-character escapes \u001f / \u001e (which valac < 0.58
+passes through as invalid C universal character names) with the equivalent
+hex escapes \x1f / \x1e (same bytes, valid C).
+
+Fixes: build failure in ProtonPlus 0.6.0 with void's vala 0.56.19
+-- gcc: error: \u001f is not a valid universal character
+
+--- a/src/models/steam-change-receipt.vala
++++ b/src/models/steam-change-receipt.vala
+@@ -76,7 +76,7 @@
+ 
+         public static string fingerprint (string value, bool present) {
+             var checksum = new Checksum (ChecksumType.SHA256);
+-            var material = (present ? "present\u001f" : "absent\u001f") + value;
++            var material = (present ? "present\x1f" : "absent\x1f") + value;
+             checksum.update (material.data, material.length);
+             return checksum.get_string ();
+         }
+@@ -139,7 +139,7 @@
+                 var identity = configuration_intent != null
+                     ? "configuration-intent"
+                     : kind_to_identifier (kind);
+-                return "%s\u001f%s\u001f%s".printf (target.id, identity, resource_key);
++                return "%s\x1f%s\x1f%s".printf (target.id, identity, resource_key);
+             }
+         }
+ 
+--- a/src/services/steam-configuration-service.vala
++++ b/src/services/steam-configuration-service.vala
+@@ -37,7 +37,7 @@
+     }
+ 
+     public class SteamConfigurationService : Object, SteamConfigurationReconciler {
+-        private const string ABSENT = "\u001eprotonplus-absent";
++        private const string ABSENT = "\x1eprotonplus-absent";
+         private SteamSessionService sessions;
+         private SteamRestartManager manager;
+         private SteamShortcutMutator shortcut_mutator;
+--- a/src/services/steam-restart-state-store.vala
++++ b/src/services/steam-restart-state-store.vala
+@@ -233,7 +233,7 @@
+             if (schema_version == 1) {
+                 if (!object.has_member ("baseline")) return null;
+                 var baseline = object.get_string_member ("baseline");
+-                const string legacy_absent = "\u001eprotonplus-absent";
++                const string legacy_absent = "\x1eprotonplus-absent";
+                 var baseline_present = baseline != legacy_absent;
+                 var desired_present = desired != legacy_absent;
+                 return new SteamConfigurationIntent (file, operation, path, field_id,
