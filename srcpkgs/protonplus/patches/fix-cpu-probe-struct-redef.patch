@@ -1,0 +1,33 @@
+ProtonPlus 0.6.0 declares the CpuFeatureProbe struct in Vala with both
+[CCode(cname)] and [CCode(cheader_filename="utils/cpu-probe.h")]. valac
+then emits the full struct body in the generated system.c AND #includes
+cpu-probe.h, whose typedef defines the same struct -- gcc errors with
+'redefinition of struct _ProtonPlusCpuFeatureProbe'.
+
+Drop the cheader_filename from both the struct and the extern
+get_cpu_feature_probe() declarations so valac emits its own struct and
+its own extern prototype (matching the symbol provided by cpu-probe.c).
+The generated struct layout is byte-identical to the header's.
+
+Fixes: build failure in ProtonPlus 0.6.0 with vala 0.56.19
+
+--- a/src/utils/system.vala
++++ b/src/utils/system.vala
+@@ -208,7 +208,7 @@
+         static bool systemd_update_pending = false;
+         static SystemdTimerManager? systemd_timer_manager = null;
+ 
+-        [CCode (cname = "ProtonPlusCpuFeatureProbe", cheader_filename = "utils/cpu-probe.h", has_type_id = false)]
++        [CCode (cname = "ProtonPlusCpuFeatureProbe", has_type_id = false)]
+         private struct CpuFeatureProbe {
+             public bool available;
+             public bool cmpxchg16b;
+@@ -242,7 +242,7 @@
+             public bool aarch64_rdma;
+         }
+ 
+-        [CCode (cname = "protonplus_cpu_get_feature_probe", cheader_filename = "utils/cpu-probe.h", has_target = false)]
++        [CCode (cname = "protonplus_cpu_get_feature_probe", has_target = false)]
+         private static extern CpuFeatureProbe get_cpu_feature_probe ();
+ 
+         public static async CommandResult run_command (string command) {
