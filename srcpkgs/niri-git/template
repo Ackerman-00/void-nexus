@@ -1,9 +1,9 @@
 # Template file for 'niri-git'
 pkgname=niri-git
 _basever=26.04
-_commit=97c96a13829ec74c83e976c2ea34e7cc717b02ec
-_shortcommit=97c96a1
-_gitdate=20260810135827
+_commit=464d45daa229f16934399ceb16e94783ed2c241c
+_shortcommit=464d45d
+_gitdate=20260810150450
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cargo
@@ -23,7 +23,7 @@ changelog="https://github.com/niri-wm/niri/releases"
 conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum="dd08803b258c735c4a0710f637f6486ac088345a5b349eca1d39d46ce09dcee6"
+checksum="494dcbe6aa97f95e3e7d72628bdb51465013b002eba9d2b7e9b71a0d74538bc1"
 pre_check() {
 	export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")
 	ulimit -n 4096
