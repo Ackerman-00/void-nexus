@@ -1,6 +1,6 @@
 # Template file for 'protonplus'
 pkgname=protonplus
-version=0.6.1-1
+version=0.6.2
 revision=1
 build_style=meson
 makedepends="SDL3-devel libnotify-devel cairo-devel AppStream-devel"
@@ -12,4 +12,4 @@ license="GPL-3.0-or-later"
 homepage="https://github.com/Vysp3r/ProtonPlus"
 
 distfiles="https://github.com/Vysp3r/ProtonPlus/archive/refs/tags/v${version}.tar.gz"
-checksum="7eb9ccd29a17cd482ed9e12a3d3e95bf5c8ae0574acf1c5fefb84829f1148eca"
+checksum="1adfc7892510da0d017d1186b43e41ea0138ca164cf6b1e0468d71b223181b48"
