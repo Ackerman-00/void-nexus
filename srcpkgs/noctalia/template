@@ -9,7 +9,14 @@ revision=1
 
 build_style=meson
 buildtype=release
-configure_args="-Db_ndebug=true -Dtests=disabled"
+configure_args="-Db_ndebug=true -Dtests=disabled -Db_lto=false"
+
+# noctalia at _commit 451c391 requires C++23 <flat_set>/<print>, only
+# available in libstdc++ from GCC 16+.  Build with our parallel gcc16 and
+# rpath its libstdc++ so the binary resolves GLIBCXX_3.4.34+ symbols at
+# runtime even on systems carrying only Void's gcc14 libstdc++.
+depends+=" libstdc++16>=16.1.1"
+LDFLAGS+=" -Wl,-rpath,/opt/gcc16/lib64"
 short_desc="A sleek, customizable desktop shell crafted for Wayland"
 maintainer="Quietcraft <https://github.com/Ackerman-00>"
 license="MIT"
@@ -23,6 +30,7 @@ replaces="noctalia-v5>=0 noctalia-beta>=0"
 hostmakedepends="meson ninja pkg-config"
 
 makedepends="
+ gcc16 libstdc++16-devel
  wayland-devel wayland-protocols libepoxy-devel
  MesaLib-devel libglvnd-devel cairo-devel
  pango-devel fontconfig-devel freetype-devel
@@ -35,6 +43,11 @@ makedepends="
  polkit-devel librsvg-devel libqalculate-devel libxml2-devel jemalloc-devel
  glib-devel
 "
+
+pre_configure() {
+	export CC=/usr/bin/gcc16
+	export CXX=/usr/bin/g++16
+}
 
 post_install() {
     vlicense LICENSE
