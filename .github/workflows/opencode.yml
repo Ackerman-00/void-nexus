@@ -34,7 +34,7 @@ jobs:
 
       - name: Install opencode (latest)
         shell: bash
-        run: curl -fsSL https://opencode.ai/install | bash
+        run: curl -fsSL https://opencode.ai/install | bash -s -- -v 1.18.18
 
       - name: Build prompt from triggering issue/PR
         shell: bash
