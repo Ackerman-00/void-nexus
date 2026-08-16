@@ -1,9 +1,9 @@
 # Template file for 'quickshell-git'
 pkgname=quickshell-git
 _basever=0.3.0
-_commit=f27fd7b318f1931c27b412f8bb581265d652868b
-_shortcommit=f27fd7b
-_gitdate=20260816015227
+_commit=532a0606cafb05851a203e65be22c9a057447ee2
+_shortcommit=532a060
+_gitdate=20260816072204
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cmake
@@ -22,4 +22,4 @@ conflicts="quickshell>=0"
 provides="quickshell-${version}_${revision}"
 
 distfiles="https://github.com/quickshell-mirror/quickshell/archive/${_commit}.tar.gz"
-checksum="3ca41d3eaa4da3ace86120efcfc4ed7f565cd29dbfc0d5e274049ae374ad66c6"
+checksum="85e8effc6b3645ef4b30db9df725909e617ea1f7d44230a5c4509756bbbefd55"
