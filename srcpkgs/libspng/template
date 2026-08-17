@@ -1,7 +1,7 @@
 # Template file for 'libspng'
 pkgname=libspng
 version=0.7.4
-revision=3
+revision=2
 build_style=meson
 hostmakedepends="
   cmake
@@ -16,7 +16,7 @@ license="BSD-2-Clause"
 homepage="https://libspng.org/"
 
 distfiles="https://github.com/randy408/libspng/archive/refs/tags/v${version}.tar.gz"
-checksum="6850b0e5d07bed32b3613d4c7da50e0fc36542239a5ff5188b524494e9edda75"
+checksum="47ec02be6c0a6323044600a9221b049f63e1953faf816903e7383d4dc4234487"
 
 post_install() {
   vlicense LICENSE

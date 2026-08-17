@@ -5,7 +5,7 @@ _commit=606284464d4a99bb35710fee68192bc71085ee7c
 _shortcommit=6062844
 _gitdate=20260814122556
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=2
+revision=1
 build_style=cargo
 build_helper="qemu"
 configure_args="--no-default-features --features dbus,xdp-gnome-screencast"
@@ -23,7 +23,7 @@ changelog="https://github.com/niri-wm/niri/releases"
 conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum="6850b0e5d07bed32b3613d4c7da50e0fc36542239a5ff5188b524494e9edda75"
+checksum="eab3e51522c49963872bc0a8909f196fa1fb2f23d00331de6f8c2c5614529ac7"
 pre_check() {
 	export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")
 	ulimit -n 4096

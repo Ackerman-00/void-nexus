@@ -5,7 +5,7 @@ _commit=3bc915f09dd62bb2651a715114f9d140344bc6c1
 _shortcommit=3bc915f
 _gitdate=20260808203058
 version="${_basever}+git${_gitdate}.${_shortcommit}"
-revision=2
+revision=1
 build_style=cargo
 hostmakedepends="pkg-config clang"
 makedepends="libxcb-devel xcb-util-cursor-devel"
@@ -19,7 +19,7 @@ conflicts="xwayland-satellite>=0"
 provides="xwayland-satellite-${version}_${revision}"
 
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
-checksum="6850b0e5d07bed32b3613d4c7da50e0fc36542239a5ff5188b524494e9edda75"
+checksum="0ae2ac224d1823cd8e74164189b32ecc2176a7efb0a38b42040127c71dd7f3f9"
 
 make_check="no"
 
