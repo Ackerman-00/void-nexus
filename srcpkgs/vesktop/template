@@ -1,6 +1,6 @@
 # Template file for 'vesktop'
 pkgname=vesktop
-version=1.6.5
+version=1.6.6
 revision=1
 archs="x86_64 aarch64"
 build_style=fetch
@@ -26,7 +26,7 @@ case "${XBPS_TARGET_MACHINE}" in
 esac
 
 distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_${_deb_arch}.deb"
-checksum="2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5"
+checksum="0ef549ef5debaa24752e85fe3a4dc6e8e8b3c54f5f35d2e6f5343aee9b6e9f1a"
 
 nostrip_files="/opt/Vesktop/vesktop"
 
