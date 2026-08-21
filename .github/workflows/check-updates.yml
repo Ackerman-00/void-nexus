@@ -771,6 +771,13 @@ jobs:
               f.write(f"updates_found={'true' if changed_packages else 'false'}\n")
           PYEOF
 
+      # ---- topic: teardown-sweep ----
+      # Deterministic tear-apart gate (Proof-or-Stop): EVERY package, every
+      # artifact, downloaded and torn apart. Exit code is the verdict; the
+      # report is the receipt. A failing sweep blocks the commit step below.
+      - name: Tear-Apart Sweep (all packages, all artifacts)
+        run: |
+          python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md
       - name: Commit and push changes
         if: steps.scan.outputs.updates_found == 'true'
         run: |

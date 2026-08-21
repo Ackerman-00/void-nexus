@@ -670,7 +670,7 @@ def parse_gentoo(eb):
 
 def pypi_sdist_url(pn, pv):
     try:
-        data = json.loads(fetch("https://pypi.org/pypi/%s/%s/json" % (pn, pv), timeout=60).decode())
+        data = json.loads(fetch_with_name("https://pypi.org/pypi/%s/%s/json" % (pn, pv), timeout=60)[0].decode())
         for u in data.get("urls", []):
             if u.get("filename", "").endswith(".tar.gz") and u.get("packagetype") == "sdist":
                 return u["url"]
@@ -920,6 +920,75 @@ def host_machine():
     import platform
     m = platform.machine()
     return {"amd64": "x86_64", "arm64": "aarch64"}.get(m, m)
+
+
+def _lsremote_version_tags(clone_url):
+    """All version-like tags via `git ls-remote --tags` - no API rate limits."""
+    try:
+        out = subprocess.run(["git", "ls-remote", "--tags", clone_url],
+                             capture_output=True, text=True, timeout=180).stdout
+    except Exception:
+        return []
+    tags = []
+    for line in out.splitlines():
+        if "\t" not in line or "refs/tags/" not in line:
+            continue
+        ref = line.split("\t", 1)[1].split("refs/tags/", 1)[-1].replace("^{}", "")
+        if re.match(r"^v?\d", ref) and "/" not in ref:
+            tags.append(ref)
+    return tags
+
+
+def _tagkey(t):
+    """Version-ish sort key: numeric segments compare numerically."""
+    return [int(x) if x.isdigit() else x for x in re.split(r"([0-9]+)", t)]
+
+
+def latest_tag_lsremote(clone_url, include_prereleases=False):
+    """Latest version-like tag via `git ls-remote --tags` - no API rate limits.
+    Prerelease-looking tags (beta/rc/alpha/...) are ignored unless requested.
+    Returns the tag name or None."""
+    tags, pre = [], []
+    for ref in _lsremote_version_tags(clone_url):
+        if re.search(r"(?i)(alpha|beta|rc\d|[-.]pre|[-.]dev|nightly|canary)", ref):
+            pre.append(ref)
+        else:
+            tags.append(ref)
+    pool = (tags + pre) if include_prereleases else (tags or pre)
+    return sorted(pool, key=_tagkey)[-1] if pool else None
+
+
+def forge_slug_from_url(u):
+    """((owner/repo for REST APIs or None), clone_url) from a release/archive
+    URL. Recognizes GitHub, Codeberg, GitLab instances and Gitea git.* hosts."""
+    if not u:
+        return None, None
+
+    def repo(r):
+        return re.sub(r"\.git$", "", r.rstrip("/"))
+
+    m = re.search(r"github\.com/([^/]+)/([^/#?]+)", u)
+    if m:
+        return "%s/%s" % (m.group(1), repo(m.group(2))), \
+            "https://github.com/%s/%s.git" % (m.group(1), repo(m.group(2)))
+    m = re.search(r"codeberg\.org/([^/]+)/([^/#?]+)", u)
+    if m:
+        return "%s/%s" % (m.group(1), repo(m.group(2))), \
+            "https://codeberg.org/%s/%s.git" % (m.group(1), repo(m.group(2)))
+    m = re.search(r"(?:gitlab\.[\w.-]+|git\.[\w.-]+)/([^/]+/[^/#?]+)", u)
+    if m:
+        host = m.group(0).split("/")[0]
+        return None, "https://%s/%s.git" % (host, repo(m.group(1)))
+    return None, None
+
+
+def staleness_pv(pv):
+    """Strip distro-revision noise so PV compares cleanly against upstream tags."""
+    v = re.sub(r"[_-]p\d+$", "", pv or "")
+    v = re.sub(r"-r\d+$", "", v)
+    v = re.sub(r"\^.*$", "", v)
+    v = re.sub(r"~.*$", "", v)
+    return v
 
 
 PLACEHOLDER_RE = re.compile(r"^(latest|unstable|dev|master|head|git|rolling|current)$", re.I)
@@ -1434,6 +1503,147 @@ def content_disposition_name(dst):
     return None
 
 
+def _replacement_asset_exists(srcs, pv, newver):
+    """True/False whether upstream's new version serves an artifact matching
+    our current URL pattern (pv swapped for newver). None = undeterminable
+    (version string not embedded in any URL)."""
+    found = False
+    for item in srcs:
+        url = item[0] if isinstance(item, tuple) else None
+        if not (isinstance(url, str) and url.startswith(("http://", "https://"))
+                and pv and pv in url):
+            continue
+        found = True
+        for nv in dict.fromkeys([newver, newver.lstrip("v")]):
+            if http_status(url.replace(pv, nv)) == 200:
+                return True
+    return False if found else None
+
+
+def check_upstream_latest(pkgs):
+    """Deterministic staleness gate: for every release-pinned package whose
+    artifact URL points at a known forge, compare PV against upstream's
+    latest release. Decision matrix:
+      - authoritative /releases/latest (GitHub/Codeberg; GH_TOKEN honored)
+        matching PV -> OK; differing -> STALE
+      - no API: ls-remote max tag matches PV -> OK
+      - ls-remote only, PV matches SOME tag but not the lexical max ->
+        SKIP-ambiguous (branded suffixes like zen's 1.21b vs 1.21.15b break
+        pure version sort; never fail a package on a guess)
+    Appends OK/STALE/SKIP rows so the report shows BOTH 'artifact is what we
+    pinned' AND 'pin is upstream's latest'."""
+    log("")
+    log("=== UPSTREAM LATEST CHECK ===")
+    for pkg, pv, srcs, live in pkgs:
+        if live or not pv or PLACEHOLDER_RE.match(pv):
+            continue
+        if srcs and isinstance(srcs[0], tuple) and srcs[0][0] == "__metapackage__":
+            continue
+        api_repo = clone = None
+        for item in srcs:
+            url = item[0] if isinstance(item, tuple) else None
+            if isinstance(url, str) and url.startswith(("http://", "https://")):
+                api_repo, clone = forge_slug_from_url(url)
+                if clone:
+                    break
+        if not clone:
+            continue  # non-forge host: no honest deterministic latest to compare
+        slug = clone.split("//", 1)[-1][:-4]
+
+        latest = None
+        source = None
+        if api_repo:
+            headers = {"Accept": "application/vnd.github+json"}
+            tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+            if tok:
+                headers["Authorization"] = "Bearer %s" % tok
+            try:
+                req = urllib.request.Request(
+                    "https://api.github.com/repos/%s/releases/latest" % api_repo,
+                    headers=headers)
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = json.loads(r.read().decode())
+                if data.get("tag_name"):
+                    latest, source = data["tag_name"], "releases/latest"
+            except Exception:
+                pass
+
+        all_tags = None
+        if not latest:
+            all_tags = _lsremote_version_tags(clone)
+            if all_tags:
+                latest, source = max(all_tags, key=_tagkey), "ls-remote"
+
+        if not latest:
+            rows.append((pkg, "upstream %s" % slug, pv, "", STATUS_SKIP,
+                         "upstream tags unreachable or none version-like"))
+            log("[%s] %s : upstream tags unavailable (%s)" % (STATUS_SKIP, pkg, slug))
+            continue
+
+        base = staleness_pv(pv)
+
+        def canon(x):
+            """Token-level version identity: 5.0.0~beta9 == v5.0.0-beta.9 ==
+            5.0.0_beta.9 (separators and letter/digit boundaries ignored)."""
+            return tuple(re.findall(r"[a-z]+|\d+", re.sub(r"^[vV]", "", (x or "").lower())))
+
+        def same(a, b):
+            for aa in dict.fromkeys([a, staleness_pv(a)]):
+                for bb in dict.fromkeys([b, staleness_pv(b)]):
+                    if versions_match(aa, bb) or canon(aa) == canon(bb):
+                        return True
+            return False
+
+        if same(pv, latest):
+            note = "at upstream latest %s [%s]" % (latest, source)
+            rows.append((pkg, "upstream %s" % slug, pv, latest, STATUS_OK, note))
+            log("[%s] %s : %s" % (STATUS_OK, pkg, note))
+            continue
+        if source == "releases/latest":
+            # Some projects stop publishing release objects while tags keep
+            # advancing - their releases/latest pointer then LAGS reality.
+            # If PV matches a tag at least as new as the pointer, we're current.
+            all_tags = _lsremote_version_tags(clone)
+            match_tag = next((t for t in all_tags or []
+                              if same(pv, t)), None)
+            if match_tag and _tagkey(match_tag) >= _tagkey(latest):
+                note = ("at upstream latest %s [tag; releases/latest pointer "
+                        "stale at %s]" % (match_tag, latest))
+                rows.append((pkg, "upstream %s" % slug, pv, match_tag,
+                             STATUS_OK, note))
+                log("[%s] %s : %s" % (STATUS_OK, pkg, note))
+                continue
+            if _replacement_asset_exists(srcs, pv, latest) is False:
+                note = ("upstream released %s but no replacement artifact yet "
+                        "(partial release) - staying on %s" % (latest, pv))
+                rows.append((pkg, "upstream %s" % slug, pv, latest,
+                             STATUS_SKIP, note))
+                log("[%s] %s : %s" % (STATUS_SKIP, pkg, note))
+                continue
+            note = ("pinned %s but upstream released %s - rerun update.sh"
+                    % (pv, latest))
+            rows.append((pkg, "upstream %s" % slug, pv, latest, STATUS_STALE, note))
+            log("[%s] %s : %s" % (STATUS_STALE, pkg, note))
+            continue
+        # ls-remote only: guard against branded-suffix misordering
+        if all_tags and any(same(pv, t) for t in all_tags):
+            note = ("pinned %s matches an existing tag but lexical-max is %s "
+                    "- ambiguous scheme, verify manually" % (pv, latest))
+            rows.append((pkg, "upstream %s" % slug, pv, latest, STATUS_SKIP, note))
+            log("[%s] %s : %s" % (STATUS_SKIP, pkg, note))
+            continue
+        if _replacement_asset_exists(srcs, pv, latest) is False:
+            note = ("newer tag %s exists but no replacement artifact yet "
+                    "(partial release) - staying on %s" % (latest, pv))
+            rows.append((pkg, "upstream %s" % slug, pv, latest, STATUS_SKIP, note))
+            log("[%s] %s : %s" % (STATUS_SKIP, pkg, note))
+            continue
+        note = ("pinned %s is not any published tag; newest is %s - rerun update.sh"
+                % (pv, latest))
+        rows.append((pkg, "upstream %s" % slug, pv, latest, STATUS_STALE, note))
+        log("[%s] %s : %s" % (STATUS_STALE, pkg, note))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--overlay", default=".")
@@ -1489,6 +1699,7 @@ def main():
     log("=== TEAR-DOWN SWEEP [%s]: %d packages ===" % (repo_type, len(pkgs)))
     for pkg, pv, srcs, live in pkgs:
         sweep_package(pkg, pv, srcs, live, repo_type, workdir)
+    check_upstream_latest(pkgs)
 
     log("")
     log("=== SWEEP TABLE ===")
