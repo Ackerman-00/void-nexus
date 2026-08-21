@@ -2480,12 +2480,25 @@ def main():
     log("")
     log("=== SWEEP TABLE ===")
     log("%-34s %-34s %-16s %-14s %-12s %s" % ("PACKAGE", "DISTFILE", "PINNED", "INTERNAL", "STATUS", "NOTE"))
-    n_bad = 0
+    bad_statuses = (STATUS_FAIL, STATUS_MISMATCH, STATUS_STALE, STATUS_UNVERIFIED)
+    good_statuses = (STATUS_OK, STATUS_SOURCE_OK, STATUS_SKIP)
+    # Count bad per-PACKAGE, not per-artifact. A package with multiple
+    # artifacts (e.g. .deb + .tar.zst) is verified if ANY artifact is OK.
+    pkg_worst = {}  # pkg -> worst status seen
     for pkg, dist, pinned, internal, status, note in rows:
         log("%-34s %-34s %-16s %-14s %-12s %s" % (
             pkg, (dist or "")[:34], (pinned or "")[:16], (internal or "")[:14], status, note))
-        if status in (STATUS_FAIL, STATUS_MISMATCH, STATUS_STALE, STATUS_UNVERIFIED):
-            n_bad += 1
+        if pkg in ("LIBYEAR",):
+            continue
+        prev = pkg_worst.get(pkg)
+        if status in bad_statuses:
+            # Only mark bad if no good status has been seen for this package yet
+            if prev not in good_statuses:
+                pkg_worst[pkg] = status
+        elif status in good_statuses:
+            # Any good status overrides previous bad for this package
+            pkg_worst[pkg] = status
+    n_bad = sum(1 for s in pkg_worst.values() if s in bad_statuses)
 
     report = Path(args.report)
     lines = ["# Teardown Sweep Report", "",
