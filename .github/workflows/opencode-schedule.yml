@@ -49,75 +49,10 @@ jobs:
         shell: bash
         run: curl -fsSL https://opencode.ai/install | bash
 
-      - name: Pre-agent sweep (runs BEFORE opencode, injects into PROMPT)
-        shell: bash
-        run: |
-          python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md --autofix 2>&1 || true
-          python3 tools/docker-sweep.py --overlay . --type void --scan-images --report docker-report.md 2>&1 || true
-          echo "=== SWEEP COMPLETE — injecting findings into agent context ==="
-          # Write findings directly into .sweep-context.md for agent injection
-          {
-            echo "# SWEEP FINDINGS (injected by pre-agent step — agent reads this automatically)"
-            echo ""
-            echo "## Teardown Report (version/vulnerability/libyear)"
-            echo '```'
-            cat teardown-report.md 2>/dev/null | tail -200 || echo "(no teardown report)"
-            echo '```'
-            echo ""
-            echo "## Docker Report (install/binary/deps)"
-            echo '```'
-            cat docker-report.md 2>/dev/null | tail -100 || echo "(no docker report)"
-            echo '```'
-          } > .sweep-context.md
-          echo "=== .sweep-context.md written ($(wc -c < .sweep-context.md) bytes) ==="
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run opencode (with sweep findings injected into prompt)
+      - name: Run opencode
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
-          # Inject sweep findings directly into agent context — agent sees this
-          # in its input, no file-reading required
-          if [ -s .sweep-context.md ]; then
-            export PROMPT="$(cat .sweep-context.md)
-            ---
-
-            ${PROMPT}"
-            echo "=== Injected $(wc -c < .sweep-context.md) bytes of sweep findings into PROMPT ==="
-          else
-            echo "=== WARNING: .sweep-context.md empty/missing — agent will not see sweep findings ==="
-          fi
-          gate_passes() {
-            content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/gentoo-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
-            printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete"
-          }
-          for model in "opencode/mimo-v2.5-free" "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
-            echo "=== opencode run attempt with $model ==="
-            exit_code=0
-            MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" || exit_code=$?
-            if [ "$exit_code" -eq 0 ]; then
-              ok=0
-              for attempt in 1 2 3 4 5; do
-                if gate_passes; then
-                  ok=1
-                  break
-                fi
-                git fetch -q origin +refs/heads/main:refs/remotes/origin/main >/dev/null 2>&1 || true
-                echo "=== gate attempt $attempt: relay not confirmed yet (origin/main=$(git rev-parse --short origin/main 2>/dev/null || echo missing)) - retrying ==="
-                sleep 20
-              done
-              if [ "$ok" -eq 1 ]; then
-                echo "=== $model completed the full job (.opencode-relay.md on main confirms run $RUN_ID complete) ==="
-                exit 0
-              fi
-              echo "=== $model exited 0 but .opencode-relay.md on main does not confirm run $RUN_ID complete - run is INCOMPLETE, treating as failure ==="
-            else
-              echo "=== attempt with $model failed (exit $exit_code) - trying next ==="
-            fi
-            sleep 15
-          done
-          exit 1
         env:
           MODEL: opencode/mimo-v2.5-free
           OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/mimo-v2.5-free"}'
@@ -1573,59 +1508,34 @@ jobs:
               unresolvable problems via issues.
 
             TEAR-APART SWEEP PROTOCOL (MANDATORY):
-            The sweep already ran BEFORE you started (pre-agent step).
-            The findings are INJECTED directly into this prompt (above the
-            "---" separator). You do NOT need to read any files — the
-            teardown-report.md and docker-report.md findings are already
-            in your context. Act on them immediately.
+            YOU are the sweep. There is no separate script. You tear apart
+            every package yourself, check it against upstream, and fix what's
+            wrong. Do this as your FIRST action after reading the repo.
 
-            From the injected sweep findings you will see:
-              - STALE packages → use the suggested auto-update tool to fix
-              - VULN packages → investigate and fix or document why safe
-              - OUTDATED packages → update using livecheck/autocopr/nix-update
-              - LIBYEAR score → if >20 yr, prioritize highest-drift packages
-              - CLEAN/FRESH packages → no action needed
+            HOW TO TEAR APART PACKAGES (do this for every package):
 
-            For packages you modified during your run, re-verify them:
-               python3 tools/docker-sweep.py --overlay . --type REPO_TYPE \
-                 --packages "changed-pkg1 changed-pkg2" --scan-images \
-                 --report docker-report.md
+            1. LIST ALL PACKAGES:
+               - Void: find srcpkgs/ -name "template" | sort
 
-            For EACH package in docker-report.md with status FAIL or
-            DEPS-MISSING:
-               - Read the error details
-               - Fix the ebuild/spec/nix/template (missing deps, wrong flags)
-               - Re-run the sweep for that specific package to verify
-               - NEVER leave a failing package — fix or revert
+            2. FOR EACH PACKAGE — check version against upstream:
+               a. Read the template to get version
+               b. Query upstream for latest release via gh api or web search
+               c. Compare vs upstream latest
+               d. If STALE → update template version, run xbps-src
 
-            NEVER complete a run with the sweep showing STALE/VULN
-            that you haven't addressed. The sweep is the PROOF-OR-STOP gate.
+            3. FOR EACH BINARY PACKAGE — verify the artifact:
+               a. Download and extract the artifact
+               b. Look for version evidence inside (Makefile, CMakeLists, meson.build, etc.)
+               c. Compare internal version vs pinned version
 
-            CRITICAL: When the sweep reports OUTDATED, use the suggested
-            auto-update tool (from the report) to update the package. Do NOT
-            just mark it stale — actually fix it using the right tool.
+            4. CHECK DEPENDENCIES, TEST INSTALLS, CHECK VULNERABILITIES
 
-            LIBYEAR ENFORCEMENT: If the sweep reports LIBYEAR OVER-BUDGET
-            (>20 yr), you MUST prioritize updating the packages with the
-            highest drift. Sort by drift desc and update the top offenders.
+            NEVER complete a run without tearing apart every package.
+            The sweep is NOT a separate script — YOU are the sweep.
 
             SWEEP SCRIPT IS CODE YOU OWN: tools/teardown-sweep.py and
-            tools/docker-sweep.py are NOT immutable infrastructure. If the
-            sweep crashes (Traceback), counts wrong, misses version detection,
-            or produces false positives/negatives, FIX THE SWEEP SCRIPT
-            ITSELF. You have full repo permissions — edit the Python, test
-            it, commit it. Do NOT just work around sweep bugs. Common sweep
-            bugs to watch for:
-              - TypeError/AttributeError in sweep script → fix the Python
-              - "no version evidence" for packages with Makefile/CMake/meson →
-                add the pattern to version_evidence()
-              - Wrong exit code (FAIL when packages are actually OK) →
-                fix the counting logic
-              - Auto-fix crashes (fix_stale_pkg) → fix the Python
-              - Missing detection for new package types → add support
-            After fixing the sweep, re-run it to verify your fix works:
-              python3 tools/teardown-sweep.py --overlay . --type REPO_TYPE \
-                --report teardown-report.md --autofix
+            tools/docker-sweep.py exist as auxiliary tools you can call, but
+            YOU do the reasoning. If they help, use them. If they break, fix them.
 
             End every run with a concise final summary: the repo-working verdict
               (does the overlay/binhost actually work on Gentoo now?), what you
