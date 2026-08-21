@@ -839,6 +839,67 @@ jobs:
               relay run before the timeout.
             - Don't get stuck: cap retries at 3 per package and escalate unresolvable
               problems via issues.
+            SELF-HEALING SWEEP PROTOCOL (MANDATORY):
+            After the autonomous agent finishes, the deterministic teardown sweep
+            runs (`tools/teardown-sweep.py --autofix`). It downloads every
+            artifact, tears it apart, verifies checksums, reads internal versions,
+            and checks upstream staleness. If it finds STALE/FAIL/MISMATCH
+            packages, it tries a mechanical fix (version sed in ebuild/spec) and
+            re-verifies. But the sweep is a dumb verifier — YOU are the
+            intelligent fixer. When the sweep fails (exit 1), the CI opens an
+            issue. On your NEXT run, you MUST:
+
+            1. READ `teardown-report.md` from the previous run (it is committed
+               to the repo). Every row with status STALE, FAIL, or MISMATCH is
+               a real problem that was NOT fixed by the sweep's mechanical
+               autofix.
+
+            2. For each STALE package: the sweep already tried `fix_stale_pkg()`
+               (sed the version in the ebuild/spec/nix/template) and re-verified.
+               If it STILL shows STALE after autofix, the problem is deeper — the
+               new version may not have release assets yet, the package may need
+               more than a version bump (new deps, EAPI change, eclass rename,
+               breaking API changes), or the upstream detection may be wrong.
+               Investigate the specific package:
+               - Web-search the upstream for the actual latest release
+               - Check if the release asset exists (the sweep's
+                 `_replacement_asset_exists` already verified this)
+               - Check the official packaging for how they package the new version
+               - Update the package properly (not just version sed — check deps,
+                 build requirements, API changes)
+               - For gentoo: run `ebuild <new>.ebuild manifest` to regenerate Manifest
+               - For fedora/opensuse: run `rpmbuild --nobuild` to verify spec parses
+               - For nix: run `nix-build` to verify the expression evaluates
+               - For void: run `xbump` or `xbps-src` to verify template
+               - Verify with a clean build/test
+
+            3. For each FAIL/MISMATCH: the artifact downloaded but checksum
+               doesn't match, or the internal version doesn't match the pinned
+               version. These are the most dangerous — they mean consumers may
+               be installing wrong/broken software. Fix immediately:
+               - Re-download the artifact and verify the checksum manually
+               - If upstream re-released (common with revbumps), update the
+                 checksum in the package definition
+               - If the internal version mismatch is a Chromium build-number
+                 issue (brave, chromium), the sweep's `is_chromium_build_number`
+                 filter should have caught it — if it didn't, the version
+                 evidence source needs updating
+
+            4. NEVER close a teardown issue with "will fix later" or "not
+               important". The sweep is the PROOF-OR-STOP gate — if it exits 1,
+               the repo is NOT verified. Only close after:
+               - The package is updated/fixed
+               - The sweep passes (exit 0) on a fresh run
+               - You paste the passing sweep output as evidence
+
+            5. FALSE POSITIVE DEFENSE: if you determine a STALE finding is a
+               false positive (e.g. the sweep compared against a fork instead
+               of the canonical upstream, or a Chromium build-number was not
+               filtered), fix the sweep script (`tools/teardown-sweep.py`) and
+               document the fix in AGENTS.md. The sweep is deterministic Python
+               — it can be improved. But never weaken a check to make it pass;
+               fix the underlying issue.
+
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
               their result, the dependency audit table, the install-test table, and
