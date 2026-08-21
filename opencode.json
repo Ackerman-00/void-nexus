@@ -2,5 +2,54 @@
   "$schema": "https://opencode.ai/config.json",
   "permission": {
     "*": "allow"
+  },
+  "provider": {
+    "opencode": {
+      "apiKey": "$OPENCODE_API_KEY",
+      "models": {
+        "mimo-v2.5-free": {
+          "name": "MiMo-V2.5 Free",
+          "model": "opencode/mimo-v2.5-free",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        },
+        "x-preview-f-free": {
+          "name": "Ox Alpha Free",
+          "model": "opencode/x-preview-f-free",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        },
+        "muse-spark-1.2-contributor-free": {
+          "name": "Muse Spark 1.2 Contributor Free",
+          "model": "opencode/muse-spark-1.2-contributor-free",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        },
+        "hy3-free": {
+          "name": "Hy3 Free",
+          "model": "opencode/hy3-free",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        },
+        "nemotron-3-ultra-free": {
+          "name": "Nemotron 3 Ultra Free",
+          "model": "opencode/nemotron-3-ultra-free",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        },
+        "nemotron-3.5-lightning-free": {
+          "name": "Nemotron 3.5 Lightning Free",
+          "model": "opencode/nemotron-3.5-lightning-free",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        },
+        "big-pickle": {
+          "name": "Big Pickle",
+          "model": "opencode/big-pickle",
+          "maxTokens": 8192,
+          "contextWindow": 131072
+        }
+      }
+    }
   }
 }
