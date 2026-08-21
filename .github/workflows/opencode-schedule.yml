@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
-          for model in "opencode/deepseek-v4-flash-free" "opencode/big-pickle" "opencode/mimo-v2.5-free" "opencode/laguna-s-2.1-free"; do
+          for model in "opencode/mimo-v2.5-free" "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
             echo "=== opencode run attempt with $model ==="
             MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT"
             exit_code=$?
@@ -70,8 +70,8 @@ jobs:
           done
           exit 1
         env:
-          MODEL: opencode/deepseek-v4-flash-free
-          OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/deepseek-v4-flash-free"}'
+          MODEL: opencode/mimo-v2.5-free
+          OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/mimo-v2.5-free"}'
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELAY: ${{ github.event.inputs.relay || 'false' }}
