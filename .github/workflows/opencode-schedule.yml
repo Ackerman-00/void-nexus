@@ -52,9 +52,10 @@ jobs:
       - name: Pre-agent sweep (runs BEFORE opencode, injects into PROMPT)
         shell: bash
         run: |
-          python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md --autofix 2>&1 || true
-          python3 tools/docker-sweep.py --overlay . --type void --scan-images --report docker-report.md 2>&1 || true
+          python3 tools/teardown-sweep.py --overlay . --type gentoo --report teardown-report.md --autofix 2>&1 || true
+          python3 tools/docker-sweep.py --overlay . --type gentoo --scan-images --report docker-report.md 2>&1 || true
           echo "=== SWEEP COMPLETE — injecting findings into agent context ==="
+          # Write findings directly into .sweep-context.md for agent injection
           {
             echo "# SWEEP FINDINGS (injected by pre-agent step — agent reads this automatically)"
             echo ""
@@ -76,7 +77,8 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
-          # Inject sweep findings directly into agent context
+          # Inject sweep findings directly into agent context — agent sees this
+          # in its input, no file-reading required
           if [ -s .sweep-context.md ]; then
             export PROMPT="$(cat .sweep-context.md)
             ---
@@ -84,10 +86,10 @@ jobs:
             ${PROMPT}"
             echo "=== Injected $(wc -c < .sweep-context.md) bytes of sweep findings into PROMPT ==="
           else
-            echo "=== WARNING: .sweep-context.md empty/missing ==="
+            echo "=== WARNING: .sweep-context.md empty/missing — agent will not see sweep findings ==="
           fi
           gate_passes() {
-            content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/void-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
+            content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/gentoo-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
             printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete"
           }
           for model in "opencode/mimo-v2.5-free" "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
@@ -128,8 +130,8 @@ jobs:
           GIT_COMMITTER_NAME: opencode-agent[bot]
           GIT_COMMITTER_EMAIL: 41898282+opencode-agent[bot]@users.noreply.github.com
           PROMPT: |
-            You are the FULLY AUTONOMOUS maintainer of void-nexus
-            (https://github.com/Ackerman-00/void-nexus), a pre-built Gentoo
+            You are the FULLY AUTONOMOUS maintainer of gentoo-nexus
+            (https://github.com/Ackerman-00/gentoo-nexus), a pre-built Gentoo
             overlay and binary host (binhost) for the Wayland desktop stack, used
             by many people. You run on a schedule with NO human supervision: you
             must detect, fix, rebuild, verify, review, merge, and close issues
@@ -169,7 +171,7 @@ jobs:
                  (git fetch origin && git pull --rebase origin main first), then
                  trigger the relay run BEFORE the timeout kills you:
                    gh workflow run opencode-schedule.yml --ref main \
-                     --repo Ackerman-00/void-nexus -f relay=true
+                     --repo Ackerman-00/gentoo-nexus -f relay=true
                  The new run gets a fresh runner and picks up from the state
                  file. Your run ending after that is fine.
               d. TIMEOUT SAFETY: if the job timeout is near with work still
@@ -444,7 +446,7 @@ jobs:
                  push. The package is already current.
               b. CHECK THE ROLLING RELEASE FOR WHAT WAS ALREADY BUILT. The
                  "rolling" GitHub Release is authoritative for "what got out":
-                 GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling
+                 GET https://api.github.com/repos/Ackerman-00/gentoo-nexus/releases/tags/rolling
                  (or `gh release view rolling --json assets --jq '.assets[].name'`).
                  If the asset <package>-<version>_r<rev>.gpkg.tar already
                  exists, the package is built AND published - do NOT trigger
@@ -619,7 +621,7 @@ jobs:
                  `gh release view rolling --json assets --jq '.assets[].name'`
                  to find <package>-<version>_r<rev>.gpkg.tar, and download it
                  (plus the Packages index) from
-                 https://github.com/Ackerman-00/void-nexus/releases/download/rolling/
+                 https://github.com/Ackerman-00/gentoo-nexus/releases/download/rolling/
                  into a local binhost dir.
               b. REAL INSTALL TEST IN A CLEAN STAGE3 CONTAINER. You need a
                  working container runtime on the runner. Docker is
@@ -639,8 +641,8 @@ jobs:
                  at them, and ACTUALLY INSTALL:
                  docker run --rm --privileged -v "$PWD:/work" \
                    gentoo/stage3:amd64-openrc bash -lc '
-                     cp -a /work/overlay /var/db/repos/void-nexus
-                     printf "[void-nexus]\nlocation = /var/db/repos/void-nexus\nmasters = gentoo\n" > /etc/portage/repos.conf/void-nexus.conf
+                     cp -a /work/overlay /var/db/repos/gentoo-nexus
+                     printf "[gentoo-nexus]\nlocation = /var/db/repos/gentoo-nexus\nmasters = gentoo\n" > /etc/portage/repos.conf/gentoo-nexus.conf
                      printf "[nexus]\npriority = 1\nsync-uri = file:///work/binhost\nlocation = /var/cache/binhost/nexus\n" > /etc/portage/binrepos.conf/nexus.conf
                      emerge-webrsync -q || emerge --sync -q
                      emerge --pretend --verbose --getbinpkg --usepkgonly <atom>
@@ -872,7 +874,7 @@ jobs:
                  on the consumer side.
 
             REFERENCE HARDWARE - THE OWNER'S PC (Ryzen 5 5600G, Vega 7 iGPU).
-            The owner runs void-nexus on this machine and it is the
+            The owner runs gentoo-nexus on this machine and it is the
             canonical consumer to optimize for. Know its exact config (this
             is quickstart.sh hardware choice 1) and verify anything you
             change against it:
@@ -946,7 +948,7 @@ jobs:
             Then work autonomously, in this priority order:
 
             1. FIX FAILED BUILDS - TOP PRIORITY (dismissal is FORBIDDEN).
-               GET https://api.github.com/repos/Ackerman-00/void-nexus/actions/runs
+               GET https://api.github.com/repos/Ackerman-00/gentoo-nexus/actions/runs
                (or `gh run list`) and find EVERY recent FAILED run of "Build
                Relay", "Build Gentoo Official", "Check Updates", or "Check
                Gentoo Official Updates". For each, identify the exact failing
@@ -1094,7 +1096,7 @@ jobs:
                  sync_overlay.sh.
 
                STEP D - THE BINHOST MUST BE COHERENT. GET
-               https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling
+               https://api.github.com/repos/Ackerman-00/gentoo-nexus/releases/tags/rolling
                and list the assets (.gpkg.tar, Packages, Packages.gz, commits.json).
                - Every non-live ebuild's current version must have a matching
                  <package>-<version>_r<rev>.gpkg.tar (or a build must be
@@ -1113,11 +1115,11 @@ jobs:
                Do NOT rebuild in this sweep; the .gpkg.tar assets from the
                "rolling" release ARE the test subject:
                1. DOWNLOAD THE RELEASE BINARIES FIRST:
-                  GET https://api.github.com/repos/Ackerman-00/void-nexus/
+                  GET https://api.github.com/repos/Ackerman-00/gentoo-nexus/
                   releases/tags/rolling -> list every asset; download the
                   FULL set (every <package>-<version>_r<rev>.gpkg.tar, the
                   Packages index, Packages.gz, commits.json) via
-                  https://github.com/Ackerman-00/void-nexus/releases/
+                  https://github.com/Ackerman-00/gentoo-nexus/releases/
                   download/rolling/<asset> into a local binhost dir. If an
                   asset is missing from the release, that is a FAIL of the
                   sweep - record it and trigger a rebuild for it.
@@ -1311,14 +1313,14 @@ jobs:
                  apply your own judgment on what to do.
 
             4. REPAIR RELEASE CONSISTENCY.
-               GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling,
+               GET https://api.github.com/repos/Ackerman-00/gentoo-nexus/releases/tags/rolling,
                list the assets, and compare against every ebuild's current
                version/revision (and every 9999 EGIT_COMMIT). Rebuild any package
                whose expected binary is missing or stale, and fix the Packages
                index if it is out of sync with the assets.
 
              5. REVIEW ALL OPEN ISSUES like a human maintainer - AND REPLY.
-                GET https://api.github.com/repos/Ackerman-00/void-nexus/issues
+                GET https://api.github.com/repos/Ackerman-00/gentoo-nexus/issues
                 (state=open, no pull requests). EVERY open issue MUST get a reply
                 - silence is not an option. For each issue:
                 - Read it fully, reproduce or diagnose it, and web-search for
@@ -1351,7 +1353,7 @@ jobs:
                   fix, so the reporter always gets a response from this run.
 
              6. REVIEW ALL OPEN PULL REQUESTS like a human maintainer - AND DECIDE.
-                GET https://api.github.com/repos/Ackerman-00/void-nexus/pulls
+                GET https://api.github.com/repos/Ackerman-00/gentoo-nexus/pulls
                 (state=open). For each PR: you are the maintainer - review it,
                 test it, and merge / request changes / close it. Do NOT leave it
                 hanging for a human. EVERY PR gets a comment with your verdict
@@ -1364,7 +1366,7 @@ jobs:
                   dependencies are right, and there are no known issues.
                 - TRIGGER A BUILD of the PR's packages to prove it works:
                     gh workflow run "Build Relay" --ref <pr-branch> \
-                      --repo Ackerman-00/void-nexus \
+                      --repo Ackerman-00/gentoo-nexus \
                       -f package_list="<atoms>" -f force_rebuild="true"
                   Watch it to completion (`gh run watch <id> --exit-status`).
                 - MERGE: if the change is clearly correct, low-risk, builds
@@ -1435,7 +1437,7 @@ jobs:
                  git push origin main
               b. Trigger a build for exactly those packages:
                  gh workflow run "Build Relay" --ref main \
-                   --repo Ackerman-00/void-nexus \
+                   --repo Ackerman-00/gentoo-nexus \
                    -f package_list="<atom1> <atom2> ..." -f force_rebuild="true"
               c. VERIFY: find the new run
                  (`gh run list --workflow "Build Relay" --limit 1`) and watch it
@@ -1607,6 +1609,24 @@ jobs:
             (>20 yr), you MUST prioritize updating the packages with the
             highest drift. Sort by drift desc and update the top offenders.
 
+            SWEEP SCRIPT IS CODE YOU OWN: tools/teardown-sweep.py and
+            tools/docker-sweep.py are NOT immutable infrastructure. If the
+            sweep crashes (Traceback), counts wrong, misses version detection,
+            or produces false positives/negatives, FIX THE SWEEP SCRIPT
+            ITSELF. You have full repo permissions — edit the Python, test
+            it, commit it. Do NOT just work around sweep bugs. Common sweep
+            bugs to watch for:
+              - TypeError/AttributeError in sweep script → fix the Python
+              - "no version evidence" for packages with Makefile/CMake/meson →
+                add the pattern to version_evidence()
+              - Wrong exit code (FAIL when packages are actually OK) →
+                fix the counting logic
+              - Auto-fix crashes (fix_stale_pkg) → fix the Python
+              - Missing detection for new package types → add support
+            After fixing the sweep, re-run it to verify your fix works:
+              python3 tools/teardown-sweep.py --overlay . --type REPO_TYPE \
+                --report teardown-report.md --autofix
+
             End every run with a concise final summary: the repo-working verdict
               (does the overlay/binhost actually work on Gentoo now?), what you
               fixed, which issues you closed, which PRs you merged/rejected, which
@@ -1626,7 +1646,7 @@ jobs:
           set -euo pipefail
           python3 /overlay/tools/teardown-sweep.py --overlay /overlay --report /overlay/teardown-report.md --autofix
           # Also run Docker sweep with Trivy CVE scanning
-          python3 /overlay/tools/docker-sweep.py --overlay /overlay --type void --scan-images --report /overlay/docker-report.md 2>/dev/null || true
+          python3 /overlay/tools/docker-sweep.py --overlay /overlay --type gentoo --scan-images --report /overlay/docker-report.md 2>/dev/null || true
           TDSHEOF
           chmod +x teardown_sweep.sh
           docker run --rm -e GITHUB_TOKEN -v "${{ github.workspace }}:/overlay" gentoo/stage3:amd64-desktop-openrc bash /overlay/teardown_sweep.sh
