@@ -152,11 +152,11 @@ jobs:
             look for known build fixes/patches upstream. NEVER trust a version, URL,
             checksum, or fix you have not verified online.
             - GITHUB API RATE LIMITS: unauthenticated api.github.com requests are
-              limited to 60/hour - you will hit this in a long run. Always send
-              `-H "Authorization: token $GITHUB_TOKEN"` on GitHub API calls, or
-              prefer `gh api <path>` which authenticates automatically and gets
-               5000/hour. If a curl call starts returning 403 rate-limit JSON, switch
-               to `gh api` immediately.
+              limited to 60/hour - you will hit this in a long run. NEVER use
+              `curl` for GitHub API calls - ALWAYS use `gh api <path>` which
+              authenticates automatically via GITHUB_TOKEN and gets 5000/hour.
+              `gh api` also handles JSON parsing, error handling, and pagination.
+              COPR API is not rate-limited the same way and needs no auth for reads.
 
             EVIDENCE & COMPLETION GATE (MANDATORY - "NO EVIDENCE, NO
             COMPLETION"). Nothing in this run is "done" because you say so -
@@ -525,9 +525,9 @@ jobs:
                  and the AUR package (e.g. aur.archlinux.org/packages/rootapp-bin).
                  This applies to EVERY binary-distributed package, not just
                  rootapp - never trust a filename or homepage string alone.
-               - For GitHub projects, use the API and reconcile results:
-                     curl -s https://api.github.com/repos/<owner>/<repo>/releases/latest
-                     curl -s https://api.github.com/repos/<owner>/<repo>/tags
+               - For GitHub projects, use `gh api` (not curl!) and reconcile results:
+                     gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name'
+                     gh api repos/<owner>/<repo>/tags --jq '.[].name'
                  Web-search too (incl. repology); if API and search disagree, dig until
                  certain.
                - For -git/-snapshot packages, compare the pinned commit against the
