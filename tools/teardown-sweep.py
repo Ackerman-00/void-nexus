@@ -2002,11 +2002,24 @@ def check_upstream_latest(pkgs):
 
 
 def check_vulns_and_deps(pkgs, repo_type):
-    """Check ALL packages for known vulnerabilities (OSV.dev) and
-    dependency freshness (Repology). No hardcoding — works for ANY package."""
+    """Check ALL packages for known vulnerabilities (OSV.dev),
+    dependency freshness (Repology), and auto-update availability.
+    No hardcoding — works for ANY package."""
     log("")
-    log("=== VULNERABILITY & DEPENDENCY CHECK ===")
+    log("=== VULNERABILITY, FRESHNESS & AUTO-UPDATE CHECK ===")
     eco = repo_type if repo_type in ECOSYSTEM_MAP else None
+    total_vulns = 0
+    total_outdated = 0
+    total_fresh = 0
+
+    AUTO_UPDATE_TOOLS = {
+        "gentoo": "livecheck + pkgbump (auto-detect new versions from SRC_URI)",
+        "fedora": "autocopr (auto-update spec files from GitHub releases)",
+        "nix": "nix-update (auto-update versions + hashes, test build)",
+        "opensuse": "osc service, manual spec bump",
+        "void": "xbps-src update, manual template bump",
+    }
+
     for pkg, pv, srcs, live, homepage in pkgs:
         if live or not pv or PLACEHOLDER_RE.match(pv):
             continue
@@ -2016,6 +2029,7 @@ def check_vulns_and_deps(pkgs, repo_type):
 
         vulns = osv_query(pkg, clean_pv, eco)
         if vulns:
+            total_vulns += 1
             log("[VULN] %s@%s: %s" % (pkg, clean_pv, ", ".join(vulns)))
             rows.append((pkg, pkg, clean_pv, "", "VULN",
                          "known vulnerabilities: %s" % ", ".join(vulns)))
@@ -2027,10 +2041,21 @@ def check_vulns_and_deps(pkgs, repo_type):
             upstream = info.get("upstream_version", "?")
             status = info.get("status", "?")
             if status == "outdated" and upstream:
-                log("[OUTDATED-IN-REPOLOGY] %s: pinned %s, repology newest %s"
-                    % (pkg, clean_pv, upstream))
+                total_outdated += 1
+                tool = AUTO_UPDATE_TOOLS.get(repo_type, "manual")
+                log("[OUTDATED] %s: pinned %s, upstream %s -> use %s"
+                    % (pkg, clean_pv, upstream, tool))
+                rows.append((pkg, pkg, clean_pv, upstream, "OUTDATED",
+                             "upstream %s available, use %s" % (upstream, tool)))
             elif status == "newest":
-                log("[REPOLOGY-OK] %s@%s (newest across repos)" % (pkg, clean_pv))
+                total_fresh += 1
+                log("[FRESH] %s@%s" % (pkg, clean_pv))
+            else:
+                log("[INFO] %s@%s status=%s" % (pkg, clean_pv, status))
+
+    log("")
+    log("=== SUMMARY: %d vulns, %d outdated, %d fresh (of %d packages) ==="
+        % (total_vulns, total_outdated, total_fresh, len(pkgs)))
 
 
 def fix_stale_pkg(pkg, pv, latest, repo_type, root):

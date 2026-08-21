@@ -33,6 +33,7 @@ STATUS_DEPS_MISSING = "DEPS-MISSING"
 STATUS_BINARY_FAIL = "BINARY-FAIL"
 STATUS_INSTALL_FAIL = "INSTALL-FAIL"
 STATUS_SKIP = "SKIP"
+STATUS_VULN = "VULN"
 
 
 def log(msg):
@@ -215,6 +216,39 @@ def test_void_package(name, template_path, workdir):
 # Main
 # ---------------------------------------------------------------------------
 
+def trivy_scan_image(image_tag):
+    """Scan a built Docker image with Trivy for known CVEs.
+    Returns dict with vulns list and severity counts. No hardcoding."""
+    try:
+        import shutil
+        if not shutil.which("trivy"):
+            return None
+        res = subprocess.run(
+            ["trivy", "image", "--format", "json", "--severity", "CRITICAL,HIGH,MEDIUM",
+             "--quiet", image_tag],
+            capture_output=True, timeout=120)
+        if res.returncode != 0 and not res.stdout:
+            return None
+        data = json.loads(res.stdout.decode())
+        results = data.get("Results", [])
+        vulns = []
+        counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0}
+        for r in results:
+            for v in r.get("Vulnerabilities", []):
+                sev = v.get("Severity", "UNKNOWN")
+                vid = v.get("VulnerabilityID", "?")
+                pkg = v.get("PkgName", "?")
+                installed = v.get("InstalledVersion", "?")
+                fixed = v.get("FixedVersion", "")
+                vulns.append({"id": vid, "severity": sev, "package": pkg,
+                              "installed": installed, "fixed": fixed})
+                if sev in counts:
+                    counts[sev] += 1
+        return {"vulns": vulns, "counts": counts}
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser(description="Docker-based package install + dependency sweep")
     ap.add_argument("--overlay", default=".", help="repo root")
@@ -223,6 +257,7 @@ def main():
     ap.add_argument("--all", action="store_true", help="test all packages (slow)")
     ap.add_argument("--report", default="docker-report.md", help="output report path")
     ap.add_argument("--timeout", type=int, default=300, help="per-package Docker timeout")
+    ap.add_argument("--scan-images", action="store_true", help="Trivy-scan base images for CVEs")
     args = ap.parse_args()
 
     root = Path(args.overlay)
@@ -273,6 +308,34 @@ def main():
         log("  [%s] %s: %s" % (r["status"], name, r["details"]))
 
     n_bad = sum(1 for r in results if r["status"] not in (STATUS_PASS, STATUS_SKIP))
+
+    image_vulns = {}
+    if args.scan_images:
+        BASE_IMAGES = {
+            "gentoo": "gentoo/stage3",
+            "fedora": "fedora:latest",
+            "void": "voidlinux/voidlinux:latest",
+        }
+        img = BASE_IMAGES.get(repo_type)
+        if img:
+            log("")
+            log("=== TRIVY SCAN: %s ===" % img)
+            scan = trivy_scan_image(img)
+            if scan:
+                counts = scan["counts"]
+                log("  CRITICAL: %d  HIGH: %d  MEDIUM: %d" % (
+                    counts["CRITICAL"], counts["HIGH"], counts["MEDIUM"]))
+                for v in scan["vulns"][:20]:
+                    log("  [%s] %s@%s: %s (fixed: %s)" % (
+                        v["severity"], v["package"], v["installed"], v["id"], v["fixed"] or "none"))
+                image_vulns[img] = scan
+                if counts["CRITICAL"] > 0:
+                    n_bad += 1
+                    results.append({"package": "base-image:%s" % img, "status": STATUS_VULN,
+                                    "details": "%d CRITICAL CVEs" % counts["CRITICAL"]})
+            else:
+                log("  Trivy not available or scan failed (install trivy to enable)")
+
     log("")
     log("=== SWEEP TABLE ===")
     log("%-30s %-16s %s" % ("PACKAGE", "STATUS", "DETAILS"))
