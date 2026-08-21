@@ -56,9 +56,27 @@ def log(msg):
     print(msg, flush=True)
 
 
+def _github_headers():
+    """Return headers dict with GITHUB_TOKEN auth if available (5000 req/hour vs 60)."""
+    headers = dict(UA)
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("REPO_FULL_ACCESS_TOKEN")
+    if token:
+        headers["Authorization"] = "token " + token
+    return headers
+
+
+def fetch(url, timeout=120):
+    """fetch(url) -> bytes. Uses GITHUB_TOKEN for GitHub API calls."""
+    headers = _github_headers() if "api.github.com" in url or "github.com" in url else UA
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
 def fetch_with_name(url, timeout=120):
     """fetch(url) -> (bytes, content-disposition filename or None)."""
-    req = urllib.request.Request(url, headers=UA)
+    headers = _github_headers() if "api.github.com" in url or "github.com" in url else UA
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         data = r.read()
         cd = r.headers.get("Content-Disposition", "")
