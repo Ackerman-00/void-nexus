@@ -814,6 +814,14 @@ jobs:
               what remains. Include the pre-completion gate checklist with
               PASS/FAIL + evidence per item.
 
+      # ---- topic: teardown-sweep ----
+      # Deterministic tear-apart gate (Proof-or-Stop): EVERY package, every
+      # artifact, downloaded and torn apart. Exit code is the verdict; the
+      # report is the receipt.
+      - name: Tear-Apart Sweep (all packages, all artifacts)
+        run: |
+          python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md
+
       - name: Upload opencode logs (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
