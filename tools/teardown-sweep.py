@@ -181,6 +181,65 @@ def repology_newest(project_name):
     return None, None
 
 
+ECOSYSTEM_MAP = {
+    "gentoo": "Gentoo",
+    "fedora": "Fedora",
+    "opensuse": "openSUSE",
+    "void": None,
+    "nix": None,
+}
+
+
+def osv_query(pkg, version, ecosystem=None):
+    """Query OSV.dev for known vulnerabilities. Returns list of vuln IDs
+    or empty list. Works for ANY package — no hardcoding."""
+    eco = ECOSYSTEM_MAP.get(ecosystem) if ecosystem else None
+    query = {"version": version, "package": {"name": pkg}}
+    if eco:
+        query["package"]["ecosystem"] = eco
+    try:
+        data = json.loads(fetch(
+            "https://api.osv.dev/v1/query",
+            data=json.dumps(query).encode(),
+            timeout=15).decode())
+        vulns = data.get("vulns", [])
+        return [v.get("id", "?") for v in vulns]
+    except Exception:
+        return []
+
+
+def repology_dep_info(pkg):
+    """Get dependency and version info from Repology for ANY package.
+    Returns dict with upstream_version, status, deps, or empty dict."""
+    try:
+        data = json.loads(fetch(
+            "https://repology.org/api/v1/project/%s" % pkg,
+            timeout=15).decode())
+        if not isinstance(data, list):
+            return {}
+        newest = None
+        for p in data:
+            if p.get("status") == "newest":
+                newest = p
+                break
+        if not newest:
+            for p in data:
+                if p.get("status") not in ("unique", "rolling", "noscheme",
+                                            "ignored", "incorrect", "untrusted"):
+                    newest = p
+                    break
+        if newest:
+            return {
+                "upstream_version": newest.get("version"),
+                "repo": newest.get("repo"),
+                "status": newest.get("status"),
+                "summary": newest.get("summary"),
+            }
+    except Exception:
+        pass
+    return {}
+
+
 def resolve_canonical_repo(owner_repo):
     """If owner_repo is a GitHub fork, return the parent's owner/repo.
     Otherwise return owner_repo unchanged. Returns None on API failure."""
@@ -1942,6 +2001,38 @@ def check_upstream_latest(pkgs):
         log("[%s] %s : %s" % (STATUS_STALE, pkg, note))
 
 
+def check_vulns_and_deps(pkgs, repo_type):
+    """Check ALL packages for known vulnerabilities (OSV.dev) and
+    dependency freshness (Repology). No hardcoding — works for ANY package."""
+    log("")
+    log("=== VULNERABILITY & DEPENDENCY CHECK ===")
+    eco = repo_type if repo_type in ECOSYSTEM_MAP else None
+    for pkg, pv, srcs, live, homepage in pkgs:
+        if live or not pv or PLACEHOLDER_RE.match(pv):
+            continue
+        clean_pv = staleness_pv(pv)
+        if not clean_pv:
+            continue
+
+        vulns = osv_query(pkg, clean_pv, eco)
+        if vulns:
+            log("[VULN] %s@%s: %s" % (pkg, clean_pv, ", ".join(vulns)))
+            rows.append((pkg, pkg, clean_pv, "", "VULN",
+                         "known vulnerabilities: %s" % ", ".join(vulns)))
+        else:
+            log("[CLEAN] %s@%s" % (pkg, clean_pv))
+
+        info = repology_dep_info(pkg)
+        if info:
+            upstream = info.get("upstream_version", "?")
+            status = info.get("status", "?")
+            if status == "outdated" and upstream:
+                log("[OUTDATED-IN-REPOLOGY] %s: pinned %s, repology newest %s"
+                    % (pkg, clean_pv, upstream))
+            elif status == "newest":
+                log("[REPOLOGY-OK] %s@%s (newest across repos)" % (pkg, clean_pv))
+
+
 def fix_stale_pkg(pkg, pv, latest, repo_type, root):
     """Attempt to auto-update a genuinely stale package. Returns True if fixed."""
     import subprocess
@@ -2070,6 +2161,7 @@ def main():
     for pkg, pv, srcs, live, homepage in pkgs:
         sweep_package(pkg, pv, srcs, live, repo_type, workdir)
     check_upstream_latest(pkgs)
+    check_vulns_and_deps(pkgs, repo_type)
 
     if args.autofix:
         stale_pkgs = [(pkg, pinned) for pkg, dist, pinned, internal, status, note in rows
