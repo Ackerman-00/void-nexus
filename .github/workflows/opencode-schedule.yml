@@ -847,10 +847,11 @@ jobs:
             DURING YOUR RUN, for packages you modified or that are critical:
 
             1. Run the Docker sweep for changed/critical packages:
-               python3 tools/docker-sweep.py --overlay . --type REPO_TYPE \
-                 --packages "changed-pkg1 changed-pkg2" --report docker-report.md
+               python3 tools/docker-sweep.py --overlay . --type REPO_TYPE                  --packages "changed-pkg1 changed-pkg2" --scan-images                  --report docker-report.md
 
                Where REPO_TYPE is: gentoo, fedora, nix, void, or opensuse.
+               The --scan-images flag runs Trivy on the base Docker image
+               to check for CRITICAL/HIGH/MEDIUM CVEs in the base layer.
 
             2. The sweep spins up CLEAN containers (gentoo/stage3, fedora,
                voidlinux, nixos/nix) and:
@@ -858,21 +859,26 @@ jobs:
                - Verifies no deps are missing (ldd, rpm -V, nix-store --query)
                - Reports PASS/FAIL per package
 
-            3. For EACH package in docker-report.md with status FAIL or
+            3. Read teardown-report.md — the automated sweep already checked:
+               - Version pinning vs upstream (GitHub releases, tags, Repology)
+               - OSV.dev vulnerability scan (CVEs on your pinned version)
+               - Repology freshness (is your version outdated vs 120+ repos?)
+               - Auto-update tool hints (livecheck, autocopr, nix-update)
+
+            4. For EACH package in docker-report.md with status FAIL or
                DEPS-MISSING:
                - Read the error details
                - Fix the ebuild/spec/nix/template (missing deps, wrong flags)
                - Re-run the sweep for that specific package to verify
                - NEVER leave a failing package — fix or revert
 
-            4. For the FULL REPO SWEEP (end of run, before final summary):
-               python3 tools/docker-sweep.py --overlay . --type REPO_TYPE \
-                 --all --report docker-report.md
+            5. For the FULL REPO SWEEP (end of run, before final summary):
+               python3 tools/docker-sweep.py --overlay . --type REPO_TYPE                  --all --scan-images --report docker-report.md
 
-               This tests EVERY package. Any FAIL = the run is not done.
-               Fix all failures before completing.
+               This tests EVERY package + scans base images for CVEs.
+               Any FAIL = the run is not done. Fix all before completing.
 
-            5. Cross-check dependency trees against upstream:
+            6. Cross-check dependency trees against upstream:
                - For gentoo: compare `emerge --pretend` output against the
                  ::gentoo ebuild's DEPEND/RDEPEND
                - For fedora: compare `dnf repoquery --requires` output
@@ -882,7 +888,7 @@ jobs:
                - For void: compare xbps-install output against template's
                  depends= 
 
-            6. Run the installed binary if applicable:
+            7. Run the installed binary if applicable:
                - Check `which <binary>` exists
                - Check `ldd $(which <binary>)` has no "not found"
                - For GUI apps: check --version or --help runs without segfault
@@ -890,6 +896,11 @@ jobs:
             NEVER complete a run with docker-report.md showing FAIL.
             The sweep is the PROOF-OR-STOP gate — install + deps + binary
             must ALL pass. Version matching alone is NOT enough.
+
+            CRITICAL: When the sweep reports OUTDATED, use the suggested
+            auto-update tool (from the report) to update the package. Do NOT
+            just mark it stale — actually fix it using the right tool for
+            the repo type.
 
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
@@ -903,6 +914,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md --autofix
+          # Also run Docker sweep with Trivy CVE scanning
+          python3 tools/docker-sweep.py --overlay . --type void --scan-images --report docker-report.md 2>/dev/null || true
 
       - name: Upload opencode logs (on failure)
         if: failure()
