@@ -52,8 +52,8 @@ jobs:
       - name: Pre-agent sweep (runs BEFORE opencode, injects into PROMPT)
         shell: bash
         run: |
-          python3 tools/teardown-sweep.py --overlay . --type gentoo --report teardown-report.md --autofix 2>&1 || true
-          python3 tools/docker-sweep.py --overlay . --type gentoo --scan-images --report docker-report.md 2>&1 || true
+          python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md --autofix 2>&1 || true
+          python3 tools/docker-sweep.py --overlay . --type void --scan-images --report docker-report.md 2>&1 || true
           echo "=== SWEEP COMPLETE — injecting findings into agent context ==="
           # Write findings directly into .sweep-context.md for agent injection
           {
@@ -1646,7 +1646,7 @@ jobs:
           set -euo pipefail
           python3 /overlay/tools/teardown-sweep.py --overlay /overlay --report /overlay/teardown-report.md --autofix
           # Also run Docker sweep with Trivy CVE scanning
-          python3 /overlay/tools/docker-sweep.py --overlay /overlay --type gentoo --scan-images --report /overlay/docker-report.md 2>/dev/null || true
+          python3 /overlay/tools/docker-sweep.py --overlay /overlay --type void --scan-images --report /overlay/docker-report.md 2>/dev/null || true
           TDSHEOF
           chmod +x teardown_sweep.sh
           docker run --rm -e GITHUB_TOKEN -v "${{ github.workspace }}:/overlay" gentoo/stage3:amd64-desktop-openrc bash /overlay/teardown_sweep.sh
