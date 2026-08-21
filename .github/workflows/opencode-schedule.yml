@@ -445,10 +445,42 @@ jobs:
                   reason recorded.
               f. MANDATORY DELIVERABLE - install-test table in your final
                  summary, one row per package tested:
-                 | package | build | xbps install test | smoke test | status |
-                 status in: installable / fixed / broken-(dep) /
-                 blocked-(reason). Any package you changed but did not
-                 install-test is an unfinished package.
+                  | package | build | xbps install test | smoke test | status |
+                  status in: installable / fixed / broken-(dep) /
+                  blocked-(reason). Any package you changed but did not
+                  install-test is an unfinished package.
+
+            TEAR-APART + DEPENDENCY SWEEP (MANDATORY - "rip every package open
+            and verify EVERY shared library"). This is NOT optional. Every run
+            must tear apart EVERY binary package and verify zero missing deps:
+              a. FOR EVERY PACKAGE - DOWNLOAD AND EXTRACT THE ARTIFACT:
+                 Download the upstream artifact (AppImage, deb, rpm, tar.xz,
+                 zip) into /tmp (NEVER the repo tree). Extract it:
+                 - AppImage: ./<app>.AppImage --appimage-extract
+                 - deb: ar x <pkg>.deb && tar xf control.tar.* && tar xf data.tar.*
+                 - rpm: rpm2cpio <pkg>.rpm | cpio -idmv
+                 - tar.xz: tar xf <pkg>.tar.xz
+                 - zip: unzip <pkg>.zip
+              b. FIND ALL ELF BINARIES IN THE EXTRACTED TREE:
+                 `find /tmp/extracted -type f -exec file {} \; | grep "ELF"`
+                 Then for EACH ELF binary:
+                 `readelf -d <binary> | grep NEEDED`
+                 This lists EVERY shared library the binary requires.
+              c. VERIFY EVERY NEEDED LIBRARY EXISTS:
+                 For each NEEDED .so from readelf, check if it resolves:
+                 `ldd <binary> | grep "not found"`
+                 ZERO "not found" lines = PASS. Any "not found" = DEPS-FAIL.
+              d. DOCKER SMOKE TEST - RUN IN CLEAN CONTAINER:
+                 docker run --rm -v "$(pwd):/pkg:ro" ubuntu:24.04 \
+                    bash -lc 'ldd /pkg/<binary> | grep "not found"; /pkg/<binary> --version'
+                 If ldd prints "not found" OR the binary fails to run = BROKEN.
+              e. REPAIR MISSING DEPS IMMEDIATELY:
+                 If ANY lib is missing: add it to depends= in the template,
+                 rebuild, re-test. A package with missing deps is BROKEN -
+                 fix it before moving on.
+              f. MANDATORY DELIVERABLE - dependency audit table for EVERY package:
+                 | package | ELF count | NEEDED libs | missing | ldd result | status |
+                 status in: deps-verified / deps-fixed / deps-broken-(lib).
 
             Then work autonomously, in this priority order:
 
