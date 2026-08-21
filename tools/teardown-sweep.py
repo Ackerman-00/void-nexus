@@ -707,9 +707,25 @@ def extract_deb_control_version(path, tmp):
     for name, off, size in members:
         if re.match(r"^control\.tar\.(gz|xz|zst|bz2)$", name):
             blob = path.read_bytes()[off:off + size]
-            ctl = tmp / ("control." + name.split(".", 2)[-1])
+            ext = name.split(".", 2)[-1]
+            ctl = tmp / ("control." + ext)
             ctl.write_bytes(blob)
             try:
+                if ext == "zst":
+                    try:
+                        import zstandard as zstd
+                        dctx = zstd.ZstdDecompressor()
+                        with open(ctl, "rb") as f_in:
+                            decompressed = dctx.stream_reader(f_in).read()
+                        ctl_decomp = tmp / "control.tar"
+                        ctl_decomp.write_bytes(decompressed)
+                        ctl = ctl_decomp
+                    except ImportError:
+                        import subprocess as _sp
+                        ctl_decomp = tmp / "control.tar"
+                        _sp.run(["zstd", "-d", "-o", str(ctl_decomp), str(ctl)],
+                                check=True, capture_output=True)
+                        ctl = ctl_decomp
                 with tarfile.open(ctl) as t:
                     names = t.getnames()
                     control_name = "control" if "control" in names else next(
@@ -1164,11 +1180,26 @@ def tear_apart(path, distname, tmp):
             return None, "zip extracted, no version evidence found", False, looks_like_source(sub)
         except Exception as e:
             return None, "zip teardown error: %s" % e, False, False
-    if ext.endswith((".tar.gz", ".tgz", ".tar.xz", ".tar.bz2")):
+    if ext.endswith((".tar.gz", ".tgz", ".tar.xz", ".tar.bz2", ".tar.zst")):
         try:
             sub = tmp / "tar"
             sub.mkdir()
-            with tarfile.open(path) as t:
+            actual_path = path
+            if ext.endswith(".tar.zst"):
+                try:
+                    import zstandard as zstd
+                    dctx = zstd.ZstdDecompressor()
+                    with open(path, "rb") as f_in:
+                        decompressed = dctx.stream_reader(f_in).read()
+                    decomp_path = tmp / "decomp.tar"
+                    decomp_path.write_bytes(decompressed)
+                    actual_path = decomp_path
+                except ImportError:
+                    import subprocess as _sp
+                    _sp.run(["zstd", "-d", "-o", str(tmp / "decomp.tar"), str(path)],
+                            check=True, capture_output=True)
+                    actual_path = tmp / "decomp.tar"
+            with tarfile.open(actual_path) as t:
                 t.extractall(sub, filter="data")
             hits = version_evidence(sub, distname)
             for kind, v, rel in hits:
@@ -1182,6 +1213,76 @@ def tear_apart(path, distname, tmp):
             return None, "tar extracted, no version evidence found", False, looks_like_source(sub)
         except Exception as e:
             return None, "tar teardown error: %s" % e, False, False
+    if ext.endswith(".zst"):
+        try:
+            sub = tmp / "zst"
+            sub.mkdir()
+            try:
+                import zstandard as zstd
+                dctx = zstd.ZstdDecompressor()
+                with open(path, "rb") as f_in:
+                    decompressed = dctx.stream_reader(f_in).read()
+                decomp_path = sub / "decomp"
+                decomp_path.write_bytes(decompressed)
+            except ImportError:
+                import subprocess as _sp
+                _sp.run(["zstd", "-d", "-o", str(sub / "decomp"), str(path)],
+                        check=True, capture_output=True)
+                decomp_path = sub / "decomp"
+            try:
+                with tarfile.open(decomp_path) as t:
+                    t.extractall(sub / "tar", filter="data")
+                    hits = version_evidence(sub / "tar", distname)
+            except:
+                hits = version_evidence(sub, distname)
+            for kind, v, rel in hits:
+                if kind in STRONG_KINDS:
+                    return v, "zst %s=%s (%s)" % (kind, v, rel), True, False
+            ver, cmd, out = probe_binary_version(sub, distname)
+            if ver:
+                return ver, "zst runtime probe %s: %s" % (cmd, out), True, False
+            if hits:
+                return hits[0][1], "zst %s=%s (%s)" % (hits[0][0], hits[0][1], hits[0][2]), False, looks_like_source(sub)
+            return None, "zst extracted, no version evidence found", False, looks_like_source(sub)
+        except Exception as e:
+            return None, "zst teardown error: %s" % e, False, False
+    if ext.endswith(".xbps"):
+        try:
+            sub = tmp / "xbps"
+            sub.mkdir()
+            import subprocess as _sp
+            _sp.run(["tar", "xf", str(path), "-C", str(sub)], check=True, capture_output=True)
+            hits = version_evidence(sub, distname)
+            for kind, v, rel in hits:
+                if kind in STRONG_KINDS:
+                    return v, "xbps %s=%s (%s)" % (kind, v, rel), True, False
+            ver, cmd, out = probe_binary_version(sub, distname)
+            if ver:
+                return ver, "xbps runtime probe %s: %s" % (cmd, out), True, False
+            if hits:
+                return hits[0][1], "xbps %s=%s (%s)" % (hits[0][0], hits[0][1], hits[0][2]), False, looks_like_source(sub)
+            return None, "xbps extracted, no version evidence found", False, looks_like_source(sub)
+        except Exception as e:
+            return None, "xbps teardown error: %s" % e, False, False
+    if ext.endswith(".rpm"):
+        try:
+            sub = tmp / "rpm"
+            sub.mkdir()
+            import subprocess as _sp
+            _sp.run(["bash", "-c", "rpm2cpio '%s' | cpio -idm" % str(path)],
+                    cwd=str(sub), check=True, capture_output=True)
+            hits = version_evidence(sub, distname)
+            for kind, v, rel in hits:
+                if kind in STRONG_KINDS:
+                    return v, "rpm %s=%s (%s)" % (kind, v, rel), True, False
+            ver, cmd, out = probe_binary_version(sub, distname)
+            if ver:
+                return ver, "rpm runtime probe %s: %s" % (cmd, out), True, False
+            if hits:
+                return hits[0][1], "rpm %s=%s (%s)" % (hits[0][0], hits[0][1], hits[0][2]), False, looks_like_source(sub)
+            return None, "rpm extracted, no version evidence found", False, looks_like_source(sub)
+        except Exception as e:
+            return None, "rpm teardown error: %s" % e, False, False
     return None, "unknown artifact type", False, False
 
 
