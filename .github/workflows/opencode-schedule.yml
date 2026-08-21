@@ -1546,21 +1546,6 @@ jobs:
               to hand off leftover work, also state that you left it in
               .opencode-relay.md and relayed a new run.
 
-      # ---- topic: teardown-sweep ----
-      - name: Tear-Apart Sweep (all ebuilds, all artifacts)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cat > teardown_sweep.sh << 'TDSHEOF'
-          #!/bin/bash
-          set -euo pipefail
-          python3 /overlay/tools/teardown-sweep.py --overlay /overlay --report /overlay/teardown-report.md --autofix
-          # Also run Docker sweep with Trivy CVE scanning
-          python3 /overlay/tools/docker-sweep.py --overlay /overlay --type void --scan-images --report /overlay/docker-report.md 2>/dev/null || true
-          TDSHEOF
-          chmod +x teardown_sweep.sh
-          docker run --rm -e GITHUB_TOKEN -v "${{ github.workspace }}:/overlay" gentoo/stage3:amd64-desktop-openrc bash /overlay/teardown_sweep.sh
-
       - name: Upload opencode logs (on failure)
         if: failure()
         uses: actions/upload-artifact@v7.0.1
