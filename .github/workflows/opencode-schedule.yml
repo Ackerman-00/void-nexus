@@ -53,6 +53,36 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
+          gate_passes() {
+            content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/void-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
+            printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete"
+          }
+          for model in "opencode/mimo-v2.5-free" "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
+            echo "=== opencode run attempt with $model ==="
+            exit_code=0
+            MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" || exit_code=$?
+            if [ "$exit_code" -eq 0 ]; then
+              ok=0
+              for attempt in 1 2 3 4 5; do
+                if gate_passes; then
+                  ok=1
+                  break
+                fi
+                git fetch -q origin +refs/heads/main:refs/remotes/origin/main >/dev/null 2>&1 || true
+                echo "=== gate attempt $attempt: relay not confirmed yet (origin/main=$(git rev-parse --short origin/main 2>/dev/null || echo missing)) - retrying ==="
+                sleep 20
+              done
+              if [ "$ok" -eq 1 ]; then
+                echo "=== $model completed the full job (.opencode-relay.md on main confirms run $RUN_ID complete) ==="
+                exit 0
+              fi
+              echo "=== $model exited 0 but .opencode-relay.md on main does not confirm run $RUN_ID complete - run is INCOMPLETE, treating as failure ==="
+            else
+              echo "=== attempt with $model failed (exit $exit_code) - trying next ==="
+            fi
+            sleep 15
+          done
+          exit 1
         env:
           MODEL: opencode/mimo-v2.5-free
           OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/mimo-v2.5-free"}'
