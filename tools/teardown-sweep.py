@@ -683,6 +683,10 @@ def parse_gentoo(eb):
             if m:
                 manifest[m.group(1)] = {"size": int(m.group(2)), "b2": m.group(3).lower(),
                                         "s512": m.group(4).lower()}
+    homepage = None
+    hm = re.search(r'^\s*HOMEPAGE="(.*?)"', content, re.M)
+    if hm:
+        homepage = hm.group(1).strip()
     live = None
     if vars_.get("PV") == "9999" and vars_.get("EGIT_REPO_URI"):
         repo = vars_["EGIT_REPO_URI"].rstrip("/")
@@ -711,7 +715,7 @@ def parse_gentoo(eb):
                     name = url.rsplit("/", 1)[-1]
                 srcs.append((url, name))
     srcs = [(u, n, manifest.get(n)) for u, n in srcs]
-    return pkg, pv, srcs, live
+    return pkg, pv, srcs, live, homepage
 
 
 def pypi_sdist_url(pn, pv):
@@ -1142,12 +1146,17 @@ def version_evidence(tree, distname):
 
 def probe_binary_version(sub, distname):
     import subprocess
+    SKIP_BINS = {"chrome_crashpad_handler", "crashpad_handler", "chrome-sandbox",
+                 "nacl_helper", "nacl_helper_nonsfi", "libEGL_mesa.so",
+                 "libGLESv2_mesa.so", "vulkaninfo"}
     cands = []
     for f in sorted(sub.rglob("*")):
         if not f.is_file():
             continue
         rel = f.relative_to(sub)
         if len(rel.parts) > 3:
+            continue
+        if f.stem.lower() in SKIP_BINS:
             continue
         try:
             head = f.read_bytes()[:4]
@@ -1769,7 +1778,7 @@ def check_upstream_latest(pkgs):
     pinned' AND 'pin is upstream's latest'."""
     log("")
     log("=== UPSTREAM LATEST CHECK ===")
-    for pkg, pv, srcs, live in pkgs:
+    for pkg, pv, srcs, live, homepage in pkgs:
         if live or not pv or PLACEHOLDER_RE.match(pv):
             continue
         if srcs and isinstance(srcs[0], tuple) and srcs[0][0] == "__metapackage__":
@@ -1784,6 +1793,14 @@ def check_upstream_latest(pkgs):
         if not clone:
             continue  # non-forge host: no honest deterministic latest to compare
         slug = clone.split("//", 1)[-1][:-4]
+        # If HOMEPAGE points to a different GitHub repo than SRC_URI, use HOMEPAGE
+        # (e.g. SRC_URI = fork tarball, HOMEPAGE = canonical upstream)
+        if homepage:
+            hp_repo, _ = forge_slug_from_url(homepage)
+            if hp_repo and hp_repo != api_repo:
+                log("  [homepage-redirect] %s -> %s (from HOMEPAGE)" % (api_repo, hp_repo))
+                api_repo = hp_repo
+                slug = homepage.rstrip("/").split("//", 1)[-1]
         if api_repo:
             api_repo = resolve_canonical_repo(api_repo)
 
@@ -1976,7 +1993,8 @@ def main():
             if not any(x in p.parts for x in SKIP_DIRS) and len(p.parts) >= 3
         )
         for eb in ebuilds:
-            pkgs.append(parse_gentoo(eb))
+            r = parse_gentoo(eb)
+            pkgs.append(r)
         if not pkgs:
             log("NO EBUILDS FOUND under %s - sweep aborted (FAIL)" % root)
             sys.exit(1)
@@ -2005,7 +2023,7 @@ def main():
             sys.exit(1)
 
     log("=== TEAR-DOWN SWEEP [%s]: %d packages ===" % (repo_type, len(pkgs)))
-    for pkg, pv, srcs, live in pkgs:
+    for pkg, pv, srcs, live, homepage in pkgs:
         sweep_package(pkg, pv, srcs, live, repo_type, workdir)
     check_upstream_latest(pkgs)
 
@@ -2034,7 +2052,7 @@ def main():
                 log("")
                 log("=== RE-VERIFY after auto-fix ===")
                 rows.clear()
-                for pkg, pv, srcs, live in pkgs:
+                for pkg, pv, srcs, live, homepage in pkgs:
                     sweep_package(pkg, pv, srcs, live, repo_type, workdir)
                 check_upstream_latest(pkgs)
 
