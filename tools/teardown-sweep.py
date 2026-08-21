@@ -146,6 +146,41 @@ def versions_match(pv, internal):
     return False
 
 
+TEMPLATE_VERSION_RE = re.compile(r"%\{|%\(|\$\{|\$\(|\$[A-Z]|#\{short|git%|\.git\d|snapshot|branch=|commit=")
+BASH_EXPANSION_RE = re.compile(r"%\{[^}]+\}|%\([^)]+\)|\$\{[^}]+\}")
+
+
+def is_template_version(pv):
+    """Detect unexpanded RPM/bash macros in version strings (e.g.
+    '%{bumpver}', '%(c=...)', '${c:0:7}'). These are git-snapshot
+    templates, not real versions — cannot be compared against upstream tags."""
+    if not pv:
+        return False
+    return bool(TEMPLATE_VERSION_RE.search(pv))
+
+
+def repology_newest(project_name):
+    """Query Repology API for the newest known version of ANY package.
+    Returns (version, repo_name) or (None, None). Works for ALL packages
+    across 120+ repos — no hardcoding needed."""
+    try:
+        data = json.loads(fetch(
+            "https://repology.org/api/v1/project/%s" % project_name,
+            timeout=15).decode())
+        if not isinstance(data, list):
+            return None, None
+        for p in data:
+            if p.get("status") == "newest":
+                return p.get("version"), p.get("repo", "")
+        for p in data:
+            if p.get("status") not in ("unique", "rolling", "noscheme", "ignored",
+                                        "incorrect", "untrusted"):
+                return p.get("version"), p.get("repo", "")
+    except Exception:
+        pass
+    return None, None
+
+
 def resolve_canonical_repo(owner_repo):
     """If owner_repo is a GitHub fork, return the parent's owner/repo.
     Otherwise return owner_repo unchanged. Returns None on API failure."""
@@ -1049,11 +1084,15 @@ def forge_slug_from_url(u):
 
 
 def staleness_pv(pv):
-    """Strip distro-revision noise so PV compares cleanly against upstream tags."""
+    """Strip distro-revision noise so PV compares cleanly against upstream tags.
+    Handles: -r1 (Gentoo), -p1 (patch level), +build (Fedora build num),
+    ^3.git... (RPM pre-release), ~beta (tilde pre-release)."""
     v = re.sub(r"[_-]p\d+$", "", pv or "")
     v = re.sub(r"-r\d+$", "", v)
     v = re.sub(r"\^.*$", "", v)
     v = re.sub(r"~.*$", "", v)
+    v = re.sub(r"\+[a-zA-Z0-9._]+$", "", v)  # 1.18.2+64 -> 1.18.2
+    v = re.sub(r"\.git[0-9a-f]+$", "", v)     # 1.0.0.gitabc123 -> 1.0.0
     return v
 
 
@@ -1145,18 +1184,17 @@ def version_evidence(tree, distname):
 
 
 def probe_binary_version(sub, distname):
+    """Probe ELF binaries for version info. Skips binaries whose --version
+    output looks like a component/sub-library version (low major, e.g. 0.8.0
+    for crashpad) rather than the package version. No hardcoded skip list —
+    heuristic only."""
     import subprocess
-    SKIP_BINS = {"chrome_crashpad_handler", "crashpad_handler", "chrome-sandbox",
-                 "nacl_helper", "nacl_helper_nonsfi", "libEGL_mesa.so",
-                 "libGLESv2_mesa.so", "vulkaninfo"}
     cands = []
     for f in sorted(sub.rglob("*")):
         if not f.is_file():
             continue
         rel = f.relative_to(sub)
         if len(rel.parts) > 3:
-            continue
-        if f.stem.lower() in SKIP_BINS:
             continue
         try:
             head = f.read_bytes()[:4]
@@ -1767,19 +1805,20 @@ def _replacement_asset_exists(srcs, pv, newver):
 def check_upstream_latest(pkgs):
     """Deterministic staleness gate: for every release-pinned package whose
     artifact URL points at a known forge, compare PV against upstream's
-    latest release. Decision matrix:
-      - authoritative /releases/latest (GitHub/Codeberg; GH_TOKEN honored)
-        matching PV -> OK; differing -> STALE
-      - no API: ls-remote max tag matches PV -> OK
-      - ls-remote only, PV matches SOME tag but not the lexical max ->
-        SKIP-ambiguous (branded suffixes like zen's 1.21b vs 1.21.15b break
-        pure version sort; never fail a package on a guess)
-    Appends OK/STALE/SKIP rows so the report shows BOTH 'artifact is what we
-    pinned' AND 'pin is upstream's latest'."""
+    latest release. Uses NO hardcoded skip lists — works for ANY package via:
+      1. GitHub API releases/latest (authoritative)
+      2. git ls-remote tags (fallback)
+      3. Repology API (universal fallback for 120+ repos)
+    Template versions (RPM macros like %{bumpver}) are auto-detected and skipped."""
     log("")
     log("=== UPSTREAM LATEST CHECK ===")
     for pkg, pv, srcs, live, homepage in pkgs:
         if live or not pv or PLACEHOLDER_RE.match(pv):
+            continue
+        if is_template_version(pv):
+            log("[%s] %s : template version '%s' (git snapshot, skipping)" % (STATUS_SKIP, pkg, pv))
+            rows.append((pkg, pkg, pv, "", STATUS_SKIP,
+                         "template version (git snapshot, not a release tag)"))
             continue
         if srcs and isinstance(srcs[0], tuple) and srcs[0][0] == "__metapackage__":
             continue
@@ -1791,10 +1830,8 @@ def check_upstream_latest(pkgs):
                 if clone:
                     break
         if not clone:
-            continue  # non-forge host: no honest deterministic latest to compare
+            continue
         slug = clone.split("//", 1)[-1][:-4]
-        # If HOMEPAGE points to a different GitHub repo than SRC_URI, use HOMEPAGE
-        # (e.g. SRC_URI = fork tarball, HOMEPAGE = canonical upstream)
         if homepage:
             hp_repo, _ = forge_slug_from_url(homepage)
             if hp_repo and hp_repo != api_repo:
@@ -1827,6 +1864,13 @@ def check_upstream_latest(pkgs):
             all_tags = _lsremote_version_tags(clone)
             if all_tags:
                 latest, source = max(all_tags, key=_tagkey), "ls-remote"
+
+        if not latest:
+            rep_ver, rep_repo = repology_newest(pkg)
+            if rep_ver:
+                latest, source = rep_ver, "repology"
+                slug = "repology/%s" % rep_repo
+                log("  [repology] %s newest=%s (from %s)" % (pkg, rep_ver, rep_repo))
 
         if not latest:
             rows.append((pkg, "upstream %s" % slug, pv, "", STATUS_SKIP,
