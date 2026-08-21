@@ -847,6 +847,8 @@ jobs:
 
       # ---- topic: teardown-sweep ----
       - name: Tear-Apart Sweep (all packages, all artifacts)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md
 
