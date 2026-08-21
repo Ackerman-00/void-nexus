@@ -1222,7 +1222,173 @@ def version_evidence(tree, distname):
                 if key not in seen:
                     seen.add(key)
                     hits.append(("Cargo.toml", m.group(1), str(rel)))
-        elif name in ("version", "version.txt", "version.json", "package_version"):
+        elif name == "makefile":
+            txt = read_small(f)
+            m = re.search(r"^VERSION\s*[:?]?=\s*([^\s#]+)", txt, re.M)
+            if m:
+                key = ("makefile", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("Makefile", m.group(1), str(rel)))
+        elif name == "cmakelists.txt":
+            txt = read_small(f)
+            m = re.search(r"project\s*\([^)]*VERSION\s+([0-9][^\s)]*)", txt, re.I)
+            if m:
+                key = ("cmake", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("CMakeLists.txt", m.group(1), str(rel)))
+        elif name == "meson.build":
+            txt = read_small(f)
+            m = re.search(r"project\s*\([^)]*version\s*:\s*['\"]([^'\"]+)['\"]", txt, re.I)
+            if m:
+                key = ("meson", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("meson.build", m.group(1), str(rel)))
+        elif name in ("setup.py", "setup.cfg"):
+            txt = read_small(f)
+            m = re.search(r"version\s*=\s*['\"]([^'\"]+)['\"]", txt)
+            if m:
+                key = ("setup", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append((name, m.group(1), str(rel)))
+        elif name == "pyproject.toml":
+            txt = read_small(f)
+            m = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', txt, re.M)
+            if m:
+                key = ("pyproject", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("pyproject.toml", m.group(1), str(rel)))
+        elif name == "configure.ac":
+            txt = read_small(f)
+            m = re.search(r"AC_INIT\s*\([^,]+,\s*\[?([0-9][^\s,\)]+)", txt)
+            if m:
+                key = ("autoconf", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("configure.ac", m.group(1), str(rel)))
+        elif name.endswith(".cabal"):
+            txt = read_small(f)
+            m = re.search(r"^version:\s*([0-9][^\s]+)", txt, re.M)
+            if m:
+                key = ("cabal", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("cabal", m.group(1), str(rel)))
+        elif name in ("build.gradle", "build.gradle.kts"):
+            txt = read_small(f)
+            m = re.search(r"version\s*=\s*['\"]([^'\"]+)['\"]", txt)
+            if m:
+                key = ("gradle", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("gradle", m.group(1), str(rel)))
+        elif name == "pom.xml":
+            txt = read_small(f)
+            m = re.search(r"<version>\s*([0-9][^<]+)</version>", txt)
+            if m:
+                key = ("maven", m.group(1).strip())
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("pom.xml", m.group(1).strip(), str(rel)))
+        elif name == "description":
+            txt = read_small(f)
+            m = re.search(r"^Version:\s*(.+)$", txt, re.M)
+            if m:
+                key = ("desc", m.group(1).strip())
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("DESCRIPTION", m.group(1).strip(), str(rel)))
+        elif name == "pkgbuild":
+            txt = read_small(f)
+            m = re.search(r"^pkgver=(.+)$", txt, re.M)
+            if m:
+                key = ("pkgbuild", m.group(1).strip())
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("PKGBUILD", m.group(1).strip(), str(rel)))
+        elif name in ("__version__.py", "_version.py"):
+            txt = read_small(f)
+            m = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', txt)
+            if m:
+                key = ("pyver", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("__version__.py", m.group(1), str(rel)))
+        elif name == "info.plist":
+            txt = read_small(f)
+            m = re.search(r"<key>CFBundleShortVersionString</key>\s*<string>([^<]+)</string>", txt)
+            if m:
+                key = ("plist", m.group(1).strip())
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("Info.plist", m.group(1).strip(), str(rel)))
+        elif name == "androidmanifest.xml":
+            txt = read_small(f)
+            m = re.search(r'android:versionName="([^"]+)"', txt)
+            if m:
+                key = ("android", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("AndroidManifest.xml", m.group(1), str(rel)))
+        elif name.endswith(".gemspec"):
+            txt = read_small(f)
+            m = re.search(r"spec\.version\s*=\s*['\"]([^'\"]+)['\"]", txt)
+            if m:
+                key = ("gem", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("gemspec", m.group(1), str(rel)))
+        elif name in ("podspec",) or name.endswith(".podspec"):
+            txt = read_small(f)
+            m = re.search(r"\.version\s*=\s*['\"]([^'\"]+)['\"]", txt)
+            if m:
+                key = ("pod", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("podspec", m.group(1), str(rel)))
+        elif name.endswith(".nuspec"):
+            txt = read_small(f)
+            m = re.search(r"<version>([0-9][^<]+)</version>", txt)
+            if m:
+                key = ("nuspec", m.group(1).strip())
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("nuspec", m.group(1).strip(), str(rel)))
+        elif name.endswith(".csproj"):
+            txt = read_small(f)
+            m = re.search(r"<Version>([0-9][^<]+)</Version>", txt, re.I)
+            if m:
+                key = ("csproj", m.group(1).strip())
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("csproj", m.group(1).strip(), str(rel)))
+        elif name in ("stacking.toml", "build.zig.zon"):
+            txt = read_small(f)
+            m = re.search(r"version\s*=\s*\"([^\"]+)\"", txt)
+            if m:
+                key = ("zig", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append((name, m.group(1), str(rel)))
+        elif name == "makefile.am":
+            txt = read_small(f)
+            m = re.search(r"VERSION\s*=\s*(\S+)", txt)
+            if m:
+                key = ("automake", m.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("Makefile.am", m.group(1), str(rel)))
+        elif name in ("version", "version.txt", "version.json", "package_version",
+                       "ver.txt", "versions", "ver", "vers", "__version__",
+                       "__version__.txt", "version.py", "version.md",
+                       "version.cfg", "version.ini", "version.yaml",
+                       "version.yml", "version.conf", "version.config",
+                       "version.properties", "version.env", "version.rc",
+                       "version.toml"):
             txt = read_small(f).strip()
             if txt and len(txt) < 64 and re.match(r"^[\w.\-+~]+$", txt):
                 key = ("vfile", txt)
@@ -1241,7 +1407,13 @@ def version_evidence(tree, distname):
         return hits
     priority = {"asar": 0, "X-AppImage-Version": 1, "application.ini": 2,
                 "desktop Version": 3, "package.json": 4, "Cargo.toml": 5,
-                "version file": 6, "changelog": 7}
+                "Makefile": 6, "CMakeLists.txt": 6, "meson.build": 6,
+                "pom.xml": 6, "gradle": 6, "cabal": 6, "gemspec": 6,
+                "podspec": 6, "nuspec": 6, "csproj": 6, "DESCRIPTION": 6,
+                "PKGBUILD": 6, "setup.py": 6, "setup.cfg": 6,
+                "pyproject.toml": 6, "configure.ac": 6, "Makefile.am": 6,
+                "build.gradle": 6, "Info.plist": 7, "AndroidManifest.xml": 7,
+                "__version__.py": 7, "version file": 8, "changelog": 9}
     hits.sort(key=lambda h: (priority.get(h[0], 9), h[2]))
     return hits[:4]
 
@@ -2156,7 +2328,7 @@ def fix_stale_pkg(pkg, pv, latest, repo_type, root):
         if not eb:
             return False
         eb_dir = eb[0].parent
-        spec = eb_dir / "%s-%s.ebuild" % (pkg, latest.lstrip("v"))
+        spec = eb_dir / ("%s-%s.ebuild" % (str(pkg), latest.lstrip("v")))
         if spec.exists():
             return False
         old = sorted(eb)[-1]
