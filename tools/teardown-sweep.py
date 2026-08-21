@@ -115,15 +115,25 @@ def latest_channel_version_header(url, timeout=60):
 def normalize(v):
     v = (v or "").strip().strip('"').strip("'").strip("`")
     v = re.sub(r"^[vV]", "", v)
-    v = re.sub(r"\+.*$", "", v)
-    v = re.sub(r"-0[~.-].*$", "", v)
+    v = re.sub(r"\^.*$", "", v)
+    v = re.sub(r"~.*$", "", v)
     v = re.sub(r"-([0-9]+)$", "", v)
     return v.lower()
 
 
+def is_chromium_build_number(v):
+    """True if v looks like a Chromium engine build number (e.g. 143.1.93.137
+    or 151507.074199) rather than a user-facing browser version."""
+    parts = (v or "").split(".")
+    if not parts or not parts[0].isdigit():
+        return False
+    first = int(parts[0])
+    return first >= 50
+
+
 def versions_match(pv, internal):
     """True when internal == pv, or internal is pv with a leading build-number
-    component (e.g. Chromium-prefixed Brave '151.1.93.137' vs pinned
+    component (e.g. Chromium-prefixed Brave '143.1.93.137' vs pinned
     '1.93.137')."""
     p, i = normalize(pv), normalize(internal)
     if p == i:
@@ -131,7 +141,25 @@ def versions_match(pv, internal):
     pc, ic = p.split("."), i.split(".")
     if len(ic) > len(pc) and ic[len(ic) - len(pc):] == pc:
         return True
+    if len(pc) > len(ic) and pc[len(pc) - len(ic):] == ic:
+        return True
     return False
+
+
+def resolve_canonical_repo(owner_repo):
+    """If owner_repo is a GitHub fork, return the parent's owner/repo.
+    Otherwise return owner_repo unchanged. Returns None on API failure."""
+    if "/" not in (owner_repo or ""):
+        return owner_repo
+    try:
+        data = json.loads(fetch("https://api.github.com/repos/%s" % owner_repo, timeout=30).decode())
+        if isinstance(data, dict) and data.get("fork") and data.get("parent", {}).get("full_name"):
+            parent = data["parent"]["full_name"]
+            log("  [fork-detected] %s -> parent %s" % (owner_repo, parent))
+            return parent
+    except Exception:
+        pass
+    return owner_repo
 
 
 def upstream_head(repo):
@@ -1135,7 +1163,11 @@ def probe_binary_version(sub, distname):
             out = (res.stdout or res.stderr or b"").decode(errors="ignore")
             m = re.search(r"([0-9]+\.[0-9]+(?:\.[0-9]+)?[a-zA-Z0-9._\-]*)", out)
             if m:
-                return m.group(1), "%s --version" % cand.name, out.strip()[:120]
+                ver = m.group(1)
+                first = ver.split(".")[0]
+                if first.isdigit() and int(first) >= 100000:
+                    continue
+                return ver, "%s --version" % cand.name, out.strip()[:120]
         except Exception:
             continue
     return None, None, None
@@ -1188,12 +1220,15 @@ def tear_apart(path, distname, tmp):
                 z.extractall(sub)
             hits = version_evidence(sub, distname)
             for kind, v, rel in hits:
-                if kind in STRONG_KINDS:
+                if kind in STRONG_KINDS and not is_chromium_build_number(v):
                     return v, "zip %s=%s (%s)" % (kind, v, rel), True, False
             ver, cmd, out = probe_binary_version(sub, distname)
             if ver:
                 return ver, "zip runtime probe %s: %s" % (cmd, out), True, False
             if hits:
+                for kind, v, rel in hits:
+                    if not is_chromium_build_number(v):
+                        return v, "zip %s=%s (%s)" % (kind, v, rel), False, looks_like_source(sub)
                 return hits[0][1], "zip %s=%s (%s)" % (hits[0][0], hits[0][1], hits[0][2]), False, looks_like_source(sub)
             return None, "zip extracted, no version evidence found", False, looks_like_source(sub)
         except Exception as e:
@@ -1749,6 +1784,8 @@ def check_upstream_latest(pkgs):
         if not clone:
             continue  # non-forge host: no honest deterministic latest to compare
         slug = clone.split("//", 1)[-1][:-4]
+        if api_repo:
+            api_repo = resolve_canonical_repo(api_repo)
 
         latest = None
         source = None
@@ -1844,12 +1881,83 @@ def check_upstream_latest(pkgs):
         log("[%s] %s : %s" % (STATUS_STALE, pkg, note))
 
 
+def fix_stale_pkg(pkg, pv, latest, repo_type, root):
+    """Attempt to auto-update a genuinely stale package. Returns True if fixed."""
+    import subprocess
+    if repo_type == "gentoo":
+        eb = list(root.rglob("%s/*.ebuild" % pkg))
+        if not eb:
+            eb = list(root.rglob("*/%s/*.ebuild" % pkg))
+        if not eb:
+            return False
+        eb_dir = eb[0].parent
+        spec = eb_dir / "%s-%s.ebuild" % (pkg, latest.lstrip("v"))
+        if spec.exists():
+            return False
+        old = sorted(eb)[-1]
+        log("  [autofix] cp %s %s" % (old, spec))
+        try:
+            import shutil
+            shutil.copy2(str(old), str(spec))
+            subprocess.run(["ebuild", str(spec), "manifest"], cwd=str(eb_dir),
+                           capture_output=True, timeout=120)
+            return True
+        except Exception as e:
+            log("  [autofix] failed: %s" % e)
+            return False
+    if repo_type in ("fedora", "opensuse"):
+        specs = list(root.rglob("%s/*.spec" % pkg))
+        if not specs:
+            specs = list(root.rglob("*/%s*.spec" % pkg))
+        if not specs:
+            return False
+        spec = specs[0]
+        txt = spec.read_text()
+        new_ver = latest.lstrip("v")
+        if re.search(r"^Version:\s*.*$", txt, re.M):
+            new_txt = re.sub(r"^(Version:\s*).*$", r"\g<1>%s" % new_ver, txt, count=1, flags=re.M)
+            if new_txt != txt:
+                log("  [autofix] sed Version %s -> %s in %s" % (pv, new_ver, spec))
+                spec.write_text(new_txt)
+                return True
+    if repo_type == "nix":
+        nix_files = list(root.rglob("pkgs/%s.nix" % pkg))
+        if not nix_files:
+            nix_files = list(root.rglob("pkgs/*/%s.nix" % pkg))
+        if not nix_files:
+            return False
+        nix = nix_files[0]
+        txt = nix.read_text()
+        new_ver = latest.lstrip("v")
+        if re.search(r'version\s*=\s*"[^"]*"', txt):
+            new_txt = re.sub(r'(version\s*=\s*")[^"]*"', r'\g<1>%s"' % new_ver, txt, count=1)
+            if new_txt != txt:
+                log("  [autofix] sed version %s -> %s in %s" % (pv, new_ver, nix))
+                nix.write_text(new_txt)
+                return True
+    if repo_type == "void":
+        templates = list(root.rglob("srcpkgs/%s/template" % pkg))
+        if not templates:
+            return False
+        tmpl = templates[0]
+        txt = tmpl.read_text()
+        new_ver = latest.lstrip("v")
+        if re.search(r"version=.*", txt):
+            new_txt = re.sub(r"version=.*", "version=%s" % new_ver, txt, count=1)
+            if new_txt != txt:
+                log("  [autofix] sed version %s -> %s in %s" % (pv, new_ver, tmpl))
+                tmpl.write_text(new_txt)
+                return True
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--overlay", default=".")
     ap.add_argument("--type", default="auto", choices=["auto", "gentoo", "fedora", "nix", "void", "opensuse"])
     ap.add_argument("--report", default="teardown-report.md")
     ap.add_argument("--workdir", default=None)
+    ap.add_argument("--autofix", action="store_true", help="auto-update genuinely STALE packages")
     args = ap.parse_args()
 
     root = Path(args.overlay)
@@ -1900,6 +2008,35 @@ def main():
     for pkg, pv, srcs, live in pkgs:
         sweep_package(pkg, pv, srcs, live, repo_type, workdir)
     check_upstream_latest(pkgs)
+
+    if args.autofix:
+        stale_pkgs = [(pkg, pinned) for pkg, dist, pinned, internal, status, note in rows
+                      if status == STATUS_STALE]
+        if stale_pkgs:
+            log("")
+            log("=== AUTO-FIX: %d stale package(s) ===" % len(stale_pkgs))
+            fixed_any = False
+            for pkg, pinned in stale_pkgs:
+                log("  [autofix] %s (pinned %s)" % (pkg, pinned))
+                latest_note = next((n for p, d, pi, i, s, n in rows
+                                    if p == pkg and s == STATUS_STALE), "")
+                m = re.search(r"newest is (\S+)", latest_note) or re.search(r"released (\S+)", latest_note)
+                if not m:
+                    log("  [autofix] cannot determine upstream version, skipping")
+                    continue
+                latest = m.group(1).rstrip("-.")
+                if fix_stale_pkg(pkg, pinned, latest, repo_type, root):
+                    fixed_any = True
+                    log("  [autofix] %s updated to %s" % (pkg, latest))
+                else:
+                    log("  [autofix] %s auto-fix not applicable" % pkg)
+            if fixed_any:
+                log("")
+                log("=== RE-VERIFY after auto-fix ===")
+                rows.clear()
+                for pkg, pv, srcs, live in pkgs:
+                    sweep_package(pkg, pv, srcs, live, repo_type, workdir)
+                check_upstream_latest(pkgs)
 
     log("")
     log("=== SWEEP TABLE ===")
