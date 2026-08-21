@@ -1,6 +1,6 @@
 # Template file for 'quickshell-git'
 pkgname=quickshell-git
-_basever=0.3.0
+_basever=0.3.1
 _commit=1a4716cde794a59928d9d9fc15f2afc7a95de360
 _shortcommit=1a4716c
 _gitdate=20260821022855
