@@ -2001,16 +2001,60 @@ def check_upstream_latest(pkgs):
         log("[%s] %s : %s" % (STATUS_STALE, pkg, note))
 
 
+def compute_libyear(pkg, pinned_pv, api_repo):
+    """Compute libyear drift for a single package. Libyear = cumulative age
+    of dependencies in years. For a single package, drift = time between
+    pinned version's publish date and latest version's publish date.
+    Returns (drift_years, pinned_date, latest_date) or None."""
+    from datetime import datetime, timezone
+    if not api_repo or not pinned_pv:
+        return None
+    headers = {"Accept": "application/vnd.github+json"}
+    tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if tok:
+        headers["Authorization"] = "Bearer %s" % tok
+    try:
+        req = urllib.request.Request(
+            "https://api.github.com/repos/%s/releases" % api_repo,
+            headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as r:
+            releases = json.loads(r.read().decode())
+        if not isinstance(releases, list) or not releases:
+            return None
+        pinned_date = None
+        latest_date = None
+        for rel in releases:
+            tag = rel.get("tag_name", "")
+            pub = rel.get("published_at", "")
+            if not pub:
+                continue
+            dt = datetime.fromisoformat(pub.replace("Z", "+00:00"))
+            if not latest_date:
+                latest_date = dt
+            clean_tag = tag.lstrip("v")
+            clean_pv = pinned_pv.lstrip("v")
+            if clean_tag == clean_pv or versions_match(clean_tag, pinned_pv):
+                pinned_date = dt
+        if pinned_date and latest_date and latest_date > pinned_date:
+            drift = (latest_date - pinned_date).total_seconds() / (365.25 * 86400)
+            return (drift, pinned_date.isoformat()[:10], latest_date.isoformat()[:10])
+    except Exception:
+        pass
+    return None
+
+
 def check_vulns_and_deps(pkgs, repo_type):
     """Check ALL packages for known vulnerabilities (OSV.dev),
-    dependency freshness (Repology), and auto-update availability.
-    No hardcoding — works for ANY package."""
+    dependency freshness (Repology), libyear drift, and auto-update
+    availability. No hardcoding — works for ANY package."""
     log("")
-    log("=== VULNERABILITY, FRESHNESS & AUTO-UPDATE CHECK ===")
+    log("=== VULNERABILITY, FRESHNESS & LIBYEAR CHECK ===")
     eco = repo_type if repo_type in ECOSYSTEM_MAP else None
     total_vulns = 0
     total_outdated = 0
     total_fresh = 0
+    total_libyear = 0.0
+    libyear_count = 0
 
     AUTO_UPDATE_TOOLS = {
         "gentoo": "livecheck + pkgbump (auto-detect new versions from SRC_URI)",
@@ -2051,11 +2095,38 @@ def check_vulns_and_deps(pkgs, repo_type):
                 total_fresh += 1
                 log("[FRESH] %s@%s" % (pkg, clean_pv))
             else:
-                log("[INFO] %s@%s status=%s" % (pkg, clean_pv, status))
+                log("[INFO] %s@%s status=%s" % (pkg, clean_pv))
+
+        api_repo = None
+        for item in srcs:
+            url = item[0] if isinstance(item, tuple) else None
+            if isinstance(url, str) and url.startswith(("http://", "https://")):
+                api_repo, _ = forge_slug_from_url(url)
+                if api_repo:
+                    break
+        if homepage and not api_repo:
+            api_repo, _ = forge_slug_from_url(homepage)
+        if api_repo:
+            ly = compute_libyear(pkg, clean_pv, api_repo)
+            if ly:
+                drift, pinned_dt, latest_dt = ly
+                total_libyear += drift
+                libyear_count += 1
+                log("[LIBYEAR] %s: %.2f yr drift (pinned %s, upstream %s)"
+                    % (pkg, drift, pinned_dt, latest_dt))
 
     log("")
-    log("=== SUMMARY: %d vulns, %d outdated, %d fresh (of %d packages) ==="
-        % (total_vulns, total_outdated, total_fresh, len(pkgs)))
+    log("=== SUMMARY ===")
+    log("  Packages: %d total" % len(pkgs))
+    log("  Vulns: %d" % total_vulns)
+    log("  Outdated: %d" % total_outdated)
+    log("  Fresh: %d" % total_fresh)
+    log("  Libyear: %.2f yr across %d versionable packages" % (total_libyear, libyear_count))
+    if total_libyear > 20:
+        log("  ⚠ LIBYEAR BUDGET EXCEEDED: %.2f > 20 yr threshold" % total_libyear)
+    rows.append(("LIBYEAR", "freshness", "%.2f yr" % total_libyear, "%d pkgs" % libyear_count,
+                 "METRIC" if total_libyear <= 20 else "OVER-BUDGET",
+                 "threshold=20 libyears"))
 
 
 def fix_stale_pkg(pkg, pv, latest, repo_type, root):

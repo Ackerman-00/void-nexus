@@ -863,6 +863,7 @@ jobs:
                - Version pinning vs upstream (GitHub releases, tags, Repology)
                - OSV.dev vulnerability scan (CVEs on your pinned version)
                - Repology freshness (is your version outdated vs 120+ repos?)
+               - Libyear drift (how many years behind upstream, budget=20yr)
                - Auto-update tool hints (livecheck, autocopr, nix-update)
 
             4. For EACH package in docker-report.md with status FAIL or
@@ -901,6 +902,11 @@ jobs:
             auto-update tool (from the report) to update the package. Do NOT
             just mark it stale — actually fix it using the right tool for
             the repo type.
+
+            LIBYEAR ENFORCEMENT: If the sweep reports LIBYEAR OVER-BUDGET
+            (>20 yr), you MUST prioritize updating the packages with the
+            highest drift. Sort by drift desc and update the top offenders
+            first. The libyear score is in teardown-report.md.
 
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
