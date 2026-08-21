@@ -49,21 +49,43 @@ jobs:
         shell: bash
         run: curl -fsSL https://opencode.ai/install | bash
 
-      - name: Pre-agent sweep (runs BEFORE opencode, agent reads results)
+      - name: Pre-agent sweep (runs BEFORE opencode, injects into PROMPT)
         shell: bash
         run: |
           python3 tools/teardown-sweep.py --overlay . --type void --report teardown-report.md --autofix 2>&1 || true
           python3 tools/docker-sweep.py --overlay . --type void --scan-images --report docker-report.md 2>&1 || true
-          echo "=== SWEEP COMPLETE — agent will read reports ==="
-          cat teardown-report.md 2>/dev/null | tail -30
-          cat docker-report.md 2>/dev/null | tail -20
+          echo "=== SWEEP COMPLETE — injecting findings into agent context ==="
+          {
+            echo "# SWEEP FINDINGS (injected by pre-agent step — agent reads this automatically)"
+            echo ""
+            echo "## Teardown Report (version/vulnerability/libyear)"
+            echo '```'
+            cat teardown-report.md 2>/dev/null | tail -200 || echo "(no teardown report)"
+            echo '```'
+            echo ""
+            echo "## Docker Report (install/binary/deps)"
+            echo '```'
+            cat docker-report.md 2>/dev/null | tail -100 || echo "(no docker report)"
+            echo '```'
+          } > .sweep-context.md
+          echo "=== .sweep-context.md written ($(wc -c < .sweep-context.md) bytes) ==="
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run opencode
+      - name: Run opencode (with sweep findings injected into prompt)
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
+          # Inject sweep findings directly into agent context
+          if [ -s .sweep-context.md ]; then
+            export PROMPT="$(cat .sweep-context.md)
+            ---
+
+            ${PROMPT}"
+            echo "=== Injected $(wc -c < .sweep-context.md) bytes of sweep findings into PROMPT ==="
+          else
+            echo "=== WARNING: .sweep-context.md empty/missing ==="
+          fi
           gate_passes() {
             content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/void-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
             printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete"
@@ -1550,14 +1572,12 @@ jobs:
 
             TEAR-APART SWEEP PROTOCOL (MANDATORY):
             The sweep already ran BEFORE you started (pre-agent step).
-            teardown-report.md and docker-report.md are already in the repo.
-            You MUST read them on your FIRST step and act on findings.
+            The findings are INJECTED directly into this prompt (above the
+            "---" separator). You do NOT need to read any files — the
+            teardown-report.md and docker-report.md findings are already
+            in your context. Act on them immediately.
 
-            YOUR FIRST ACTION — read the pre-computed reports:
-              cat teardown-report.md | head -200
-              cat docker-report.md | head -100
-
-            From teardown-report.md you will see:
+            From the injected sweep findings you will see:
               - STALE packages → use the suggested auto-update tool to fix
               - VULN packages → investigate and fix or document why safe
               - OUTDATED packages → update using livecheck/autocopr/nix-update
@@ -1576,7 +1596,7 @@ jobs:
                - Re-run the sweep for that specific package to verify
                - NEVER leave a failing package — fix or revert
 
-            NEVER complete a run with teardown-report.md showing STALE/VULN
+            NEVER complete a run with the sweep showing STALE/VULN
             that you haven't addressed. The sweep is the PROOF-OR-STOP gate.
 
             CRITICAL: When the sweep reports OUTDATED, use the suggested

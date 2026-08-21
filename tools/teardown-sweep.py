@@ -730,10 +730,14 @@ def parse_nix(pnix):
                 url = "https://github.com/%s/archive/%s.tar.gz" % (repo, rev)
         if url:
             srcs.append((url, url.rsplit("/", 1)[-1], h))
+    homepage = None
+    hm = re.search(r'homepage\s*=\s*"([^"]+)"', content)
+    if hm:
+        homepage = hm.group(1)
     live = None
     if repo and rev:
         live = (repo, rev)
-    return pkg, pv, srcs, live
+    return pkg, pv, srcs, live, homepage
 
 
 # --- gentoo (unchanged behavior) ---
@@ -1719,7 +1723,20 @@ def sweep_package(pkg, pv, srcs, live, repo_type, workdir):
             log("[%s] %s : %s signature/keyring material" % (STATUS_OK, pkg, name))
             pkg_verified = True
             continue
+        # Disambiguate same-filename multi-arch distfiles (e.g. rootapp)
         dst = dl / name
+        if dst.exists():
+            # Check if existing file matches this source's hash; if not, it's a different arch
+            if sha:
+                expected_existing = {"sha256": sha} if isinstance(sha, str) else (sha if isinstance(sha, dict) else {})
+                already_ok, _ = verify_file(dst, expected_existing)
+                if not already_ok:
+                    # Different arch, use a disambiguated path
+                    base, ext = name.rsplit(".", 1) if "." in name else (name, "")
+                    idx = 2
+                    while dst.exists():
+                        dst = dl / ("%s_%d.%s" % (base, idx, ext)) if ext else dl / "%s_%d" % (base, idx)
+                        idx += 1
         if not dst.exists():
             try:
                 log("  downloading %s (%s)" % (name, url))
