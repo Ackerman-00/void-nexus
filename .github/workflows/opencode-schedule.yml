@@ -366,6 +366,16 @@ jobs:
                  If any package is missing from this table, the run is not
                  finished. State confidence (high/medium/low) for anything
                  not fully verified, and why.
+              h. 2026 AUTOMATED EXCELLENCE CHECKS (MANDATORY - August 2026 Void):
+                 For EVERY template you touched (and for at least 5-sample of the full 19), run the modern Void toolchain locally and paste output. This is how an "excellent template" is proven:
+                 - `xlint template` (xtools) — must be clean; fix all E:/W: (mandatory vars: pkgname, version without dash, revision, short_desc ≤72, homepage, license SPDX, maintainer valid email)
+                 - `xgensum -i` or `sha256sum` of distfiles vs `checksum` — must match; `distfiles` URLs must be https, use `${GNU_SITE}`/`${GITHUB_SITE}` macros where canonical, and revision must be 1 on version bump, +1 only on binary change (see Manual.md `revision`)
+                 - `hostmakedepends` vs `makedepends` vs `depends` vs `checkdepends` correctly distinguished (host = build-host tools, makedepends = compile libs, depends = runtime manual, checkdepends = test deps for `XBPS_CHECK_PKGS=yes` / `-Q`); runtime ELF `NEEDED` is auto-detected by xbps-src — do NOT list auto-detected `depends` via `depends`, only manual ones; verify with `./xbps-src show-files <pkg>` and `readelf -d`
+                 - `build_style` (common/build-style/*) correctness — required helpers must be in `hostmakedepends` (e.g., `cmake` build_style needs `cmake`); if no `build_style`, `do_install()` must exist; check `common/build-style/<name>.sh`
+                 - `./xbps-src -Q pkg <pkg>` or `XBPS_CHECK_PKGS=yes ./xbps-src pkg <pkg>` must pass; also test cross ` -a armv6l` where feasible (CONTRIBUTING.md)
+                 - `./xbps-src update-check <pkg>` — version freshness against upstream; if template has `update` file, verify its logic
+                 - `repository` variable, `restricted`, `only_for_archs="x86_64"` etc. must be justified; `subpackages` must list correct `_package()` functions
+                 Log each tool's 1-line result per template; any failure = deps-broken. Tools are available via `tools/teardown-sweep.py:parse_void` + `check_rpm_dependencies` (static) — you may call it, but YOU do the reasoning. Teardown is done BY YOU, the agent, not by a separate pass-anyway script; sweep is auxiliary evidence, not the verdict.
 
             KNOWN PACKAGE-SPECIFIC NOTES - THE RIGOR BELOW APPLIES TO EVERY
             PACKAGE, NOT JUST THE EXAMPLE NAMED. For EVERY package, establish
@@ -498,6 +508,9 @@ jobs:
                  status in: installable / fixed / broken-(dep) /
                  blocked-(reason). Any package you changed but did not
                  install-test is an unfinished package.
+              g. DOCKER BATTLE TEST (MANDATORY - every binary + repo path must work in a clean void-glibc-full container, not just build). This is not optional:
+                 1. FOR EVERY .xbps in rolling (all 19): download + `xbps-rindex -f -a` + `docker run ghcr.io/void-linux/void-glibc-full:latest xbps-install --repository=/repo <pkg>` as above — at least 5 diverse per run, oldest-uncovered first, plus every touched. No manual `tar` fallback is a battle test.
+                 2. BATTLE-TEST THE REPO ITSELF: inside the same clean container, clone the repo, run `xlint srcpkgs/*/template` (must be clean), `./xbps-src -n pkg <touched>` dry-run, and verify `README.md` Quick Setup (`10-nexus.conf` + `xbps-install -S` + trust key) actually works with the downloaded repo. If `xbps-src` or instructions are broken, fix the template/README and re-test. Think like a new Void user who just added the repo — if they would hit it, you must hit it first.
 
             Then work autonomously, in this priority order:
 

@@ -6,12 +6,16 @@ Work-notes for AI agents and humans maintaining this repo.
 
 Three-layer defense-in-depth for package staleness and integrity:
 
-### Layer 1: Deterministic Python sweep (`tools/teardown-sweep.py`)
+### Layer 1: Deterministic Python sweep (`tools/teardown-sweep.py`) — AUXILIARY, NOT VERDICT
 
-Pure stdlib Python script that runs AFTER the agent exits. Downloads every
+Pure stdlib helper the **agent calls** (not a separate CI gate). Downloads every
 artifact, tears it apart (AppImage extract, .deb control, zip internals, Electron
 .asar, `application.ini`, ELF `--version` probe), verifies checksums (sha256,
-BLAKE2B+SHA512, SRI), reads internal versions, and compares against upstream.
+BLAKE2B+SHA512, SRI), reads internal versions vs upstream, and (2026-08) runs
+`xlint`/`xgensum`/`xbps-src` hooks. The agent IS the teardown — it must tear every
+template apart itself, run `xlint` + `xbps-src -Q` + `xbps-install` in Docker,
+produce the dependency audit table, and ensure excellent `srcpkgs/*/template`.
+Sweep is evidence, not a pass-anyway script; CI gate hard-fails if the agent skips it.
 
 Key functions:
 - `resolve_canonical_repo()`: detects GitHub forks via API `parent.full_name`,
@@ -33,27 +37,26 @@ Key functions:
 Exit code = verdict. Exit 0 = all packages verified. Exit 1 = any
 FAIL/MISMATCH/STALE/UNVERIFIED → CI opens an issue.
 
-### Layer 1b: Docker-based install + dependency sweep (`tools/docker-sweep.py`)
+### Layer 1b: Docker battle test + dependency sweep (`tools/docker-sweep.py`) — MANDATORY
 
-Runs INSIDE the agent's execution. For each package:
-1. Spins up a clean Docker container (gentoo/stage3, fedora, voidlinux, nixos/nix)
-2. Installs the package + all dependencies
-3. Verifies all deps resolved (no missing)
-4. Runs the binary (if applicable) and checks it starts
-5. Reports PASS/FAIL per package
+Runs INSIDE the agent, clean `ghcr.io/void-linux/void-glibc-full:latest` every run:
+1. Downloads EVERY .xbps from rolling + reindexes
+2. `xbps-install --repository=/repo <pkg>` + `ldd` + `--version` for each binary (5+ per run)
+3. Battle-tests `xlint` + `xbps-src -n pkg` + README Quick Setup (`10-nexus.conf` + key + `xbps-install -S`)
+4. Reports `| package | xbps install | ldd | --version | status |` — any fail = fix template/README
 
 Key features:
-- `trivy_scan_image()`: scans base Docker images for CRITICAL/HIGH/MEDIUM CVEs
-- `--scan-images` flag: enables Trivy CVE scanning of base layers
-- Works for ANY package type (gentoo, fedora, nix, void, opensuse)
+- `trivy_scan_image()`: scans base images for CRITICAL/HIGH/MEDIUM CVEs
+- `--scan-images` flag: enables Trivy CVE scanning
+- No manual tar fallback — docker battle test is mandatory
 
-### Layer 2: Agentic self-healing prompt (opencode-schedule.yml PROMPT)
+### Layer 2: Agentic self-healing prompt (opencode-schedule.yml PROMPT) — MANDATORY
 
-The coding agent's PROMPT includes a TEAR-APART SWEEP PROTOCOL section that
-instructs the agent on what to do:
+YOU are the sweep. The PROMPT's TEAR-APART + DOCKER BATTLE TEST is NOT optional.
+It must:
 
-1. Run `docker-sweep.py --scan-images` for changed/critical packages
-2. Read `teardown-report.md` from the automated sweep:
+1. Tear every `srcpkgs/*/template` apart itself (distfiles → extract → Cargo.toml/meson.build vs hostmakedepends/depends), run 2026 toolchain: `xlint` + `xbps-src -Q` / `XBPS_CHECK_PKGS=yes` (Manual.md 2026-08), `xgensum`, `xbps-src update-check` — log output
+2. Produce mandatory `| package | upstream deps | in template | missing | status |` for ALL 19 packages
    - OSV.dev vulnerability scan (CVEs on pinned version)
    - Repology freshness (outdated vs 120+ repos)
    - Libyear drift (years behind upstream, budget=20yr)
@@ -64,12 +67,10 @@ instructs the agent on what to do:
 6. Never close a teardown issue without passing sweep + evidence
 7. False positive defense: fix the sweep script, never weaken checks
 
-### Layer 3: CI gate + issue auto-open
+### Layer 3: CI gate + issue auto-open — ENFORCED
 
-The workflow's cleanup job opens an issue when the sweep fails (exit 1).
-On the next run, the agent reads the issue and the teardown report, fixes
-the problems, and the sweep re-verifies. This closes the loop:
-detect → report → fix → verify → close.
+`gate_passes()` now hard-checks that `.opencode-relay.md` contains `run_id` + `status: complete` + `PACKAGE.*BR.*Req` / `deps-verified` / `dependency audit`.
+If the agent skips the table, the job fails and retries with stronger model.
 
 ### Why this architecture
 
