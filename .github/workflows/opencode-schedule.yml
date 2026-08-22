@@ -57,7 +57,7 @@ jobs:
             content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/void-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
             printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete" && printf '%s' "$content" | grep -qi "PACKAGE.*BR\|deps-verified\|dependency audit"
           }
-          for model in "opencode/mimo-v2.5-free" "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
+          for model in "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/mimo-v2.5-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
             echo "=== opencode run attempt with $model ==="
             exit_code=0
             MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" || exit_code=$?
@@ -84,8 +84,8 @@ jobs:
           done
           exit 1
         env:
-          MODEL: opencode/mimo-v2.5-free
-          OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/mimo-v2.5-free"}'
+          MODEL: opencode/x-preview-f-free
+          OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/x-preview-f-free"}'
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
