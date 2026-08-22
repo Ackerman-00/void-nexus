@@ -366,8 +366,8 @@ jobs:
                  If any package is missing from this table, the run is not
                  finished. State confidence (high/medium/low) for anything
                  not fully verified, and why.
-              h. 2026 AUTOMATED EXCELLENCE CHECKS (MANDATORY - August 2026 Void):
-                 For EVERY template you touched (and for at least 5-sample of the full 19), run the modern Void toolchain locally and paste output. This is how an "excellent template" is proven:
+              h. 2026 AUTOMATED EXCELLENCE CHECKS (MANDATORY - August 2026 Void - excellent .spec aka excellent `srcpkgs/*/template`):
+                 For EVERY template you touched (and for at least 5-sample of the full 19), run the modern Void toolchain locally and paste output. This is how an "excellent template" (Void's equivalent of an excellent .spec) is proven:
                  - `xlint template` (xtools) — must be clean; fix all E:/W: (mandatory vars: pkgname, version without dash, revision, short_desc ≤72, homepage, license SPDX, maintainer valid email)
                  - `xgensum -i` or `sha256sum` of distfiles vs `checksum` — must match; `distfiles` URLs must be https, use `${GNU_SITE}`/`${GITHUB_SITE}` macros where canonical, and revision must be 1 on version bump, +1 only on binary change (see Manual.md `revision`)
                  - `hostmakedepends` vs `makedepends` vs `depends` vs `checkdepends` correctly distinguished (host = build-host tools, makedepends = compile libs, depends = runtime manual, checkdepends = test deps for `XBPS_CHECK_PKGS=yes` / `-Q`); runtime ELF `NEEDED` is auto-detected by xbps-src — do NOT list auto-detected `depends` via `depends`, only manual ones; verify with `./xbps-src show-files <pkg>` and `readelf -d`
@@ -376,6 +376,13 @@ jobs:
                  - `./xbps-src update-check <pkg>` — version freshness against upstream; if template has `update` file, verify its logic
                  - `repository` variable, `restricted`, `only_for_archs="x86_64"` etc. must be justified; `subpackages` must list correct `_package()` functions
                  Log each tool's 1-line result per template; any failure = deps-broken. Tools are available via `tools/teardown-sweep.py:parse_void` + `check_rpm_dependencies` (static) — you may call it, but YOU do the reasoning. Teardown is done BY YOU, the agent, not by a separate pass-anyway script; sweep is auxiliary evidence, not the verdict.
+              i. ALL CONTENT + REPO ITSELF BATTLE-TESTED IN DOCKER (MANDATORY - you have full repo access, use it):
+                 List every file: `ls -R` / `find . -type f | sort` / `git ls-files | sort`. For each category, verify:
+                 - Every `srcpkgs/*/template`: `bash -n`, `xlint` (clean), mandatory vars (pkgname/version/revision/short_desc/homepage/license SPDX/maintainer valid email), `xgensum` vs `checksum`, `hostmakedepends`/`makedepends`/`depends`/`checkdepends` split (Manual.md Aug 2026; runtime ELF NEEDED auto-detected — do NOT list auto deps via `depends`), `build_style` + required `hostmakedepends`; download each `distfiles` (`curl -L --max-time 30 -o /tmp` + `sha256sum`) and ensure checksum matches; if `update` file exists, `bash -n` it and check `xbps-src update-check` logic
+                 - Every `srcpkgs/*/files/*` / `patches/*`: must be referenced by template, under 20 KiB is fine, larger must be handled via `FILESDIR`; check not orphaned (grep repo for reference)
+                 - Every `.github/workflows/*.yml`: `python3 -c "import yaml; yaml.safe_load(open(f))"` must be valid; check cron not overlapping, permissions minimal, `actions/checkout` SHA-pinned as in `update-engine.yml`; if workflow bash is broken (unclosed quote, bad `xbps-src` invocation), fix it — you have `workflows: write`
+                 - `signing-key.plist`, `README.md`, `AGENTS.md`: README Quick Setup must exactly match the Docker battle-tested path (`10-nexus.conf` + `curl -L -o /var/db/xbps/keys/.../signing-key.plist` + `xbps-install -S` + trust). If README lies, fix README
+                 - Inside clean `ghcr.io/void-linux/void-glibc-full:latest`: prove the repo is self-hostable — `git clone <this-repo> /tmp/test && cd /tmp/test && ./xbps-src -n pkg <sample>` dry-run or at least `bash -n srcpkgs/*/template` + `xlint` must succeed without `XBPS_CHECK_PKGS` errors; this proves the repo itself builds in Docker, not just that prebuilt .xbps install. Log `ls -R` + each check's 1-line result; any file not checked = gap (name it).
 
             KNOWN PACKAGE-SPECIFIC NOTES - THE RIGOR BELOW APPLIES TO EVERY
             PACKAGE, NOT JUST THE EXAMPLE NAMED. For EVERY package, establish
