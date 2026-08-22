@@ -7,63 +7,63 @@ build_style=fetch
 hostmakedepends="tar xz"
 depends="desktop-file-utils hicolor-icon-theme libnotify libavcodec xdg-utils nss nspr"
 short_desc="Welcome to a calmer internet"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="MPL-2.0"
 homepage="https://www.zen-browser.app/"
 
 case "${XBPS_TARGET_MACHINE}" in
 x86_64*)
-    _upstream_arch=x86_64
-    ;;
+	_upstream_arch=x86_64
+	;;
 aarch64*)
-    _upstream_arch=aarch64
-    ;;
+	_upstream_arch=aarch64
+	;;
 *) broken="No distfiles available for this target" ;;
 esac
 
 distfiles="https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-${_upstream_arch}.tar.xz
- https://raw.githubusercontent.com/zen-browser/desktop/refs/heads/dev/LICENSE>LICENSE"
+https://raw.githubusercontent.com/zen-browser/desktop/refs/heads/dev/LICENSE>LICENSE"
 checksum="
- 2eaea664b840067ca0ace623bd4f4548fae98f46a98e2ddbdfdcb9253b674bbf
- c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
+2eaea664b840067ca0ace623bd4f4548fae98f46a98e2ddbdfdcb9253b674bbf
+c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30"
 
 do_install() {
-    vmkdir opt/zen-browser
-    vmkdir usr/bin
+	vmkdir opt/zen-browser
+	vmkdir usr/bin
 
-    tar -xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/zen.linux-${_upstream_arch}.tar.xz \
-        -C ${DESTDIR}/opt/zen-browser --strip-components=1
+	tar -xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/zen.linux-${_upstream_arch}.tar.xz \
+		-C ${DESTDIR}/opt/zen-browser --strip-components=1
 
-    ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
+	ln -sf /opt/zen-browser/zen ${DESTDIR}/usr/bin/zen
 
-    if [ -f "${FILESDIR}/zen.desktop" ]; then
-        vinstall ${FILESDIR}/zen.desktop 0644 usr/share/applications/
-    fi
+	if [ -f "${FILESDIR}/zen.desktop" ]; then
+		vinstall ${FILESDIR}/zen.desktop 0644 usr/share/applications/
+	fi
 
-    if [ -f "${FILESDIR}/policies.json" ]; then
-        vmkdir opt/zen-browser/distribution
-        vinstall ${FILESDIR}/policies.json 0644 opt/zen-browser/distribution/
-    fi
+	if [ -f "${FILESDIR}/policies.json" ]; then
+		vmkdir opt/zen-browser/distribution
+		vinstall ${FILESDIR}/policies.json 0644 opt/zen-browser/distribution/
+	fi
 
-    local _icon_path="${DESTDIR}/opt/zen-browser/browser/chrome/icons/default"
-    if [ -d "$_icon_path" ]; then
-        vinstall ${_icon_path}/default48.png 0644 usr/share/pixmaps zen.png
-        for size in 16 32 48 64 128; do
-            vmkdir usr/share/icons/hicolor/${size}x${size}/apps
-            vinstall ${_icon_path}/default${size}.png 0644 usr/share/icons/hicolor/${size}x${size}/apps zen.png
-        done
-    fi
+	local _icon_path="${DESTDIR}/opt/zen-browser/browser/chrome/icons/default"
+	if [ -d "$_icon_path" ]; then
+		vinstall ${_icon_path}/default48.png 0644 usr/share/pixmaps zen.png
+		for size in 16 32 48 64 128; do
+			vmkdir usr/share/icons/hicolor/${size}x${size}/apps
+			vinstall ${_icon_path}/default${size}.png 0644 usr/share/icons/hicolor/${size}x${size}/apps zen.png
+		done
+	fi
 
-    ln -sf /usr/share/hunspell ${DESTDIR}/opt/zen-browser/dictionaries
-    ln -sf /usr/share/hyphen ${DESTDIR}/opt/zen-browser/hyphenation
+	ln -sf /usr/share/hunspell ${DESTDIR}/opt/zen-browser/dictionaries
+	ln -sf /usr/share/hyphen ${DESTDIR}/opt/zen-browser/hyphenation
 
-    for f in libnspr4.so libnss3.so libnssutil3.so libplc4.so \
-             libplds4.so libsmime3.so libssl3.so libnssckbi.so; do
-        if [ -f "${DESTDIR}/opt/zen-browser/${f}" ]; then
-            rm -f ${DESTDIR}/opt/zen-browser/${f}
-            ln -sf /usr/lib/${f} ${DESTDIR}/opt/zen-browser/${f}
-        fi
-    done
+	for f in libnspr4.so libnss3.so libnssutil3.so libplc4.so \
+			libplds4.so libsmime3.so libssl3.so libnssckbi.so; do
+		if [ -f "${DESTDIR}/opt/zen-browser/${f}" ]; then
+			rm -f ${DESTDIR}/opt/zen-browser/${f}
+			ln -sf /usr/lib/${f} ${DESTDIR}/opt/zen-browser/${f}
+		fi
+	done
 
-    vlicense ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE
+	vlicense ${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE
 }

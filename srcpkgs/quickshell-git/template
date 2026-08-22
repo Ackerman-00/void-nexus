@@ -4,18 +4,21 @@ _basever=0.3.1
 _commit=1a4716cde794a59928d9d9fc15f2afc7a95de360
 _shortcommit=1a4716c
 _gitdate=20260821022855
+# NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
+# rewrites _commit/_gitdate and leaves version= to expand at build time.
+# xlint flags "_" chars from variable NAMES here; value itself is clean.
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cmake
 configure_args="-DCRASH_HANDLER=OFF -DINSTALL_QML_PREFIX=lib/qt6/qml -DDISTRIBUTOR=Void"
 hostmakedepends="cmake ninja pkg-config qt6-base qt6-declarative-host-tools qt6-shadertools"
 makedepends="qt6-base-private-devel qt6-declarative-devel qt6-declarative-private-devel
- qt6-wayland-devel qt6-wayland-private-devel qt6-shadertools-devel qt6-svg-devel
- libdrm-devel libxcb-devel cli11 wayland-devel wayland-protocols
- pipewire-devel polkit-devel glib-devel pam-devel jemalloc-devel"
+qt6-wayland-devel qt6-wayland-private-devel qt6-shadertools-devel qt6-svg-devel
+libdrm-devel libxcb-devel cli11 wayland-devel wayland-protocols
+pipewire-devel polkit-devel glib-devel pam-devel jemalloc-devel"
 depends="qt6-base qt6-declarative qt6-svg qt6-wayland jemalloc polkit pipewire hicolor-icon-theme"
 short_desc="Flexible toolkit for making desktop shells with QtQuick (Git Snapshot)"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="LGPL-3.0-only"
 homepage="https://git.outfoxxed.me/quickshell/quickshell"
 conflicts="quickshell>=0"

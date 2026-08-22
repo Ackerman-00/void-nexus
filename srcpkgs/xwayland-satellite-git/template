@@ -4,6 +4,9 @@ _basever=0.8.2
 _commit=3bc915f09dd62bb2651a715114f9d140344bc6c1
 _shortcommit=3bc915f
 _gitdate=20260808203058
+# NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
+# rewrites _commit/_gitdate and leaves version= to expand at build time.
+# xlint flags "_" chars from variable NAMES here; value itself is clean.
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cargo
@@ -11,7 +14,7 @@ hostmakedepends="pkg-config clang"
 makedepends="libxcb-devel xcb-util-cursor-devel"
 depends="xorg-server-xwayland"
 short_desc="Xwayland outside your Wayland compositor (Git Snapshot)"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="MPL-2.0"
 homepage="https://github.com/Supreeeme/xwayland-satellite"
 
@@ -21,8 +24,9 @@ provides="xwayland-satellite-${version}_${revision}"
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
 checksum="0ae2ac224d1823cd8e74164189b32ecc2176a7efb0a38b42040127c71dd7f3f9"
 
+# Tests need a running Wayland compositor; unavailable in build containers
 make_check="no"
 
 post_install() {
-    vman xwayland-satellite.man xwayland-satellite.1
+	vman xwayland-satellite.man xwayland-satellite.1
 }

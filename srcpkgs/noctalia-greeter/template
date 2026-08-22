@@ -5,12 +5,12 @@ revision=2
 build_style=meson
 hostmakedepends="meson ninja pkg-config wayland-devel"
 makedepends="wayland-devel wayland-protocols libxkbcommon-devel
- freetype-devel fontconfig-devel cairo-devel pango-devel librsvg-devel
- glib-devel tomlplusplus-devel json-c++ wlroots0.20-devel libinput-devel
- MesaLib-devel libwebp-devel stb"
+freetype-devel fontconfig-devel cairo-devel pango-devel librsvg-devel
+glib-devel tomlplusplus-devel json-c++ wlroots0.20-devel libinput-devel
+MesaLib-devel libwebp-devel stb"
 depends="greetd dbus polkit bash"
-short_desc="A minimal login greeter for greetd that matches the look and feel of Noctalia Shell"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+short_desc="Minimal login greeter for greetd matching Noctalia Shell"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-greeter"
 changelog="https://github.com/noctalia-dev/noctalia-greeter/releases"
@@ -18,6 +18,6 @@ distfiles="https://github.com/noctalia-dev/noctalia-greeter/archive/refs/tags/v$
 checksum="1d1c43494b74e75f4f18c5c0d2f5326b9b3b30f337156c05c45d4511a9a587e1"
 
 post_install() {
-    vlicense LICENSE
-    vdoc README.md
+	vlicense LICENSE
+	vdoc README.md
 }

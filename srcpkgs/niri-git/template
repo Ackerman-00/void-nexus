@@ -4,6 +4,9 @@ _basever=26.04
 _commit=dd75865f547f0eac0e9b6c4d86d2cd00c0744252
 _shortcommit=dd75865
 _gitdate=20260821184624
+# NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
+# rewrites _commit/_gitdate and leaves version= to expand at build time.
+# xlint flags "_" chars from variable NAMES here; value itself is clean.
 version="${_basever}+git${_gitdate}.${_shortcommit}"
 revision=1
 build_style=cargo
@@ -11,19 +14,19 @@ build_helper="qemu"
 configure_args="--no-default-features --features dbus,xdp-gnome-screencast"
 hostmakedepends="pkg-config"
 makedepends="cairo-devel eudev-libudev-devel glib-devel libdisplay-info-devel
- libgbm-devel libinput-devel libseat-devel libxkbcommon-devel MesaLib-devel
- pango-devel pipewire-devel pixman-devel clang19-devel"
+libgbm-devel libinput-devel libseat-devel libxkbcommon-devel MesaLib-devel
+pango-devel pipewire-devel pixman-devel clang19-devel"
 depends="wayland xwayland-satellite-git"
 checkdepends="wayland"
 short_desc="Scrollable-tiling Wayland compositor (Git Snapshot)"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/niri-wm/niri"
 changelog="https://github.com/niri-wm/niri/releases"
-conflicts="niri>=0"
-provides="niri-${version}_${revision}"
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
 checksum="ae1859d605e1f6f8ced5b9e5d8e3b5c41f7240fb2c89f1ffcef507ecd269e67a"
+conflicts="niri>=0"
+provides="niri-${version}_${revision}"
 pre_check() {
 	export XDG_RUNTIME_DIR=$(mktemp -d "$wrksrc/runtime.XXXXXX")
 	ulimit -n 4096

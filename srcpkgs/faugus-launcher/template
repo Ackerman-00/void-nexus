@@ -5,10 +5,10 @@ revision=1
 build_style=meson
 hostmakedepends="meson pkg-config gettext glib-devel gtk-update-icon-cache"
 depends="python3 python3-gobject python3-requests python3-Pillow
- python3-vdf python3-psutil python3-dbus python3-icoextract
- gtk4 libadwaita libmanette polkit xdg-utils"
+python3-vdf python3-psutil python3-dbus python3-icoextract
+gtk4 libadwaita libmanette polkit xdg-utils"
 short_desc="Simple and lightweight app for running Windows games using UMU-Launcher"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="MIT"
 homepage="https://github.com/Faugus/faugus-launcher"
 
@@ -16,5 +16,5 @@ distfiles="https://github.com/Faugus/faugus-launcher/archive/refs/tags/${version
 checksum="a6956e5bbd831bcb5b43ce9ccc41341bf108e0c372d12724b994e737c8c668ed"
 
 post_install() {
-    vlicense LICENSE
+	vlicense LICENSE
 }

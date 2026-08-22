@@ -7,22 +7,22 @@ build_style=fetch
 hostmakedepends="bsdtar"
 depends="gtk+3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core util-linux-libs libsecret"
 short_desc="Custom Discord desktop client with Vencord preinstalled"
-maintainer="Quietcraft <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/Vencord/Vesktop"
 
 case "${XBPS_TARGET_MACHINE}" in
-    x86_64*)
-        _deb_arch=amd64
-        _deb_checksum=2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5
-        ;;
-    aarch64*)
-        _deb_arch=arm64
-        _deb_checksum=3ba8e5b14d4eafa641f407c8720fb0ec489a9ee6276423f98e967218b5d6cd38
-        ;;
-    *)
-        broken="Unsupported architecture: ${XBPS_TARGET_MACHINE}"
-        ;;
+	x86_64*)
+		_deb_arch=amd64
+		_deb_checksum=2d4c97abe4810703561d59c63cb12b1926f591fe1fe2bf9e914db66c6cc31cf5
+		;;
+	aarch64*)
+		_deb_arch=arm64
+		_deb_checksum=3ba8e5b14d4eafa641f407c8720fb0ec489a9ee6276423f98e967218b5d6cd38
+		;;
+	*)
+		broken="Unsupported architecture: ${XBPS_TARGET_MACHINE}"
+		;;
 esac
 
 distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_${_deb_arch}.deb"
@@ -31,22 +31,22 @@ checksum="0204a3fcf8861d11debf72a9be70423d2dca6d4698766b6fda7cfe39beea6a61"
 nostrip_files="/opt/Vesktop/vesktop"
 
 do_extract() {
-    bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_${_deb_arch}.deb data.tar.*
-    bsdtar xf data.tar.* -C .
+	bsdtar xf ${XBPS_SRCDISTDIR}/${pkgname}-${version}/vesktop_${version}_${_deb_arch}.deb data.tar.*
+	bsdtar xf data.tar.* -C .
 }
 
 do_install() {
-    vmkdir opt
-    cp -a opt/Vesktop ${DESTDIR}/opt/
+	vmkdir opt
+	cp -a opt/Vesktop ${DESTDIR}/opt/
 
-    vmkdir usr/share
-    cp -a usr/share/applications ${DESTDIR}/usr/share/
-    cp -a usr/share/icons ${DESTDIR}/usr/share/
+	vmkdir usr/share
+	cp -a usr/share/applications ${DESTDIR}/usr/share/
+	cp -a usr/share/icons ${DESTDIR}/usr/share/
 
-    vmkdir usr/bin
-    ln -sf /opt/Vesktop/vesktop ${DESTDIR}/usr/bin/vesktop
+	vmkdir usr/bin
+	ln -sf /opt/Vesktop/vesktop ${DESTDIR}/usr/bin/vesktop
 
-    if [ -f ${DESTDIR}/opt/Vesktop/chrome-sandbox ]; then
-        chmod 4755 ${DESTDIR}/opt/Vesktop/chrome-sandbox
-    fi
+	if [ -f ${DESTDIR}/opt/Vesktop/chrome-sandbox ]; then
+		chmod 4755 ${DESTDIR}/opt/Vesktop/chrome-sandbox
+	fi
 }

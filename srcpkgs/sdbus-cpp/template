@@ -6,6 +6,6 @@ archs="x86_64*"
 metapackage=yes
 depends="sdbus-c++>=${version}_1"
 short_desc="High-level C++ D-Bus library"
-maintainer="Ackerman <https://github.com/Ackerman-00>"
+maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="LGPL-2.1-or-later"
 homepage="https://github.com/Kistler-Group/sdbus-cpp"
