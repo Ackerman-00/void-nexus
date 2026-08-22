@@ -19,6 +19,7 @@ permissions:
   issues: write
   actions: write
   id-token: write
+  workflows: write
 
 concurrency:
   group: opencode-schedule
@@ -34,6 +35,7 @@ jobs:
       issues: write
       actions: write
       id-token: write
+      workflows: write
     steps:
       - uses: actions/checkout@v7.0.1
         with:
