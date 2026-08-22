@@ -887,8 +887,6 @@ jobs:
         shell: bash
         env:
           RUN_ID: ${{ github.run_id }}
-        if: always()
-        shell: bash
         run: |
           echo "=== External verifier: tools/verify-void.sh ==="
           bash tools/verify-void.sh || {
