@@ -88,6 +88,7 @@ jobs:
           OPENCODE_CONFIG_CONTENT: '{"small_model":"opencode/mimo-v2.5-free"}'
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELAY: ${{ github.event.inputs.relay || 'false' }}
           RUN_ID: ${{ github.run_id }}
           GIT_AUTHOR_NAME: opencode-agent[bot]
@@ -200,12 +201,9 @@ jobs:
             URLs return 200 (`curl -sI`), checksums match (download + sha256sum), and
             look for known build fixes/patches upstream. NEVER trust a version, URL,
             checksum, or fix you have not verified online.
-            - GITHUB API RATE LIMITS: unauthenticated api.github.com requests are
-              limited to 60/hour - you will hit this in a long run. Always send
-              `-H "Authorization: token $GITHUB_TOKEN"` on GitHub API calls, or
-              prefer `gh api <path>` which authenticates automatically and gets
-               5000/hour. If a curl call starts returning 403 rate-limit JSON, switch
-               to `gh api` immediately.
+            - GITHUB API RATE LIMITS (2026 community best practice - docs.github.com/rest/using-the-rest-api/rate-limits-for-the-rest-api + dev.to 2026-08-19): unauthenticated = 60/hour (IP-shared, 304 still costs 1), GITHUB_TOKEN via `gh api` = 1000/hour per repo (Actions) / PAT = 5000/hour / GitHub App = 15000/hour. Modern way to avoid 60/hr:
+              * NEVER use `curl -sI https://github.com/.../releases/tag/...` or `curl https://api.github.com/...` without token — that log line `curl -sI .../releases/tag/v2.22.1 | head -1 → 200` is wasteful and still counts. ALWAYS use `gh api repos/<owner>/<repo>/releases/tags/<tag> --jq .tag_name` or `gh api repos/<owner>/<repo>/releases/latest --jq .tag_name` — it authenticates via GITHUB_TOKEN (env already set), gets 5000/hour, handles `Authorization` + `If-None-Match` (304 free ONLY with token), pagination, and `--cache 3600s`.
+              * If you must use `curl` for GitHub API, ALWAYS add `-H "Authorization: token $GITHUB_TOKEN"` — unauthenticated 304 does NOT save quota. Prefer `gh api --cache 3600s --jq` and check `x-ratelimit-remaining` (meter `gh api rate_limit` or `curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/rate_limit` — meter is free). See Prow `ghproxy` caching + `--github-hourly-tokens` pattern for heavy runs. If you see 403/429, back off 60s, throttle to 1 req/s.
 
             EVIDENCE & COMPLETION GATE (MANDATORY - "NO EVIDENCE, NO
             COMPLETION"). Nothing in this run is "done" because you say so -
