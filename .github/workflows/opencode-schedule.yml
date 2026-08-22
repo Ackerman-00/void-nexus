@@ -874,11 +874,22 @@ jobs:
               relay run before the timeout.
             - Don't get stuck: cap retries at 3 per package and escalate unresolvable
               problems via issues.
+            - VERIFICATION LOOP (MANDATORY - battle-tested 2026: pre-completion checklist + external verifier, agentpatterns.ai 2026-07-19 / contextOS 2026-08-14): Before declaring `status: complete`, you MUST run `bash tools/verify-void.sh` and paste its `----- VERIFICATION REPORT -----` output. It checks numerical completion (19 rows with `deps-verified`/`deps-fixed` — pre-count 19, post-grep must be 19), evidence strings (`xlint` / `xbps-install` / `xbps-src` from 2026 h./i. checks), and install-test + battle test table. Exit 1 = NOT COMPLETE — keep working until exit 0. Do NOT write `status: complete` if verifier fails. Prompt 70-90%, verifier+gate near-100%.
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
               their result, the dependency audit table, the install-test table, and
               what remains. Include the pre-completion gate checklist with
               PASS/FAIL + evidence per item.
+
+      - name: Verify completion (external, battle-tested 2026)
+        if: always()
+        shell: bash
+        run: |
+          echo "=== External verifier: tools/verify-void.sh ==="
+          bash tools/verify-void.sh || {
+            echo "::error::Verification FAILED — relay missing 19-row deps table or evidence. Agent skipped mandatory audit."
+            exit 1
+          }
 
       # ---- topic: teardown-sweep ----
       - name: Upload opencode logs (on failure)
