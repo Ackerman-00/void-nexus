@@ -304,10 +304,20 @@ jobs:
               return m.group(1) or m.group(2) or m.group(3) or m.group(4)
 
           def extract_distfile_urls(content):
-              m = re.search(r'^distfiles\+?=(.+?)(?=\n[A-Za-z#_]|\Z)', content, re.MULTILINE | re.DOTALL)
+              # Stop only at the next template assignment or comment line.
+              # Old lookahead (?=\n[A-Za-z#_] also truncated multi-line distfiles whose
+              # continuation lines start with https:// (e.g. zen-browser), dropping URLs
+              # -> phantom "checksum mismatch" churn. A line like "https://..." never
+              # matches ^name= because ':' breaks [A-Za-z0-9_]* before '='.
+              m = re.search(
+                  r'^distfiles\+?=(.+?)(?=^[A-Za-z_][A-Za-z0-9_]*[-+]?=|^\s*#|\Z)',
+                  content, re.MULTILINE | re.DOTALL
+              )
               if not m:
                   return []
-              return re.findall(r'(https?://[^\s"\'>\\]+)', m.group(1))
+              # [^\s"\'><\\]+ already stops at '>' so ">renamed" suffixes and closing
+              # quotes are never captured.
+              return re.findall(r'(https?://[^\s"\'><\\]+)', m.group(1))
 
           def parse_checksums(content):
               line = extract_shell_var(r'_?checksum', content)
@@ -823,14 +833,27 @@ jobs:
             local BINARY="${PKG}-${VER}_${REV}.x86_64.xbps"
 
             echo "→ ${PKG}: checking ${BINARY}..."
-            if gh release view rolling --repo ${{ github.repository }} --json assets \
-              --jq '.assets[].name' 2>/dev/null | grep -qFx "$BINARY"; then
+            if printf '%s\n' "$ROLLING_ASSETS" | grep -qFx "$BINARY"; then
               echo "  ✓ Binary exists in releases. Skipping."
             else
               echo "  ✗ Binary not found. Will build."
               NEEDS_BUILD="$NEEDS_BUILD $PKG"
             fi
           }
+
+          # Fetch the rolling-release asset list ONCE with retries.
+          ROLLING_ASSETS=""
+          for attempt in 1 2 3; do
+            ROLLING_ASSETS=$(gh release view rolling --repo "${{ github.repository }}" \
+              --json assets --jq '.assets[].name' 2>/dev/null || true)
+            [ -n "$ROLLING_ASSETS" ] && break
+            echo "⚠ gh release view failed (attempt ${attempt}/3), retrying in 10s..."
+            sleep 10
+          done
+          if [ -z "$ROLLING_ASSETS" ]; then
+            echo "⚠ Could not list rolling assets after retries; skipping build trigger this run."
+            exit 0
+          fi
 
           # 1. Check newly-updated packages (from auto-updater)
           for PKG in $UPDATED_PKGS; do

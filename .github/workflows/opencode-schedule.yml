@@ -53,8 +53,16 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.opencode/bin:$PATH"
+          # raw.githubusercontent.com serves CDN-stale content (~5min max-age=300) after a
+          # push, and its CDN ignores cache-busting query params. Read the relay via the
+          # git protocol first, then the GitHub API; never via raw.githubusercontent.com.
           gate_passes() {
-            content="$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Ackerman-00/void-nexus/main/.opencode-relay.md" 2>/dev/null || git show origin/main:.opencode-relay.md 2>/dev/null || true)"
+            git fetch -q origin +refs/heads/main:refs/remotes/origin/main >/dev/null 2>&1 || true
+            local content=""
+            content="$(git show origin/main:.opencode-relay.md 2>/dev/null || true)"
+            if [ -z "$content" ]; then
+              content="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.opencode-relay.md?ref=main" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || true)"
+            fi
             printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete" && printf '%s' "$content" | grep -qi "PACKAGE.*BR\|deps-verified\|dependency audit"
           }
           for model in "opencode/x-preview-f-free" "opencode/muse-spark-1.2-contributor-free" "opencode/mimo-v2.5-free" "opencode/hy3-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
@@ -63,14 +71,13 @@ jobs:
             MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" || exit_code=$?
             if [ "$exit_code" -eq 0 ]; then
               ok=0
-              for attempt in 1 2 3 4 5; do
+              for attempt in $(seq 1 10); do
                 if gate_passes; then
                   ok=1
                   break
                 fi
-                git fetch -q origin +refs/heads/main:refs/remotes/origin/main >/dev/null 2>&1 || true
                 echo "=== gate attempt $attempt: relay not confirmed yet (origin/main=$(git rev-parse --short origin/main 2>/dev/null || echo missing)) - retrying ==="
-                sleep 20
+                sleep 45
               done
               if [ "$ok" -eq 1 ]; then
                 echo "=== $model completed the full job (.opencode-relay.md on main confirms run $RUN_ID complete) ==="
@@ -876,6 +883,7 @@ jobs:
             - Don't get stuck: cap retries at 3 per package and escalate unresolvable
               problems via issues.
             - VERIFICATION LOOP (MANDATORY - battle-tested 2026: pre-completion checklist + external verifier, agentpatterns.ai 2026-07-19 / contextOS 2026-08-14): Before declaring `status: complete`, you MUST run `bash tools/verify-void.sh` and paste its `----- VERIFICATION REPORT -----` output. It checks numerical completion (19 rows with `deps-verified`/`deps-fixed` -- pre-count 19, post-grep must be 19), evidence strings (`xlint` / `xbps-install` / `xbps-src` from 2026 h./i. checks), and install-test + battle test table. Exit 1 = NOT COMPLETE -- keep working until exit 0. Do NOT write `status: complete` if verifier fails. Prompt 70-90%, verifier+gate near-100%.
+            - CLOSE THE FAILURE ISSUE WHEN FIXED (MANDATORY): After `tools/verify-void.sh` passes and you have committed `status: complete` with `run_id: $RUN_ID` to `.opencode-relay.md` on `main`, you MUST close any open issue titled `autonomous run failed:*` — it is the record of the previous failure you just fixed. Run `gh api repos/${GITHUB_REPOSITORY}/issues?state=open --jq '.[] | select(.title | startswith("autonomous run failed")) | .number'` to find it, then for each number run `gh issue close <n> --reason completed --comment "Fixed by $RUN_ID ($GITHUB_SHA): verification passed (sweep + docker 19/19 + xlint) and relay is now status: complete. See https://github.com/${GITHUB_REPOSITORY}/actions/runs/$GITHUB_RUN_ID."` . Every fix gets a closing comment with evidence; never leave a fixed failure issue open.
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
               their result, the dependency audit table, the install-test table, and
@@ -927,6 +935,18 @@ jobs:
           else
             echo "failure issue for today already open - skipping"
           fi
+
+      - name: Close failure issue on success
+        if: needs.opencode.result == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for n in $(gh api "repos/${GITHUB_REPOSITORY}/issues?state=open&per_page=100" --jq '.[] | select(.title | startswith("autonomous run failed")) | .number'); do
+            echo "Closing failure issue #$n (run $GITHUB_RUN_ID succeeded, verification passed)"
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/$n" -f state=closed -f state_reason=completed >/dev/null
+            gh api "repos/${GITHUB_REPOSITORY}/issues/$n/comments" -f body="Closed automatically: the next scheduled run (\`$GITHUB_RUN_ID\`) passed verification (\`tools/verify-void.sh\` exit 0, relay \`run_id: $GITHUB_RUN_ID\` + \`status: complete\`). See https://github.com/${GITHUB_REPOSITORY}/actions/runs/$GITHUB_RUN_ID." >/dev/null || true
+          done
 
       - name: Clean up stray opencode/schedule branches
         shell: bash
