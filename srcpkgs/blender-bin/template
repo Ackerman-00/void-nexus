@@ -1,6 +1,6 @@
 # Template file for 'blender-bin'
 pkgname=blender-bin
-version=5.2.0
+version=5.2.1
 revision=1
 archs="x86_64"
 build_style=fetch
@@ -10,7 +10,7 @@ maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="GPL-3.0-or-later"
 homepage="https://www.blender.org"
 distfiles="https://download.blender.org/release/Blender${version%.*}/blender-${version}-linux-x64.tar.xz"
-checksum="96f6c181a30f4950607839dc84d42a354b250d8a0231b098b59b7bc69c351c48"
+checksum="a31f524fa99a527d3d52b7f5aaa68c34e1a19d5a1c9473f79c5cc610fd5b10e9"
 nostrip=yes
 allow_unknown_shlibs=yes
 python_version=3
