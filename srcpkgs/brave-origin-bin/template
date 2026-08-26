@@ -1,10 +1,11 @@
 # Template file for 'brave-origin-bin'
 pkgname=brave-origin-bin
 version=1.93.138
-revision=1
+revision=2
 archs="x86_64"
 hostmakedepends="unzip"
-depends="alsa-lib gtk+3 libXScrnSaver nss"
+# bash: /opt/brave-origin-bin/brave launcher script has #!/bin/bash shebang
+depends="bash alsa-lib gtk+3 libXScrnSaver nss"
 short_desc="Minimalist browser from the makers of Brave (binary release)"
 maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="MPL-2.0"
