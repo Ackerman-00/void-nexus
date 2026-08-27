@@ -1,7 +1,7 @@
 # Template file for 'brave-browser'
 pkgname=brave-browser
-version=1.93.138
-revision=2
+version=1.94.117
+revision=1
 archs="x86_64"
 hostmakedepends="tar xz"
 # upstream ships /usr/bin/brave-browser-stable + /opt/brave.com/brave/brave-browser
@@ -13,7 +13,7 @@ license="MPL-2.0"
 homepage="https://brave.com"
 
 distfiles="https://github.com/brave/brave-browser/releases/download/v${version}/brave-browser_${version}_amd64.deb"
-checksum="cf18b2d443f067241e13662484c4b9523f13ff089ba1fc27c88f67911586ac9f"
+checksum="640017e993594b4a201518c37e6c80a16a3835b5dc92cc0763b0267e1dec9324"
 
 nostrip=yes
 
