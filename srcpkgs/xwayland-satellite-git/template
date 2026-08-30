@@ -1,9 +1,9 @@
 # Template file for 'xwayland-satellite-git'
 pkgname=xwayland-satellite-git
 _basever=0.8.2
-_commit=3bc915f09dd62bb2651a715114f9d140344bc6c1
-_shortcommit=3bc915f
-_gitdate=20260808203058
+_commit=6d0de1cedde9dc02abb8877d1b04b90a8c22c3d0
+_shortcommit=6d0de1c
+_gitdate=20260829202719
 # NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
 # rewrites _commit/_gitdate and leaves version= to expand at build time.
 # xlint flags "_" chars from variable NAMES here; value itself is clean.
@@ -22,7 +22,7 @@ conflicts="xwayland-satellite>=0"
 provides="xwayland-satellite-${version}_${revision}"
 
 distfiles="https://github.com/Supreeeme/xwayland-satellite/archive/${_commit}.tar.gz"
-checksum="0ae2ac224d1823cd8e74164189b32ecc2176a7efb0a38b42040127c71dd7f3f9"
+checksum="c84a4e8d49828c1702a68e5d1ad316a9588aa0709b50a7fe3a28235f26b954c5"
 
 # Tests need a running Wayland compositor; unavailable in build containers
 make_check="no"
