@@ -1,6 +1,6 @@
 # Template file for 'noctalia-greeter'
 pkgname=noctalia-greeter
-version=1.3.0
+version=1.3.1
 revision=1
 build_style=meson
 hostmakedepends="meson ninja pkg-config wayland-devel"
@@ -15,7 +15,7 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia-greeter"
 changelog="https://github.com/noctalia-dev/noctalia-greeter/releases"
 distfiles="https://github.com/noctalia-dev/noctalia-greeter/archive/refs/tags/v${version}.tar.gz"
-checksum="e5b8c3ff4b8acadf3760c359e3c7cb655ff92b202c0759f95a34e61012ffcdc5"
+checksum="c3a2fce1d15efcf9c87f22b149d03c7dd378f273290c1488190cf8445edbc14d"
 
 post_install() {
 	vlicense LICENSE

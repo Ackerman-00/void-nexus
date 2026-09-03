@@ -1,6 +1,6 @@
 # Template file for 'helium-browser-bin'
 pkgname=helium-browser-bin
-version=0.16.3.1
+version=0.16.4.1
 revision=1
 archs="x86_64"
 depends="gtk+3 nss alsa-lib xdg-utils libXScrnSaver cups libgcrypt
@@ -13,7 +13,7 @@ homepage="https://github.com/imputnet/helium-linux"
 nostrip=yes
 
 distfiles="https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz"
-checksum="634edfba4d02eab5048f3e8f1c644c2437c12fb4ccdb19608172ad1b8956cbeb"
+checksum="683edba74ab8f6ae0ac7272a3c27f9ef945690629e1525370887b17815cedcbe"
 
 do_install() {
 	vmkdir opt/helium
