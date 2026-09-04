@@ -1,9 +1,9 @@
 # Template file for 'noctalia'
 pkgname=noctalia
 _basever=5.0.1
-_commit=f6f25a94daa07c78b1dd45a8c4d9c068129af61b
-_shortcommit=f6f25a9
-_gitdate=20260904030735
+_commit=546ec1cd6f6ca6c93e2995043a7b89f43ff14ceb
+_shortcommit=546ec1c
+_gitdate=20260904172119
 # NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
 # rewrites _commit/_gitdate and leaves version= to expand at build time.
 # xlint flags "_" chars from variable NAMES here; value itself is clean.
@@ -27,7 +27,7 @@ license="MIT"
 homepage="https://github.com/noctalia-dev/noctalia"
 
 distfiles="https://github.com/noctalia-dev/noctalia/archive/${_commit}.tar.gz"
-checksum="8c5b3a8953780dc89518e00eba8db9eef5a7e8b69994efbc8b731f17c59839cd"
+checksum="5676c2d57feeef92d9f4661ee1f6932b2657fe1f9fdd30c3e0c297bdd032ecb2"
 
 replaces="noctalia-v5>=0 noctalia-beta>=0"
 
