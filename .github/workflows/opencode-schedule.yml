@@ -75,10 +75,54 @@ jobs:
           git config --global user.email "41898282+opencode-agent[bot]@users.noreply.github.com"
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
-      - name: Install opencode (latest)
+      - name: Install opencode (latest, resilient)
         if: steps.gate.outputs.run == 'true'
         shell: bash
-        run: curl -fsSL https://opencode.ai/install | bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          mkdir -p "$HOME/.opencode/bin"
+          export PATH="$HOME/.opencode/bin:$PATH"
+          # 1) Official installer, retried: its internal version fetch can flap
+          #    or hit the shared-runner-IP 60/hr GitHub quota. curl retries +
+          #    4 outer attempts ride out transients.
+          for i in 1 2 3 4; do
+            if curl -fsSL --retry 3 --retry-delay 10 --retry-all-errors https://opencode.ai/install | bash; then
+              break
+            fi
+            echo "opencode install attempt $i/4 failed - sleeping 30s"
+            sleep 30
+          done
+          # 2) npm fallback (documented install method at opencode.ai). Link the
+          #    binary into $HOME/.opencode/bin so later steps need no PATH change.
+          if ! command -v opencode >/dev/null 2>&1; then
+            echo "official installer failed - trying npm"
+            npm install -g opencode-ai || sudo npm install -g opencode-ai || true
+            if command -v opencode >/dev/null 2>&1; then
+              ln -sf "$(command -v opencode)" "$HOME/.opencode/bin/opencode"
+            fi
+          fi
+          # 3) Authenticated GitHub-release fallback: GITHUB_TOKEN gets 1000/hr
+          #    in Actions, immune to the shared-IP quota that breaks the script's
+          #    version fetch. Asset name discovered live via API, never hardcoded.
+          if ! command -v opencode >/dev/null 2>&1; then
+            echo "npm fallback failed - trying authenticated gh release download"
+            asset="$(gh release view --repo sst/opencode --json assets --jq '.assets[].name' | grep -E '^opencode-linux-(x64|amd64).*\.(tar\.gz|tgz|zip)$' | head -n 1)"
+            if [ -n "$asset" ]; then
+              echo "downloading asset: $asset"
+              mkdir -p /tmp/opencode-dl
+              gh release download --repo sst/opencode --pattern "$asset" --dir /tmp/opencode-dl --clobber
+              case "$asset" in
+                *.zip) unzip -o /tmp/opencode-dl/"$asset" -d "$HOME/.opencode/bin" ;;
+                *) tar -xzf /tmp/opencode-dl/"$asset" -C "$HOME/.opencode/bin" ;;
+              esac
+            else
+              echo "no linux x64 asset found in latest sst/opencode release"
+            fi
+          fi
+          # Hard gate: every later step assumes `opencode` exists.
+          command -v opencode && opencode --version
 
       - name: Run opencode
         if: steps.gate.outputs.run == 'true'
@@ -97,10 +141,29 @@ jobs:
             fi
             printf '%s' "$content" | grep -qx "run_id: $RUN_ID" && printf '%s' "$content" | grep -qi "status: complete" && printf '%s' "$content" | grep -qi "PACKAGE.*BR\|deps-verified\|dependency audit"
           }
+          # Start jitter: chained runs fire right after the updater at sharp cron
+          # boundaries - a random 0-3 min delay desyncs this run from the
+          # thundering herd that knocks free-model gateways over
+          # (AI_APICallError: socket closed). Cheap insurance inside a 355-min job.
+          sleep $((RANDOM % 180))
           for model in "opencode/muse-spark-1.3-contributor-free" "opencode/mimo-v2.5-free" "opencode/ling-3.0-flash-fin-free" "opencode/nemotron-3-ultra-free" "opencode/nemotron-3.5-lightning-free" "opencode/big-pickle"; do
             echo "=== opencode run attempt with $model ==="
             exit_code=0
-            MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT" || exit_code=$?
+            # Per-model retries with backoff: free-tier gateways drop sockets under
+            # load. A flap is NOT a dead model - retry the SAME model before
+            # falling through. Bounded at 3 tries with full jitter.
+            for attempt_n in 1 2 3; do
+              if MODEL="$model" opencode run -m "$model" --dangerously-skip-permissions --agent=build --print-logs "$PROMPT"; then
+                exit_code=0
+                break
+              fi
+              exit_code=$?
+              if [ "$attempt_n" -lt 3 ]; then
+                delay=$((RANDOM % (120 * attempt_n)))
+                echo "=== $model try $attempt_n/3 failed (exit $exit_code) - backing off ${delay}s ==="
+                sleep "$delay"
+              fi
+            done
             if [ "$exit_code" -eq 0 ]; then
               ok=0
               for attempt in $(seq 1 10); do
@@ -119,7 +182,8 @@ jobs:
             else
               echo "=== attempt with $model failed (exit $exit_code) - trying next ==="
             fi
-            sleep 15
+            # Long inter-model sleep: hammering a loaded gateway faster makes it worse.
+            sleep 60
           done
           exit 1
         env:
@@ -299,10 +363,10 @@ jobs:
                  SHA / tag / version you are about to push, STOP: do not bump,
                  do not touch the template, do not push. The package is already
                  current.
-              b. CHECK THE ROLLING RELEASE FOR WHAT WAS ALREADY BUILT. The
-                 "rolling" GitHub Release is authoritative for "what got out":
-                 GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling
-                 (or `gh release view rolling --json assets --jq '.assets[].name'`).
+               b. CHECK THE ROLLING RELEASE FOR WHAT WAS ALREADY BUILT. The
+                  "rolling" GitHub Release is authoritative for "what got out":
+                  `gh api repos/Ackerman-00/void-nexus/releases/tags/rolling` (authenticated)
+                  (or `gh release view rolling --json assets --jq '.assets[].name'`).
                  If the asset `<pkg>-<ver>_<rev>.x86_64.xbps` already exists, the
                  package is built AND published - do NOT trigger another rebuild
                  by pushing, unless the build actually failed or the version
@@ -336,7 +400,10 @@ jobs:
                  distfiles, checksum, homepage, build_style,
                  hostmakedepends/makedepends/depends, do_extract/do_install,
                  post_install) and its commit history. Download the distfiles
-                 source into the working tree and EXTRACT it. Do not reason
+                 source into /tmp (NEVER the repo working tree - see CLEAN-TREE
+                 DISCIPLINE), preferably inside the clean Void container from
+                 the INSTALL-VERIFICATION SWEEP so `ldd`/shlib findings match
+                 the target distro, and EXTRACT it. Do not reason
                  about dependencies from memory - inspect the actual upstream
                  files:
                  - Rust: Cargo.toml / Cargo.lock (+ vendor dir if present)
@@ -389,10 +456,18 @@ jobs:
                  report and move on. If it is a Rust crate already vendored,
                  it needs NO depends entry, but the crate list must match
                  Cargo.lock - regenerate vendor tarballs when the lock changes.
-              e. ALSO AUDIT RUNTIME depends (shared libs via ldd of the built
-                 binary, desktop-file helpers, themes, fonts, portal services)
-                 and DROP dead/unneeded deps (rot). Keep the template minimal
-                 and correct.
+               e. ALSO AUDIT RUNTIME depends (shared libs via ldd of the built
+                  binary, desktop-file helpers, themes, fonts, portal services)
+                  and DROP dead/unneeded deps (rot). Keep the template minimal
+                  and correct. Cross-check the built .xbps directly:
+                  `xbps-query --repository=<local> -R <pkg>` and
+                  `xbps-query -R --property=run_depends <pkg>` must agree with
+                  the template's depends; any manual depends absent from the
+                  binary's own metadata must be justified in the relay.
+                  License files and upstream test suites (wired via
+                  checkdepends and run under XBPS_CHECK_PKGS) are artifacts
+                  too - a missing license or an unrunnable test suite is the
+                  same class of bug.
               f. APPLY AND VERIFY: add the deps (following template
                  conventions), commit, push (triggers a build), and verify the
                  build: an added dep that does not resolve is worse than none.
@@ -405,7 +480,7 @@ jobs:
                  finished. State confidence (high/medium/low) for anything
                  not fully verified, and why.
               h. 2026 AUTOMATED EXCELLENCE CHECKS (MANDATORY - August 2026 Void - excellent .spec aka excellent `srcpkgs/*/template`):
-                 For EVERY template you touched (and for at least 5-sample of the full 19), run the modern Void toolchain locally and paste output. This is how an "excellent template" (Void's equivalent of an excellent .spec) is proven:
+                 For EVERY template you touched (and for at least a 5-sample of the full STEP A inventory - derive the count via `ls -d srcpkgs/*/`, currently 27, NEVER hardcode the number), run the modern Void toolchain locally and paste output. This is how an "excellent template" (Void's equivalent of an excellent .spec) is proven:
                  - `xlint template` (xtools) -- must be clean; fix all E:/W: (mandatory vars: pkgname, version without dash, revision, short_desc ≤72, homepage, license SPDX, maintainer valid email)
                  - `xgensum -i` or `sha256sum` of distfiles vs `checksum` -- must match; `distfiles` URLs must be https, use `${GNU_SITE}`/`${GITHUB_SITE}` macros where canonical, and revision must be 1 on version bump, +1 only on binary change (see Manual.md `revision`)
                  - `hostmakedepends` vs `makedepends` vs `depends` vs `checkdepends` correctly distinguished (host = build-host tools, makedepends = compile libs, depends = runtime manual, checkdepends = test deps for `XBPS_CHECK_PKGS=yes` / `-Q`); runtime ELF `NEEDED` is auto-detected by xbps-src -- do NOT list auto-detected `depends` via `depends`, only manual ones; verify with `./xbps-src show-files <pkg>` and `readelf -d`
@@ -414,6 +489,49 @@ jobs:
                  - `./xbps-src update-check <pkg>` -- version freshness against upstream; if template has `update` file, verify its logic
                  - `repository` variable, `restricted`, `only_for_archs="x86_64"` etc. must be justified; `subpackages` must list correct `_package()` functions
                  Log each tool's 1-line result per template; any failure = deps-broken. Tools are available via `tools/teardown-sweep.py:parse_void` + `check_rpm_dependencies` (static) -- you may call it, but YOU do the reasoning. Teardown is done BY YOU, the agent, not by a separate pass-anyway script; sweep is auxiliary evidence, not the verdict.
+
+             DEPENDENCY CORRECTNESS PROOF (MANDATORY, EVERY RUN - "deps-verified"
+             is a PROOF, not an eyeball. Upstream dependencies MUST be all correct:
+             complete, minimal, floored, and provenance-cited. Earn every audit row:)
+               a. PROVENANCE PER DEP: every hostmakedepends/makedepends/depends/
+                  checkdepends entry must cite its source - the exact upstream
+                  file and symbol that demands it (meson.build dependency('x'),
+                  Cargo.toml [dependencies] entry, CMake find_package, go.mod
+                  require, a subproject meson.build, a .desktop Exec helper),
+                  or `distro-integration` with a one-line justification
+                  (void build-style helpers, implicit header-only includes).
+                  A dep with no citable source = UNPROVEN = a bug until cited
+                  or dropped.
+               b. MINIMUM-VERSION RECONCILIATION: every upstream-declared floor
+                  (meson version: '>=N', Cargo "x = "N"", CMake minimum) MUST
+                  be reflected in the template (versioned depends or a pinned
+                  distfile known to satisfy it). A floor we ignore rots silently
+                  when Void lags; a constraint we ADD that upstream never
+                  declared must be justified (distro reality) or dropped.
+                  NEVER transform the version string itself: read the tag,
+                  package it verbatim (dashes only where xbps ordering demands).
+               c. REVERSE DIRECTION: every upstream-declared dep must resolve to
+                  exactly one of: a template hostmakedepends/makedepends/depends
+                  entry, an explicit vendored/bundled note (crate list
+                  byte-equal to Cargo.lock - regenerate vendor tarballs on lock
+                  change), a named distro-provided transitive, or
+                  `optional-disabled` with the exact flag that disables it.
+                  Nothing unaccounted, nothing twice: duplicate capability
+                  entries are rot - keep one canonical form. Remember runtime
+                  ELF NEEDED is auto-detected: do NOT hand-list auto-detected
+                  shlib depends (verify with `readelf -d` + `./xbps-src
+                  show-files`), only manual ones.
+               d. PROVIDER IDENTITY for ambiguous mappings: prove with
+                  `xbps-query -Rs <name>` / `xbps-query -R --property=provides`
+                  inside the container (or OBS-style _builddepinfo equivalent:
+                  the void-packages template for the same upstream) and record
+                  the winning package. Never guess an owner, never copy a
+                  depends name from another distro unverified.
+               e. OUTPUT CONTRACT: every audit-table row carries `unproven: 0`,
+                  or names each unproven/unmapped dep explicitly as
+                  blocked-(which dep + why). A row claiming deps-verified with
+                  unproven > 0 fails the gate; the external verifier counts
+                  `unproven:` tokens and requires one per inventory package.
               i. ALL CONTENT + REPO ITSELF BATTLE-TESTED IN DOCKER (MANDATORY - you have full repo access, use it):
                  List every file: `ls -R` / `find . -type f | sort` / `git ls-files | sort`. For each category, verify:
                  - Every `srcpkgs/*/template`: `bash -n`, `xlint` (clean), mandatory vars (pkgname/version/revision/short_desc/homepage/license SPDX/maintainer valid email), `xgensum` vs `checksum`, `hostmakedepends`/`makedepends`/`depends`/`checkdepends` split (Manual.md Aug 2026; runtime ELF NEEDED auto-detected -- do NOT list auto deps via `depends`), `build_style` + required `hostmakedepends`; download each `distfiles` (`curl -L --max-time 30 -o /tmp` + `sha256sum`) and ensure checksum matches; if `update` file exists, `bash -n` it and check `xbps-src update-check` logic
@@ -421,6 +539,64 @@ jobs:
                  - Every `.github/workflows/*.yml`: `python3 -c "import yaml; yaml.safe_load(open(f))"` must be valid; check cron not overlapping, permissions minimal, `actions/checkout` SHA-pinned as in `update-engine.yml`; if workflow bash is broken (unclosed quote, bad `xbps-src` invocation), fix it -- you have `workflows: write`
                  - `signing-key.plist`, `README.md`, `AGENTS.md`: README Quick Setup must exactly match the Docker battle-tested path (`10-nexus.conf` + `curl -L -o /var/db/xbps/keys/.../signing-key.plist` + `xbps-install -S` + trust). If README lies, fix README
                  - Inside clean `ghcr.io/void-linux/void-glibc-full:latest`: prove the repo is self-hostable -- `git clone <this-repo> /tmp/test && cd /tmp/test && ./xbps-src -n pkg <sample>` dry-run or at least `bash -n srcpkgs/*/template` + `xlint` must succeed without `XBPS_CHECK_PKGS` errors; this proves the repo itself builds in Docker, not just that prebuilt .xbps install. Log `ls -R` + each check's 1-line result; any file not checked = gap (name it).
+
+             UPSTREAM INTELLIGENCE SWEEP (MANDATORY - be the upstream's own
+             release engineer, not a version-string copier. The checklists
+             below are the FLOOR: show initiative - if you spot an improvement
+             or gap no checklist covers, pursue it). Version numbers say THAT
+             upstream moved; only upstream's own words say WHAT changed. A
+             version bump WITHOUT this reading is an incomplete update. For
+             every package whose upstream changed since its last audit (and
+             for all P0 packages every run):
+               a. READ the delta: release notes/changelog entries, commit titles
+                  since the pinned commit, and any migration/upgrade notes.
+                  Hunt explicitly for: added/removed dependencies (including
+                  TRANSITIVE - re-read Cargo.lock / pnpm-lock.yaml / go.sum,
+                  not just manifests), build-system changes (meson options
+                  renamed, cmake minimum raised, new cargo --features),
+                  new/renamed/removed install artifacts, CVE or security
+                  mentions, deprecated APIs or flags, and changed asset layouts
+                  (a release shipping only unexpected formats = HOLD or rework,
+                  never a blind bump).
+               b. READ upstream's own packaging hints: packaging/ and dist/
+                  dirs, CI workflows, install docs, and the void-packages
+                  template for the same upstream where one exists. If upstream
+                  ships a unit file, completions, appstream metadata, or build
+                  flags we lack, that is a packaging gap: close it or justify
+                  it in the relay.
+               c. ASK what is missing: diff our installed file set against
+                  upstream's documented feature matrix (optional backends,
+                  plugins, integrations). A shippable upstream feature we
+                  silently drop - or a default we set against upstream
+                  guidance - is a bug.
+               d. CHECK upstream health signals: repo archived or renamed?
+                  default branch moved? release cadence collapsed or assets
+                  moved hosts? Any yes = early warning in the relay + verify
+                  the distfiles strategy still holds (new host, new asset
+                  names, new tag scheme).
+               e. OUTPUT CONTRACT (one line per package; no line = not verified):
+                  `upstream-delta: <pkg> <old>-><new> | deps+/-: <list> |
+                  artifacts+/-: <list> | health: ok/flag-<what> |
+                  notes: <a few words>`.
+             FLEET BATTLE-TEST ROTATION (MANDATORY - every package earns a full
+             docker rebuild on a schedule, not just touched ones; extends the
+             (g) DOCKER BATTLE TEST). Touched and changed packages get immediate
+             rebuild + install + smoke in a fresh void-glibc-full container.
+             ON TOP of that, every run rebuilds the next oldest slice of the
+             fleet ledger from the CURRENT templates (fresh container per
+             package, up to 4 parallel `docker run` jobs) and install-tests
+             the result. A failure here enters the priority-1 loop exactly
+             like a failed build. The full fleet must rotate through within 4
+             runs; record slice + next-start in the relay. Fan out with
+             parallel subagents (one per batch); serialize only pushes.
+             Time-box the SLICE, never the rigor: fewer packages fully tested
+             beats many glanced at.
+             IMPROVE THE MACHINE (MANDATORY). If the same failure class hits
+             twice (broken updater pattern, recurring dep rename, repeated HOLD
+             justification, repeated manual fix), fix the GENERATOR not the
+             instance: patch check-updates.yml / the check / the documented
+             rule so the third run cannot trip on it. Record every pattern-fix
+             in the relay.
 
             KNOWN PACKAGE-SPECIFIC NOTES - THE RIGOR BELOW APPLIES TO EVERY
             PACKAGE, NOT JUST THE EXAMPLE NAMED. For EVERY package, establish
@@ -547,20 +723,87 @@ jobs:
                   Pure library or headless-only packages still get the install
                   test; only the runtime smoke test may be skipped, with the
                   reason recorded.
-              f. MANDATORY DELIVERABLE - install-test table in your final
-                 summary, one row per package tested:
-                 | package | build | xbps install test | smoke test | status |
-                 status in: installable / fixed / broken-(dep) /
-                 blocked-(reason). Any package you changed but did not
-                 install-test is an unfinished package.
+               f. MANDATORY DELIVERABLE - install-test table in your final
+                  summary, one row per package tested:
+                  | package | image | build | xbps install test | smoke test | status |
+                  status in: installable / fixed / broken-(dep) /
+                  blocked-(reason). Record the exact image digest per row
+                  (`docker images --digests ghcr.io/void-linux/void-glibc-full`
+                  - :latest floats, the digest is the proof). Any package you
+                  changed but did not install-test is an unfinished package.
               g. DOCKER BATTLE TEST (MANDATORY - every binary + repo path must work in a clean void-glibc-full container, not just build). This is not optional:
-                 1. FOR EVERY .xbps in rolling (all 19): download + `xbps-rindex -f -a` + `docker run ghcr.io/void-linux/void-glibc-full:latest xbps-install --repository=/repo <pkg>` as above -- at least 5 diverse per run, oldest-uncovered first, plus every touched. No manual `tar` fallback is a battle test.
+                 1. FOR EVERY .xbps in rolling (all of them - derive the count via `ls -d srcpkgs/*/`, never hardcode): download + `xbps-rindex -f -a` + `docker run ghcr.io/void-linux/void-glibc-full:latest xbps-install --repository=/repo <pkg>` as above -- at least 5 diverse per run, oldest-uncovered first, plus every touched, PLUS fleet rebuild rotation (rebuild the oldest slice from CURRENT templates in fresh containers, up to 4 parallel, full fleet within 4 runs; failures enter the priority-1 loop). No manual `tar` fallback is a battle test.
                  2. BATTLE-TEST THE REPO ITSELF: inside the same clean container, clone the repo, run `xlint srcpkgs/*/template` (must be clean), `./xbps-src -n pkg <touched>` dry-run, and verify `README.md` Quick Setup (`10-nexus.conf` + `xbps-install -S` + trust key) actually works with the downloaded repo. If `xbps-src` or instructions are broken, fix the template/README and re-test. Think like a new Void user who just added the repo -- if they would hit it, you must hit it first.
 
             Then work autonomously, in this priority order:
 
+            0. ALWAYS-PRIORITY = ALL PACKAGES (no exceptions). EVERY
+               package under srcpkgs/ is priority: check EVERY package
+               for upstream changes EVERY run (git ls-remote HEAD for
+               -git packages, releases/tags for versioned ones, artifact
+               internals for prebuilt binaries - real change only, per
+               NO-CHURN). The eight named below simply go FIRST and get
+               the DEEPEST treatment each run because they move fast and
+               break silently - niri-git, xwayland-satellite-git, noctalia,
+               noctalia-greeter, zen-browser, helium-browser-bin,
+               heroic-games-launcher, quickshell-git.
+               The delta/carry-over logic does NOT apply to the eight:
+               a. EVERY run, FIRST: check each against upstream HEAD
+                  (`git ls-remote` default branch + `gh api
+                  releases/latest` where applicable, authenticated and
+                  token-safe). If upstream moved, refresh the pinned
+                  commit/version + distfiles/checksum + revision
+                  immediately (NO-CHURN rules still apply: revision back
+                  to 1 on a real version change, only push on real change).
+               b. EVERY run, regardless of whether they changed: FULL
+                  upstream dependency re-derivation from scratch
+                  (re-tear per PACKAGE DEPENDENCY DEEP AUDIT - template vs
+                  upstream build files, no reuse of prior audits),
+                  the 2026 excellence toolchain
+                  (`xlint`, `xbps-src -n pkg`, distfiles checksum match),
+                  AND a fresh void-glibc-full container install test +
+                  smoke test. Record per-package PASS/FAIL with command
+                  output in the relay; a failure here outranks all other
+                  non-build-failure work.
+               c. Never mark these eight done based on a previous run's
+                  result. "Unchanged since last run" is not verification
+                  for these packages - re-verify every time.
+               d. SIBLING CROSS-REFERENCE (MANDATORY for all eight, every
+                  run). For each priority package, check the void-linux/
+                  void-packages official template (the a0 reference) AND
+                  the fedora-nexus / opensuse-nexus counterpart packaging
+                  (same upstream stack - concrete wins already proven
+                  there that must NOT regress here, e.g. helium's bundled
+                  lib exclusion, fuller noctalia depends, rootapp AppImage
+                  unpack method where fedora-nexus is source of truth).
+                  If a sibling is newer on a REAL upstream change, sync UP
+                  (real change only, per NO-CHURN). NEVER regress our fixes
+                  to "match" a sibling - siblings are reference for spotting
+                  OUR gaps, not a downgrade target.
+                  TOKEN-SAFE FETCH: `gh api ... --cache 3600s` for GitHub
+                  (GITHUB_TOKEN is in env); shallow-clone void-packages to
+                  /tmp only (never into the repo tree). Record per package
+                  one line: `sibling-ref: <source>@<shortsha/ver> |
+                  ours: <ver>_<rev> | delta: ahead/behind/in-sync |
+                  kept-improvements: <list>`.
+               e. UNIVERSAL UPSTREAM CHECK (all remaining packages, EVERY
+                  run - priority 2 is the full implementation, this is the
+                  non-skippable minimum): for EVERY non-eight package,
+                  run the same HEAD/release/artifact check as (a) plus a
+                  sibling-reference check where one exists (void-packages
+                  official, fedora-nexus/opensuse-nexus counterparts,
+                  repology/AUR as independent trackers - token-safe fetch
+                  per (d), never unauthenticated). If upstream moved: full
+                  re-tear + excellence toolchain + install test exactly
+                  like (b), then build per the THEN section. If unchanged:
+                  record one line `upstream: <ref>@<sha/ver> == template,
+                  no action` with the command output - "unchanged" is a
+                  VERIFIED claim (ls-remote/tag/200-check output pasted),
+                  never an assumption. No package may be carried over
+                  unverified.
+
             1. FIX FAILED BUILDS (highest priority).
-               GET https://api.github.com/repos/Ackerman-00/void-nexus/actions/runs and
+               Query recent runs via `gh api repos/Ackerman-00/void-nexus/actions/runs` (authenticated, token-safe) and
                find recent FAILED "Build Nexus XBPS" or "Check and Update Package
                Versions" runs. For each, identify the exact failing package and step
                (`gh run view <id> --log-failed` or the logs API). Diagnose the root
@@ -600,11 +843,14 @@ jobs:
                  and the AUR package (e.g. aur.archlinux.org/packages/rootapp-bin).
                  This applies to EVERY binary-distributed package, not just
                  rootapp - never trust a filename or homepage string alone.
-               - For GitHub projects, use the API and reconcile results:
-                     curl -s https://api.github.com/repos/<owner>/<repo>/releases/latest
-                     curl -s https://api.github.com/repos/<owner>/<repo>/tags
-                 Web-search too (incl. repology); if API and search disagree, dig until
-                 certain.
+                - For GitHub projects, use the API via `gh api` (authenticated,
+                  token-safe per GITHUB API RATE LIMITS above - NEVER bare
+                  `curl https://api.github.com`, which burns the 60/hr
+                  unauthenticated quota) and reconcile results:
+                      gh api repos/<owner>/<repo>/releases/latest --cache 3600s --jq .tag_name
+                      gh api repos/<owner>/<repo>/tags --cache 3600s --jq '.[0].name'
+                  Web-search too (incl. repology); if API and search disagree, dig until
+                  certain.
                - For -git/-snapshot packages, compare the pinned commit against the
                  current upstream default-branch HEAD; if upstream has new commits,
                  refresh commit + version together.
@@ -644,9 +890,26 @@ jobs:
                checksum in the template. Update the checksum whenever the version
                changes.
 
-               STEP F - SANITY-CHECK DEPENDENCIES. Web-search the latest release notes
-               for changed hostmakedepends/makedepends/depends and update the template
-               if needed. Update the README.md version column too.
+                STEP F - SANITY-CHECK DEPENDENCIES. Web-search the latest release notes
+                for changed hostmakedepends/makedepends/depends and update the template
+                if needed. Update the README.md version column too.
+
+                STEP G - CVE TRIAGE (MANDATORY, cheap - OSV.dev needs no auth).
+                Batch-query every STEP A package's upstream name+version against
+                `https://api.osv.dev/v1/querybatch` (one POST, up to 1000
+                queries). Map each package to its REAL upstream ecosystem
+                (PyPI / crates.io / npm / Go / etc. where one exists; -git
+                snapshots and ecosystem-less binaries get `cve: n/a-(reason)` -
+                never a fabricated mapping). Cross-check every HIGH/CRITICAL
+                hit against a second source, the GitHub Advisory Database
+                (`gh api advisories -f ecosystem=<eco> -f affects=<pkg>
+                --cache 3600s`, authenticated) - OSV alone is not enough per
+                the 2026 multi-source consensus; confirmed-by-both = patch now,
+                singleton = verify before bump. Any HIGH/CRITICAL CVE with a
+                fixed version available = a bug: bump or patch it exactly like
+                a STALE package. Record per package `cve: clean/<CVE-ids>/
+                n/a-(reason)` alongside the version table (extend the row, do
+                not drop the 100% coverage rule).
 
                FINAL OUTPUT REQUIREMENT: your final summary MUST include a full
                verification table with one row per package:
@@ -662,15 +925,14 @@ jobs:
                push it (which triggers a build). Do not churn: only add or bump what is
                genuinely new or outdated.
 
-            3. REPAIR RELEASE CONSISTENCY.
-               GET https://api.github.com/repos/Ackerman-00/void-nexus/releases/tags/rolling,
+             3. REPAIR RELEASE CONSISTENCY.
+                List the rolling assets via `gh api repos/Ackerman-00/void-nexus/releases/tags/rolling` (authenticated),
                list the xbps assets, and compare against every template's current
                version/revision. Rebuild any package whose expected binary is missing
                or stale.
 
-            4. REVIEW ALL OPEN ISSUES like a human maintainer - AND REPLY.
-               GET https://api.github.com/repos/Ackerman-00/void-nexus/issues (state=open,
-               no pull requests). EVERY open issue MUST get a reply - silence
+             4. REVIEW ALL OPEN ISSUES like a human maintainer - AND REPLY.
+                List open issues via `gh api repos/Ackerman-00/void-nexus/issues --paginate -f state=open` (authenticated; filter out pull requests client-side). EVERY open issue MUST get a reply - silence
                is not an option. For each issue:
                - Read it fully, reproduce or diagnose it, and web-search for context.
                - DETERMINE WHO IS RIGHT. If the issue is a genuine packaging bug
@@ -698,8 +960,8 @@ jobs:
                - Reply on issues WITH `gh issue comment <n>` even before any fix,
                  so the reporter always gets a response from this run.
 
-            5. REVIEW ALL OPEN PULL REQUESTS like a human maintainer - AND DECIDE.
-               GET https://api.github.com/repos/Ackerman-00/void-nexus/pulls (state=open).
+             5. REVIEW ALL OPEN PULL REQUESTS like a human maintainer - AND DECIDE.
+                List open PRs via `gh api repos/Ackerman-00/void-nexus/pulls -f state=open` (authenticated).
                For each PR: you are the maintainer - review it, test it, and
                merge / request changes / close it. Do NOT leave it hanging for a
                human. EVERY PR gets a comment with your verdict and reasoning.
@@ -747,8 +1009,7 @@ jobs:
                editing docs, and keep your edits accurate and minimal.
 
             7. VALIDATE BEFORE COMMITTING.
-               Run `bash -n` on every template you touch and on any workflow scripts
-               you change. Verify every distfiles URL is reachable. Never commit an
+               Run `bash -n` on ALL templates and ALL workflow scripts in the repo every run (cheap - catches rot before check-updates.yml or the battle test trips on it; the (i) ALL-CONTENT check already demands this coverage), plus full validation for every file you touch. Verify every distfiles URL is reachable. Never commit an
                untested change.
 
             THEN, for each package you fixed (outside of a merged PR):
@@ -772,7 +1033,7 @@ jobs:
                  <pkg>" with the diagnosis and logs. Then move on.
 
             RELAY / LONG-RUN HANDOFF (MANDATORY): a run may last up to ~5.5 hours
-            (timeout-minutes: 330). NEVER let a run die with work unfinished or
+            (timeout-minutes: 355). NEVER let a run die with work unfinished or
             unrecorded - hand it over to the next runner.
               a. PICKUP ON START: if the relay state file .opencode-relay.md exists
                  on main with status "unfinished", or this run was started with the
@@ -860,7 +1121,12 @@ jobs:
               web-search and verify first, then validate before committing.
             - NEVER end the run after "diagnostics only". A run whose final
               output is only "checked versions, everything is up to date"
-              has FAILED to do its job. You are done ONLY when the
+              WITHOUT the mandatory version table, dependency audit table,
+              install-test table, and evidence in .opencode-relay.md
+              has FAILED to do its job. (Conversely: a fully-verified
+              zero-change run with all tables green and relay pushed IS
+              complete - do NOT manufacture churn pushes to look productive;
+              NO-CHURN still applies.) You are done ONLY when the
               pre-completion gate above is completed AND .opencode-relay.md
               on main shows `status: complete` with `run_id: $RUN_ID`.
               If the repo has ANY failed build, ANY open issue or PR, or
@@ -914,8 +1180,8 @@ jobs:
               relay run before the timeout.
             - Don't get stuck: cap retries at 3 per package and escalate unresolvable
               problems via issues.
-            - VERIFICATION LOOP (MANDATORY - battle-tested 2026: pre-completion checklist + external verifier, agentpatterns.ai 2026-07-19 / contextOS 2026-08-14): Before declaring `status: complete`, you MUST run `bash tools/verify-void.sh` and paste its `----- VERIFICATION REPORT -----` output. It checks numerical completion (19 rows with `deps-verified`/`deps-fixed` -- pre-count 19, post-grep must be 19), evidence strings (`xlint` / `xbps-install` / `xbps-src` from 2026 h./i. checks), and install-test + battle test table. Exit 1 = NOT COMPLETE -- keep working until exit 0. Do NOT write `status: complete` if verifier fails. Prompt 70-90%, verifier+gate near-100%.
-            - CLOSE THE FAILURE ISSUE WHEN FIXED (MANDATORY): After `tools/verify-void.sh` passes and you have committed `status: complete` with `run_id: $RUN_ID` to `.opencode-relay.md` on `main`, you MUST close any open issue titled `autonomous run failed:*` — it is the record of the previous failure you just fixed. Run `gh api repos/${GITHUB_REPOSITORY}/issues?state=open --jq '.[] | select(.title | startswith("autonomous run failed")) | .number'` to find it, then for each number run `gh issue close <n> --reason completed --comment "Fixed by $RUN_ID ($GITHUB_SHA): verification passed (sweep + docker 19/19 + xlint) and relay is now status: complete. See https://github.com/${GITHUB_REPOSITORY}/actions/runs/$GITHUB_RUN_ID."` . Every fix gets a closing comment with evidence; never leave a fixed failure issue open.
+            - VERIFICATION LOOP (MANDATORY - battle-tested 2026: pre-completion checklist + external verifier, agentpatterns.ai 2026-07-19 / contextOS 2026-08-14): Before declaring `status: complete`, you MUST run `bash tools/verify-void.sh` and paste its `----- VERIFICATION REPORT -----` output. It checks numerical completion (one row per STEP A inventory package with `deps-verified`/`deps-fixed` -- derive the expected count from `ls -d srcpkgs/*/`, post-grep count must reach it, not 0), evidence strings (`xlint` / `xbps-install` / `xbps-src` from 2026 h./i. checks), and install-test + battle test table. Exit 1 = NOT COMPLETE -- keep working until exit 0. Do NOT write `status: complete` if verifier fails. Prompt 70-90%, verifier+gate near-100%.
+            - CLOSE THE FAILURE ISSUE WHEN FIXED (MANDATORY): After `tools/verify-void.sh` passes and you have committed `status: complete` with `run_id: $RUN_ID` to `.opencode-relay.md` on `main`, you MUST close any open issue titled `autonomous run failed:*` — it is the record of the previous failure you just fixed. Run `gh api repos/${GITHUB_REPOSITORY}/issues?state=open --jq '.[] | select(.title | startswith("autonomous run failed")) | .number'` to find it, then for each number run `gh issue close <n> --reason completed --comment "Fixed by $RUN_ID ($GITHUB_SHA): verification passed (sweep + full-fleet docker rotation + xlint) and relay is now status: complete. See https://github.com/${GITHUB_REPOSITORY}/actions/runs/$GITHUB_RUN_ID."` . Every fix gets a closing comment with evidence; never leave a fixed failure issue open.
             - End every run with a concise final summary: what you fixed, which issues
               you closed, which PRs you merged/rejected, which builds you triggered and
               their result, the dependency audit table, the install-test table, and
@@ -930,7 +1196,7 @@ jobs:
         run: |
           echo "=== External verifier: tools/verify-void.sh ==="
           bash tools/verify-void.sh || {
-            echo "::error::Verification FAILED -- relay missing 19-row deps table or evidence. Agent skipped mandatory audit."
+            echo "::error::Verification FAILED -- relay missing full-inventory deps table or evidence. Agent skipped mandatory audit."
             exit 1
           }
 
