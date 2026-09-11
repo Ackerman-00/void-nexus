@@ -26,7 +26,7 @@ case "${XBPS_TARGET_MACHINE}" in
 esac
 
 distfiles="https://github.com/Vencord/Vesktop/releases/download/v${version}/vesktop_${version}_${_deb_arch}.deb"
-checksum="251411414ea3b05b045c0aa93c75fe77713d11f732b97c8f375987307a90f003"
+checksum="0204a3fcf8861d11debf72a9be70423d2dca6d4698766b6fda7cfe39beea6a61"
 
 nostrip_files="/opt/Vesktop/vesktop"
 
