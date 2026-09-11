@@ -1,9 +1,9 @@
 # Template file for 'niri-git'
 pkgname=niri-git
 _basever=26.04
-_commit=dd75865f547f0eac0e9b6c4d86d2cd00c0744252
-_shortcommit=dd75865
-_gitdate=20260821184624
+_commit=9e72e4917ca31baf4010496bf7f4aaf78d34d236
+_shortcommit=9e72e49
+_gitdate=20260911115830
 # NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
 # rewrites _commit/_gitdate and leaves version= to expand at build time.
 # xlint flags "_" chars from variable NAMES here; value itself is clean.
@@ -24,7 +24,7 @@ license="GPL-3.0-or-later"
 homepage="https://github.com/niri-wm/niri"
 changelog="https://github.com/niri-wm/niri/releases"
 distfiles="https://github.com/niri-wm/niri/archive/${_commit}.tar.gz"
-checksum="ae1859d605e1f6f8ced5b9e5d8e3b5c41f7240fb2c89f1ffcef507ecd269e67a"
+checksum="c84eb797e6aaf13f7248e50ec862f7ddcfdacea66791ff2a31d94f9a4cadef00"
 conflicts="niri>=0"
 provides="niri-${version}_${revision}"
 pre_check() {
