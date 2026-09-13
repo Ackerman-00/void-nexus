@@ -17,7 +17,10 @@ makedepends="cairo-devel eudev-libudev-devel glib-devel libdisplay-info-devel
 libgbm-devel libinput-devel libseat-devel libxkbcommon-devel MesaLib-devel
 pango-devel pipewire-devel pixman-devel clang19-devel"
 depends="wayland xwayland-satellite-git"
-checkdepends="wayland"
+# gtk4/libadwaita only for do_check: `cargo test --workspace` builds
+# niri-visual-tests (adw+gtk4 path deps). CI sets TEST=0 so this is for
+# local XBPS_CHECK_PKGS=yes runs. Verified present in Void repos.
+checkdepends="wayland gtk4-devel libadwaita-devel"
 short_desc="Scrollable-tiling Wayland compositor (Git Snapshot)"
 maintainer="Ackerman-00 <quietcraft@gmail.com>"
 license="GPL-3.0-or-later"
