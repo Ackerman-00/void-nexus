@@ -1,9 +1,9 @@
 # Template file for 'quickshell-git'
 pkgname=quickshell-git
 _basever=0.3.1
-_commit=86b4275879b32bf58dc89035452313919cd89bd2
-_shortcommit=86b4275
-_gitdate=20260914015902
+_commit=c6a516096dd84d5255b409482eb4bf740b952f88
+_shortcommit=c6a5160
+_gitdate=20260915064609
 # NOTE: dynamic version= (from _vars) is intentional -- check-updates.yml
 # rewrites _commit/_gitdate and leaves version= to expand at build time.
 # xlint flags "_" chars from variable NAMES here; value itself is clean.
@@ -25,4 +25,4 @@ conflicts="quickshell>=0"
 provides="quickshell-${version}_${revision}"
 
 distfiles="https://github.com/quickshell-mirror/quickshell/archive/${_commit}.tar.gz"
-checksum="84ccc98d32aea991c249f5ef7dff76c348f32f19959f044e0409e1015809b231"
+checksum="5d29075fcfb3f3a5e3eee6e5b8c8f0ef5985fc74dac000030ced67cb0aceda2d"
