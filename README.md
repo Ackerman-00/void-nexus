@@ -1,5 +1,30 @@
 <div align="center">
 
+# ■ ARCHIVED — This Repository Is Retired
+
+### Please use the new home instead ▼
+
+[![Use voider-repo on Codeberg](https://img.shields.io/badge/Codeberg-Use_voider--repo-blue?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/voiders-community/repository)
+
+**→ https://codeberg.org/voiders-community/repository ←**
+
+<p><sup><b>void-nexus is no longer maintained.</b> All development has moved to <code>voider-repo</code> on Codeberg — please update your bookmarks, issues, and PRs.</sup></p>
+
+</div>
+
+> [!IMPORTANT]
+> ## → This project has moved to Codeberg
+> **void-nexus is retired and no longer being maintained.**
+>
+> Please use the active successor instead:
+> ### → [codeberg.org/voiders-community/repository](https://codeberg.org/voiders-community/repository)
+>
+> No further updates, fixes, or releases will be published here.
+
+---
+
+<div align="center">
+
 <img src="https://voidlinux.org/assets/img/void_bg.png" width="80" />
 
 <h1>void-nexus</h1>
